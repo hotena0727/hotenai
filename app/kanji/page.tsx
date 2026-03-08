@@ -411,10 +411,10 @@ export default function KanjiPage() {
   return (
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto max-w-3xl">
-        <h1 className="mt-4 text-4xl font-bold">✨ 한자</h1>
+        <h1 className="mt-4 text-4xl font-bold">🈯 한자</h1>
 
         <div className="mt-8">
-          <p className="text-lg font-semibold text-gray-700">✨ 레벨을 선택하세요</p>
+          <p className="text-lg font-semibold text-gray-700">✅ 레벨을 선택하세요</p>
           <div className="mt-3 grid grid-cols-5 gap-3">
             {LEVEL_OPTIONS.map((level) => {
               const active = selectedLevel === level;
@@ -437,7 +437,7 @@ export default function KanjiPage() {
         </div>
 
         <div className="mt-6">
-          <p className="text-lg font-semibold text-gray-700">✨ 유형을 선택하세요</p>
+          <p className="text-lg font-semibold text-gray-700">✅ 유형을 선택하세요</p>
           <div className="mt-3 grid grid-cols-3 gap-3">
             {QTYPE_OPTIONS.map((item) => {
               const active = selectedQType === item.value;
