@@ -2,15 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { saveQuizAttempt } from "@/lib/attempts";
-import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/app/types/kanji";
+import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
+import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/types/kanji";
 import { loadKanjiRows } from "@/lib/kanji-loader";
 import { buildKanjiQuiz } from "@/lib/kanji-quiz";
 import { buildKanjiAttemptPayload } from "@/lib/kanji-payload";
-
-const JA_FONT_STYLE = {
-  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
-} as const;
 
 const LEVEL_OPTIONS = ["N5", "N4", "N3", "N2", "N1"] as const;
 
@@ -22,6 +18,8 @@ const QTYPE_OPTIONS: Array<{ value: KanjiQType; label: string }> = [
 
 type AnswerMap = Record<number, string>;
 type ExcludedWordMap = Record<string, boolean>;
+
+const DAILY_FREE_SET_LIMIT = 3;
 
 function qtypeLabel(qtype: KanjiQType): string {
   switch (qtype) {
@@ -64,6 +62,10 @@ export default function KanjiPage() {
 
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
+
+  const [userPlan, setUserPlan] = useState<"FREE" | "PRO">("FREE");
+  const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
+  const [limitMessage, setLimitMessage] = useState("");
 
   const wrongItems = questions
     .map((q, idx) => ({
@@ -108,6 +110,55 @@ export default function KanjiPage() {
     };
 
     void init();
+  }, []);
+
+
+
+  useEffect(() => {
+    const loadPlanAndUsage = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const user = session?.user;
+        if (!user) {
+          setUserPlan("FREE");
+          setTodayWordKanjiSets(0);
+          setLimitMessage("");
+          return;
+        }
+
+        const { data: profileRow, error: profileError } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error(profileError);
+        }
+
+        const plan =
+          String(profileRow?.plan || "FREE").toUpperCase() === "PRO" ? "PRO" : "FREE";
+        setUserPlan(plan);
+
+        const used = await fetchTodayWordKanjiSetCount(user.id);
+        setTodayWordKanjiSets(used);
+
+        if (plan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
+          setLimitMessage(
+            "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
+          );
+        } else {
+          setLimitMessage("");
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void loadPlanAndUsage();
   }, []);
 
   useEffect(() => {
@@ -161,6 +212,13 @@ export default function KanjiPage() {
 
   const generateQuiz = () => {
     try {
+      if (userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT) {
+        setLimitMessage(
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
+        );
+        setQuestions([]);
+        return;
+      }
       const blockedWords = Object.keys(excludedWords).filter((k) => excludedWords[k]);
 
       const quiz = buildKanjiQuiz({
@@ -313,6 +371,14 @@ export default function KanjiPage() {
         return;
       }
 
+      const used = await fetchTodayWordKanjiSetCount(user.id);
+      setTodayWordKanjiSets(used);
+      if (userPlan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
+        setLimitMessage(
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
+        );
+      }
+
       alert("결과가 저장되었습니다.");
     } catch (error) {
       console.error(error);
@@ -345,9 +411,9 @@ export default function KanjiPage() {
   return (
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto max-w-3xl">
-        <h1 className="mt-4 text-3xl font-bold">✨ 한자</h1>
+        <h1 className="mt-4 text-4xl font-bold">✨ 한자</h1>
 
-        <div className="mt-6">
+        <div className="mt-8">
           <p className="text-lg font-semibold text-gray-700">✨ 레벨을 선택하세요</p>
           <div className="mt-3 grid grid-cols-5 gap-3">
             {LEVEL_OPTIONS.map((level) => {
@@ -393,19 +459,48 @@ export default function KanjiPage() {
           </div>
         </div>
 
+
+
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+          <p className="text-sm font-semibold text-gray-800">
+            {userPlan === "PRO"
+              ? "PRO 이용 중 · 단어·한자를 제한 없이 이용할 수 있습니다."
+              : `FREE 이용 중 · 오늘 단어+한자 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
+          </p>
+
+          {userPlan === "FREE" ? (
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              {isDailyLimitReached
+                ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요. talk는 별도로 계속 이용할 수 있습니다."
+                : todayWordKanjiSets === DAILY_FREE_SET_LIMIT - 1
+                ? "오늘은 1세트 더 이용할 수 있습니다. talk는 이 제한과 별도로 계속 이용할 수 있습니다."
+                : "talk는 이 제한과 별도로 계속 이용할 수 있습니다."}
+            </p>
+          ) : null}
+
+          {limitMessage ? (
+            <p className="mt-2 text-sm leading-6 text-gray-600">{limitMessage}</p>
+          ) : null}
+        </div>
+
         <div className="mt-8 border-t border-gray-200 pt-8">
           <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
               onClick={makeNewQuiz}
-              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-800"
+              disabled={isDailyLimitReached}
+              className={
+                isDailyLimitReached
+                  ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-lg font-semibold text-gray-400"
+                  : "rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
+              }
             >
               🔄 새문제(랜덤 10문항)
             </button>
             <button
               type="button"
               onClick={resetExcludedWords}
-              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
             >
               맞힌 단어 제외 초기화
             </button>
@@ -437,7 +532,7 @@ export default function KanjiPage() {
         </div>
 
         {questions.length > 0 ? (
-          <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
             {audioError ? (
               <p className="mb-4 text-sm text-red-500">{audioError}</p>
             ) : null}
@@ -453,7 +548,7 @@ export default function KanjiPage() {
                   <div key={`${q.jp_word}-${idx}`}>
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-2xl font-semibold">
-                        {circleNumber(idx)} <span lang="ja" style={JA_FONT_STYLE}>{q.prompt}</span>
+                        {circleNumber(idx)} {q.prompt}
                       </p>
 
                       {q.qtype === "meaning" ? (
@@ -499,7 +594,7 @@ export default function KanjiPage() {
                                   : ""
                               }
                             >
-                              <span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
+                              {choice}
                             </span>
                           </label>
                         );
@@ -520,10 +615,10 @@ export default function KanjiPage() {
                           {isRight ? "정답입니다." : "오답입니다."}
                         </p>
                         <p className="mt-2 text-sm text-gray-700">
-                          정답: <span lang="ja" style={JA_FONT_STYLE}>{correct}</span>
+                          정답: {correct}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
-                          단어: <span lang="ja" style={JA_FONT_STYLE}>{q.jp_word}</span> / 읽기: <span lang="ja" style={JA_FONT_STYLE}>{q.reading}</span> / 뜻: {q.meaning}
+                          단어: {q.jp_word} / 읽기: {q.reading} / 뜻: {q.meaning}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
                           레벨: {q.level} / 유형: {qtypeLabel(q.qtype)}

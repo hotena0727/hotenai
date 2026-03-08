@@ -132,3 +132,38 @@ export async function fetchAttemptsByPrefix(
     return [];
   }
 }
+
+
+export async function fetchTodayWordKanjiSetCount(userId: string): Promise<number> {
+  if (!userId) return 0;
+
+  try {
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+
+    const { data, error } = await supabase
+      .from("quiz_attempts")
+      .select("id, created_at, pos_mode")
+      .eq("user_id", userId)
+      .gte("created_at", start.toISOString())
+      .lte("created_at", end.toISOString());
+
+    if (error) {
+      console.error(error);
+      return 0;
+    }
+
+    const rows = (data ?? []) as Array<{ pos_mode?: string | null }>;
+    return rows.filter((row) => {
+      const mode = String(row.pos_mode || "");
+      return mode.startsWith("단어") || mode.startsWith("한자");
+    }).length;
+  } catch (error) {
+    console.error(error);
+    return 0;
+  }
+}
