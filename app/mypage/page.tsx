@@ -259,26 +259,24 @@ export default function MyPage() {
       setErrorMsg("");
       try {
         const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
 
-        if (userError) {
-          if (userError.name === "AuthSessionMissingError") {
-            setErrorMsg("로그인이 필요합니다.");
-            setLoading(false);
-            return;
-          }
-          console.error(userError);
-          setErrorMsg("사용자 정보를 불러오지 못했습니다.");
+        if (sessionError) {
+          console.error(sessionError);
+          setErrorMsg("세션을 확인하지 못했습니다.");
           setLoading(false);
           return;
         }
-        if (!user) {
+
+        if (!session?.user) {
           setErrorMsg("로그인이 필요합니다.");
           setLoading(false);
           return;
         }
+
+        const user = session.user;
 
         const { data: profileRow, error: profileError } = await supabase
           .from("profiles")
