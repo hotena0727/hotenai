@@ -18,7 +18,7 @@ import type {
   TalkCsvRow,
   TalkWrongItem,
   ViewMode,
-} from "@/types/talk";
+} from "@/app/types/talk";
 import {
   getStageOptions,
   getSubOptions,
