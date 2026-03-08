@@ -81,7 +81,7 @@ function parseDate(value?: string): Date | null {
 
 
 function formatRelativeMessageTime(value?: string | null) {
-  const d = parseDate(value);
+  const d = parseDate(value ?? undefined);
   if (!d) return "방금 업데이트";
 
   const now = new Date();
