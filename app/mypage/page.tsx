@@ -257,7 +257,6 @@ export default function MyPage() {
     const loadMyPage = async () => {
       setLoading(true);
       setErrorMsg("");
-
       try {
         const {
           data: { user },
@@ -265,12 +264,16 @@ export default function MyPage() {
         } = await supabase.auth.getUser();
 
         if (userError) {
+          if (userError.name === "AuthSessionMissingError") {
+            setErrorMsg("로그인이 필요합니다.");
+            setLoading(false);
+            return;
+          }
           console.error(userError);
           setErrorMsg("사용자 정보를 불러오지 못했습니다.");
           setLoading(false);
           return;
         }
-
         if (!user) {
           setErrorMsg("로그인이 필요합니다.");
           setLoading(false);
@@ -542,40 +545,40 @@ export default function MyPage() {
     stats.streak >= 5
       ? "좋아요, 흐름이 이어지고 있어요"
       : stats.totalAttempts === 0
-      ? "오늘의 첫 기록을 만들어볼까요?"
-      : "지금 페이스가 나쁘지 않아요";
+        ? "오늘의 첫 기록을 만들어볼까요?"
+        : "지금 페이스가 나쁘지 않아요";
 
   const todayMessageBody =
     stats.streak >= 5
       ? `최근 ${stats.streak}일 연속으로 학습했어요. 오늘도 짧게라도 이어가면 흐름이 더 단단해집니다.`
       : stats.totalAttempts === 0
-      ? "아직 저장된 학습 기록이 없어요. 회화나 단어를 한 세트만 해도 메시지가 달라지기 시작합니다."
-      : `지금까지 총 ${stats.totalAttempts}회 학습했고, 이번 주에는 ${stats.thisWeekCount}회 진행했어요. 오늘도 가볍게 한 세트 이어가 보세요.`;
+        ? "아직 저장된 학습 기록이 없어요. 회화나 단어를 한 세트만 해도 메시지가 달라지기 시작합니다."
+        : `지금까지 총 ${stats.totalAttempts}회 학습했고, 이번 주에는 ${stats.thisWeekCount}회 진행했어요. 오늘도 가볍게 한 세트 이어가 보세요.`;
 
   const coachTipTitle =
     stats.topWrongType === "회화"
       ? "오늘의 코치 팁 · 회화"
       : stats.topWrongType === "한자"
-      ? "오늘의 코치 팁 · 한자"
-      : stats.topWrongType === "단어"
-      ? "오늘의 코치 팁 · 단어"
-      : "오늘의 코치 팁";
+        ? "오늘의 코치 팁 · 한자"
+        : stats.topWrongType === "단어"
+          ? "오늘의 코치 팁 · 단어"
+          : "오늘의 코치 팁";
 
   const coachTipBody =
     stats.topWrongType === "회화"
       ? "오답이 많은 회화는 정답을 읽는 것보다 소리 내어 2~3번 따라 하는 쪽이 훨씬 오래 남습니다. 짧게라도 입으로 꺼내 보세요."
       : stats.topWrongType === "한자"
-      ? "한자는 많이 보기보다 헷갈린 것만 다시 보는 편이 효율적입니다. 오늘은 오답노트에서 자주 틀린 것부터 정리해 보세요."
-      : stats.topWrongType === "단어"
-      ? "단어는 뜻만 보지 말고 짧은 문장 안에서 다시 만나야 기억이 오래 갑니다. 오늘은 오답 10개만 가볍게 복습해 보세요."
-      : "오늘의 학습 기록을 바탕으로, 가장 부담 없는 루틴부터 다시 이어가 보세요.";
+        ? "한자는 많이 보기보다 헷갈린 것만 다시 보는 편이 효율적입니다. 오늘은 오답노트에서 자주 틀린 것부터 정리해 보세요."
+        : stats.topWrongType === "단어"
+          ? "단어는 뜻만 보지 말고 짧은 문장 안에서 다시 만나야 기억이 오래 갑니다. 오늘은 오답 10개만 가볍게 복습해 보세요."
+          : "오늘의 학습 기록을 바탕으로, 가장 부담 없는 루틴부터 다시 이어가 보세요.";
 
   const warmMessage =
     stats.totalWrong === 0
       ? "지금 흐름이 아주 좋습니다. 오늘은 유지하는 것만으로도 충분해요."
       : stats.totalWrong <= 10
-      ? "조금 틀려도 괜찮아요. 기록은 흔들림이 아니라, 다시 올라가는 발판이 됩니다."
-      : "오답이 쌓였다는 건 그만큼 시도했다는 뜻이기도 해요. 오늘은 많이 말고, 한 번 더 보는 것에 집중해 봅시다.";
+        ? "조금 틀려도 괜찮아요. 기록은 흔들림이 아니라, 다시 올라가는 발판이 됩니다."
+        : "오답이 쌓였다는 건 그만큼 시도했다는 뜻이기도 해요. 오늘은 많이 말고, 한 번 더 보는 것에 집중해 봅시다.";
 
   const latestAttemptAt = allAttempts[0]?.created_at || recentAttempts[0]?.created_at || null;
   const secondAttemptAt = allAttempts[1]?.created_at || latestAttemptAt;
@@ -618,20 +621,20 @@ export default function MyPage() {
     noticeStatus.permission === "granted"
       ? "허용됨"
       : noticeStatus.permission === "denied"
-      ? "차단됨"
-      : noticeStatus.permission === "default"
-      ? "아직 미설정"
-      : "-";
+        ? "차단됨"
+        : noticeStatus.permission === "default"
+          ? "아직 미설정"
+          : "-";
 
   const noticeSummary = !noticeStatus.supported
     ? "이 브라우저에서는 푸시 알림을 지원하지 않습니다."
     : noticeStatus.subscribed
-    ? "푸시 알림이 켜져 있습니다."
-    : noticeStatus.permission === "denied"
-    ? "브라우저에서 알림이 차단되어 있습니다."
-    : noticeStatus.permission === "granted"
-    ? "권한은 허용되어 있지만, 푸시 연결은 아직 꺼져 있습니다."
-    : "알림이 아직 설정되지 않았습니다.";
+      ? "푸시 알림이 켜져 있습니다."
+      : noticeStatus.permission === "denied"
+        ? "브라우저에서 알림이 차단되어 있습니다."
+        : noticeStatus.permission === "granted"
+          ? "권한은 허용되어 있지만, 푸시 연결은 아직 꺼져 있습니다."
+          : "알림이 아직 설정되지 않았습니다.";
 
   if (loading) {
     return (
@@ -644,10 +647,23 @@ export default function MyPage() {
   }
 
   if (errorMsg) {
+    const needsLogin = errorMsg === "로그인이 필요합니다.";
+
     return (
       <main className="min-h-screen bg-white text-gray-900">
-        <div className="mx-auto max-w-3xl px-4 py-6">
-          <p className="text-sm text-red-500">{errorMsg}</p>
+        <div className="mx-auto max-w-3xl px-4 py-10">
+          <p className={needsLogin ? "text-sm text-gray-700" : "text-sm text-red-500"}>
+            {errorMsg}
+          </p>
+
+          {needsLogin ? (
+            <a
+              href="/login"
+              className="mt-4 inline-flex rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
+            >
+              로그인하러 가기
+            </a>
+          ) : null}
         </div>
       </main>
     );
@@ -700,10 +716,10 @@ export default function MyPage() {
               {stats.totalAttempts === 0
                 ? "0%"
                 : `${Math.round(
-                    ((stats.totalAttempts * 10 - stats.totalWrong) /
-                      Math.max(stats.totalAttempts * 10, 1)) *
-                      100
-                  )}%`}
+                  ((stats.totalAttempts * 10 - stats.totalWrong) /
+                    Math.max(stats.totalAttempts * 10, 1)) *
+                  100
+                )}%`}
             </p>
             <p className="mt-2 text-lg font-semibold text-gray-700">평균 정답률</p>
           </div>
@@ -969,9 +985,9 @@ export default function MyPage() {
                         <p className="mt-1">
                           {item.created_at
                             ? new Date(item.created_at).toLocaleTimeString("ko-KR", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
                             : "-"}
                         </p>
                       </div>
@@ -1019,10 +1035,10 @@ export default function MyPage() {
                     kind === "talk"
                       ? "border-purple-200 bg-purple-50 text-purple-700"
                       : kind === "word"
-                      ? "border-blue-200 bg-blue-50 text-blue-700"
-                      : kind === "kanji"
-                      ? "border-green-200 bg-green-50 text-green-700"
-                      : "border-gray-200 bg-gray-50 text-gray-700";
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : kind === "kanji"
+                          ? "border-green-200 bg-green-50 text-green-700"
+                          : "border-gray-200 bg-gray-50 text-gray-700";
 
                   return (
                     <div
@@ -1163,8 +1179,8 @@ export default function MyPage() {
                     stats.topWrongType === "회화"
                       ? "/mypage/wrong-talk"
                       : stats.topWrongType === "한자"
-                      ? "/mypage/wrong-kanji"
-                      : "/mypage/wrong-word"
+                        ? "/mypage/wrong-kanji"
+                        : "/mypage/wrong-word"
                   }
                   className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
                 >
