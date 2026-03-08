@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchAllAttempts, type QuizAttemptRow } from "@/lib/attempts";
 import {
@@ -149,6 +150,7 @@ function getTodayAttemptCount(attempts: QuizAttemptRow[]) {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<HomeProfile | null>(null);
   const [attempts, setAttempts] = useState<QuizAttemptRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,7 +208,7 @@ export default function HomePage() {
           plan: String(profileRow?.plan || "FREE").toUpperCase(),
           is_admin: Boolean(profileRow?.is_admin),
         });
-        
+
         const all = await fetchAllAttempts(user.id, 300);
         setAttempts(all);
       } catch (error) {
@@ -219,6 +221,12 @@ export default function HomePage() {
 
     void loadHome();
   }, []);
+
+  useEffect(() => {
+    if (errorMsg === "로그인이 필요합니다.") {
+      router.replace("/login");
+    }
+  }, [errorMsg, router]);
 
   const stats = useMemo(() => {
     const totalAttempts = attempts.length;
@@ -273,24 +281,15 @@ export default function HomePage() {
     );
   }
 
-  if (errorMsg) {
-    const needsLogin = errorMsg === "로그인이 필요합니다.";
+  if (errorMsg === "로그인이 필요합니다.") {
+    return null;
+  }
 
+  if (errorMsg) {
     return (
       <main className="min-h-screen bg-white text-gray-900">
         <div className="mx-auto max-w-3xl px-4 py-10">
-          <p className={needsLogin ? "text-sm text-gray-700" : "text-sm text-red-500"}>
-            {errorMsg}
-          </p>
-
-          {needsLogin ? (
-            <a
-              href="/login"
-              className="mt-4 inline-flex rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
-            >
-              로그인하러 가기
-            </a>
-          ) : null}
+          <p className="text-sm text-red-500">{errorMsg}</p>
         </div>
       </main>
     );
