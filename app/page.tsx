@@ -161,21 +161,30 @@ export default function HomePage() {
 
       try {
         const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
 
-        if (userError) {
-          console.error(userError);
-          setErrorMsg("사용자 정보를 불러오지 못했습니다.");
+        if (sessionError) {
+          console.error(sessionError);
+          setErrorMsg("세션을 확인하지 못했습니다.");
           setLoading(false);
           return;
         }
 
-        if (!user) {
-          window.location.href = "/login";
+        if (!session?.user) {
+          setErrorMsg("로그인이 필요합니다.");
+          setLoading(false);
           return;
         }
+
+        const user = session.user;
+
+        const googleName =
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.user_metadata?.user_name ||
+          "";
 
         const { data: profileRow, error: profileError } = await supabase
           .from("profiles")
@@ -185,16 +194,10 @@ export default function HomePage() {
 
         if (profileError) {
           console.error(profileError);
-          setErrorMsg("프로필 정보를 불러오지 못했습니다.");
+          setErrorMsg("profiles 정보를 불러오지 못했습니다.");
           setLoading(false);
           return;
         }
-
-        const googleName =
-          user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          user.user_metadata?.user_name ||
-          "";
 
         setProfile({
           id: user.id,
@@ -203,7 +206,7 @@ export default function HomePage() {
           plan: String(profileRow?.plan || "FREE").toUpperCase(),
           is_admin: Boolean(profileRow?.is_admin),
         });
-
+        
         const all = await fetchAllAttempts(user.id, 300);
         setAttempts(all);
       } catch (error) {
@@ -271,10 +274,23 @@ export default function HomePage() {
   }
 
   if (errorMsg) {
+    const needsLogin = errorMsg === "로그인이 필요합니다.";
+
     return (
       <main className="min-h-screen bg-white text-gray-900">
-        <div className="mx-auto max-w-3xl px-4 py-6">
-          <p className="text-sm text-red-500">{errorMsg}</p>
+        <div className="mx-auto max-w-3xl px-4 py-10">
+          <p className={needsLogin ? "text-sm text-gray-700" : "text-sm text-red-500"}>
+            {errorMsg}
+          </p>
+
+          {needsLogin ? (
+            <a
+              href="/login"
+              className="mt-4 inline-flex rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
+            >
+              로그인하러 가기
+            </a>
+          ) : null}
         </div>
       </main>
     );
