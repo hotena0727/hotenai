@@ -27,6 +27,9 @@ import {
 } from "@/lib/talk-loader";
 
 const QUIZ_SET_SIZE = 10;
+const BASE_AUDIO_URL = "https://hotena.com/hotena/app/mp3/";
+const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx/";
+let activeSfxAudio: HTMLAudioElement | null = null;
 
 type ReviewModeType = "wrong" | "random" | "old" | "mixed";
 type PronStage = "idle" | "recording" | "recorded";
@@ -37,6 +40,10 @@ const TITLE_PATHS = {
   check: "/images/hotena_talk/icons_title/icon_check_title.png",
   score: "/images/hotena_talk/icons_title/icon_score_title.png",
   reward: "/images/hotena_talk/icons_title/icon_reward_title.png",
+} as const;
+
+const JA_FONT_STYLE = {
+  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
 } as const;
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -70,54 +77,76 @@ function reviewModeLabel(mode: ReviewModeType) {
   }
 }
 
-function getPublicImagePath(path: string): string {
-  const raw = String(path || "").trim();
-  if (!raw) return "";
-  if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("blob:")) {
-    return raw;
-  }
-  return raw.startsWith("/") ? raw : `/${raw}`;
-}
-
-function formatSeconds(sec: number) {
-  const minutes = Math.floor(sec / 60)
-    .toString()
-    .padStart(2, "0");
-  const seconds = Math.floor(sec % 60)
-    .toString()
-    .padStart(2, "0");
-  return `${minutes}:${seconds}`;
-}
-
-function fakeTranscript(answer: string, score: number) {
-  if (score >= 100) return answer || "-";
-  return "ああ。";
+function fakeTranscript(answer: string) {
+  return answer || "-";
 }
 
 function fakePronComment(score: number, answer: string) {
-  if (score >= 100) return `🎯 좋습니다
-🗣️ ${answer} 를 자연스럽게 말했어요.`;
-  return `🎯 조금 더 또렷하게
-🗣️ 녹음을 조금 더 길게, 또박또박 해보세요.`;
+  if (score >= 90) return `🎯 いいですね\n🗣️ ${answer} 의 발음이 또렷합니다.`;
+  if (score >= 70) return `🎯 좋습니다\n🗣️ ${answer} 를 조금만 더 또박또박 말해보세요.`;
+  return `🎯 천천히 다시\n🗣️ ${answer} 를 2~3번 따라 말해보세요.`;
 }
 
-function Waveform({ active }: { active: boolean }) {
-  const bars = active
-    ? [16, 24, 32, 28, 22, 18, 14, 20, 26, 18, 14, 12, 18, 16, 12, 20, 24, 18, 10]
-    : [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+function formatSeconds(totalSeconds: number) {
+  const safe = Math.max(0, Math.floor(totalSeconds));
+  const mm = String(Math.floor(safe / 60)).padStart(2, "0");
+  const ss = String(safe % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
+}
 
-  return (
-    <div className="flex flex-1 items-center gap-[3px] overflow-hidden px-1">
-      {bars.map((h, idx) => (
-        <span
-          key={`${h}-${idx}`}
-          className="w-[4px] rounded-full bg-gray-400"
-          style={{ height: `${h}px`, opacity: active ? 1 : 0.35 }}
-        />
-      ))}
-      <div className="mx-2 h-px flex-1 border-t border-dashed border-gray-300" />
-    </div>
-  );
+function mergeFloat32Arrays(chunks: Float32Array[]) {
+  const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const merged = new Float32Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return merged;
+}
+
+function makeWaveformBars(level = 0.08, count = 32, phase = 0) {
+  return Array.from({ length: count }, (_, idx) => {
+    const center = (count - 1) / 2;
+    const dist = Math.abs(idx - center) / Math.max(center, 1);
+    const shape = 1 - dist * 0.9;
+    const ripple = 0.76 + 0.24 * Math.sin((idx + phase) * 0.65);
+    return Math.max(0.06, Math.min(1, level * shape * ripple + 0.06));
+  });
+}
+
+function encodeWav(samples: Float32Array, sampleRate: number) {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+
+  const writeString = (offset: number, value: string) => {
+    for (let i = 0; i < value.length; i += 1) {
+      view.setUint8(offset + i, value.charCodeAt(i));
+    }
+  };
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, "data");
+  view.setUint32(40, samples.length * 2, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i += 1) {
+    const sample = Math.max(-1, Math.min(1, samples[i] ?? 0));
+    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+    offset += 2;
+  }
+
+  return new Blob([view], { type: "audio/wav" });
 }
 
 function EmojiBox({
@@ -136,7 +165,7 @@ function EmojiBox({
     >
       {src ? (
         <img
-          src={getPublicImagePath(src)}
+          src={src}
           alt="내 이모티콘"
           className="h-full w-full object-cover"
           onError={(e) => {
@@ -161,18 +190,119 @@ function TitleImage({
 }) {
   const [failed, setFailed] = useState(false);
 
-  if (failed) {
-    return <p className="text-xl font-bold">{fallback}</p>;
-  }
-
   return (
-    <img
-      src={src}
-      alt={alt}
-      className="h-8 w-auto object-contain sm:h-9"
-      onError={() => setFailed(true)}
-    />
+    <div className="flex items-center gap-3">
+      {!failed ? (
+        <img
+          src={src}
+          alt={alt}
+          className="h-8 w-auto object-contain sm:h-9"
+          onError={() => setFailed(true)}
+        />
+      ) : null}
+      <p className="text-xl font-bold">{fallback}</p>
+    </div>
   );
+}
+
+
+function playSfx(kind: "correct" | "wrong" | "reward") {
+  const pathCandidates = {
+    correct: ["correct.mp3"],
+    wrong: ["wrong.mp3"],
+    reward: ["perfect.mp3"],
+  } as const;
+
+  const playFallbackTone = () => {
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        ((window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext as
+          | typeof AudioContext
+          | undefined);
+      if (!AudioCtx) return;
+
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      const tone = (
+        freq: number,
+        start: number,
+        duration: number,
+        volume = 0.05,
+        type: OscillatorType = "triangle"
+      ) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(volume, start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + duration + 0.02);
+      };
+
+      if (kind === "correct") {
+        tone(660, now, 0.09);
+        tone(880, now + 0.10, 0.14);
+      } else if (kind === "wrong") {
+        tone(300, now, 0.10, 0.045, "sawtooth");
+        tone(220, now + 0.11, 0.16, 0.045, "sawtooth");
+      } else {
+        tone(660, now, 0.08);
+        tone(880, now + 0.09, 0.08);
+        tone(1046, now + 0.18, 0.16, 0.06);
+      }
+
+      window.setTimeout(() => {
+        void ctx.close().catch(() => undefined);
+      }, 650);
+    } catch {
+      // noop
+    }
+  };
+
+  try {
+    const candidates = pathCandidates[kind].map((path) => `${BASE_SFX_URL}${path}`);
+    let idx = 0;
+
+    const tryPlay = (url: string) => {
+      const audio = new Audio(url);
+      activeSfxAudio = audio;
+      audio.preload = "auto";
+      audio.volume = 1;
+      audio.playsInline = true;
+      audio.onended = () => {
+        if (activeSfxAudio === audio) activeSfxAudio = null;
+      };
+      audio.onerror = () => {
+        idx += 1;
+        if (idx < candidates.length) {
+          tryPlay(candidates[idx]);
+        } else {
+          playFallbackTone();
+        }
+      };
+      const playPromise = audio.play();
+      if (playPromise) {
+        void playPromise.catch(() => {
+          idx += 1;
+          if (idx < candidates.length) {
+            tryPlay(candidates[idx]);
+          } else {
+            playFallbackTone();
+          }
+        });
+      }
+    };
+
+    tryPlay(candidates[0]);
+  } catch {
+    playFallbackTone();
+  }
 }
 
 export default function TalkPage() {
@@ -210,6 +340,7 @@ export default function TalkPage() {
   const [coachAnswer, setCoachAnswer] = useState("");
   const [coachError, setCoachError] = useState("");
   const [coachQuestion, setCoachQuestion] = useState("");
+  const [coachOpen, setCoachOpen] = useState(false);
 
   const [userPlan, setUserPlan] = useState("FREE");
 
@@ -237,20 +368,387 @@ export default function TalkPage() {
   const [pronTranscript, setPronTranscript] = useState("");
   const [pronDuration, setPronDuration] = useState("00:00");
   const [spokenSentenceCount, setSpokenSentenceCount] = useState(0);
-  const [recordedAudioUrl, setRecordedAudioUrl] = useState("");
   const [pronError, setPronError] = useState("");
-  const [rewardChecked, setRewardChecked] = useState(false);
-  const [coachOpen, setCoachOpen] = useState(false);
+  const [pronScoring, setPronScoring] = useState(false);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState("");
+  const [isRecordedPlaying, setIsRecordedPlaying] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [rewardNoticeRequested, setRewardNoticeRequested] = useState(false);
+  const [waveformBars, setWaveformBars] = useState<number[]>(makeWaveformBars(0.06));
 
   const restoringRef = useRef(false);
   const resumedOnceRef = useRef(false);
   const reviewStartedRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const recordChunksRef = useRef<Blob[]>([]);
+  const recordStreamRef = useRef<MediaStream | null>(null);
+  const recordContextRef = useRef<AudioContext | null>(null);
+  const recordSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const recordProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const recordAnalyserRef = useRef<AnalyserNode | null>(null);
+  const recordSilenceGainRef = useRef<GainNode | null>(null);
+  const pcmChunksRef = useRef<Float32Array[]>([]);
   const recordTimerRef = useRef<number | null>(null);
-  const recordSecondsRef = useRef(0);
+  const recordStartAtRef = useRef<number>(0);
+  const recordSampleRateRef = useRef<number>(44100);
+  const waveLevelRef = useRef<number>(0.06);
+  const waveformPhaseRef = useRef<number>(0);
+  const waveformAnimRef = useRef<number | null>(null);
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(`talk-spoken-count:${todayKST()}`);
+      if (stored) {
+        const parsed = Number(stored);
+        if (Number.isFinite(parsed) && parsed >= 0) {
+          setSpokenSentenceCount(parsed);
+        }
+      }
+    } catch {
+      // noop
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        `talk-spoken-count:${todayKST()}`,
+        String(spokenSentenceCount)
+      );
+    } catch {
+      // noop
+    }
+  }, [spokenSentenceCount]);
+
+
+  const resetPronunciationState = () => {
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+    }
+    setPronStage("idle");
+    setPronChecked(false);
+    setPronScore(null);
+    setPronFeedback("");
+    setPronTranscript("");
+    setPronDuration("00:00");
+    setPronError("");
+    setPronScoring(false);
+    setRecordedAudioUrl("");
+    setRecordingSeconds(0);
+    setRewardNoticeRequested(false);
+    setWaveformBars(makeWaveformBars(0.06));
+  };
+
+  const stopRecordingInternal = async () => {
+    if (recordTimerRef.current) {
+      window.clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+    if (waveformAnimRef.current) {
+      window.cancelAnimationFrame(waveformAnimRef.current);
+      waveformAnimRef.current = null;
+    }
+
+    try {
+      recordProcessorRef.current?.disconnect();
+      recordSourceRef.current?.disconnect();
+      recordAnalyserRef.current?.disconnect();
+      recordSilenceGainRef.current?.disconnect();
+    } catch (error) {
+      console.error(error);
+    }
+
+    try {
+      recordStreamRef.current?.getTracks().forEach((track) => track.stop());
+    } catch (error) {
+      console.error(error);
+    }
+
+    if (recordContextRef.current) {
+      try {
+        await recordContextRef.current.close();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    recordProcessorRef.current = null;
+    recordSourceRef.current = null;
+    recordAnalyserRef.current = null;
+    recordSilenceGainRef.current = null;
+    recordContextRef.current = null;
+    recordStreamRef.current = null;
+  };
+
+  const startPronRecording = async () => {
+    try {
+      if (typeof window === "undefined") return;
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setPronError("이 브라우저에서는 녹음 기능을 지원하지 않습니다.");
+        return;
+      }
+
+      await stopRecordingInternal();
+      setPronError("");
+      setRewardNoticeRequested(false);
+      setPronChecked(false);
+      setPronScore(null);
+      setPronFeedback("");
+      setPronTranscript("");
+      if (recordedAudioUrl) {
+        URL.revokeObjectURL(recordedAudioUrl);
+        setRecordedAudioUrl("");
+      }
+      setWaveformBars(makeWaveformBars(0.08));
+      waveLevelRef.current = 0.08;
+      waveformPhaseRef.current = 0;
+      pcmChunksRef.current = [];
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      recordStreamRef.current = stream;
+
+      const AudioCtx =
+        window.AudioContext ||
+        ((window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext as
+          | typeof AudioContext
+          | undefined);
+
+      if (!AudioCtx) {
+        setPronError("이 브라우저에서는 오디오 컨텍스트를 사용할 수 없습니다.");
+        await stopRecordingInternal();
+        return;
+      }
+
+      const audioContext = new AudioCtx();
+      recordContextRef.current = audioContext;
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+      recordSampleRateRef.current = audioContext.sampleRate || 44100;
+
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.82;
+
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      const silenceGain = audioContext.createGain();
+      silenceGain.gain.value = 0;
+
+      source.connect(analyser);
+      analyser.connect(processor);
+      processor.connect(silenceGain);
+      silenceGain.connect(audioContext.destination);
+
+      processor.onaudioprocess = (event) => {
+        const input = event.inputBuffer.getChannelData(0);
+        pcmChunksRef.current.push(new Float32Array(input));
+        let sumSq = 0;
+        for (let i = 0; i < input.length; i += 1) {
+          const sample = input[i] ?? 0;
+          sumSq += sample * sample;
+        }
+        const rms = Math.sqrt(sumSq / Math.max(input.length, 1));
+        waveLevelRef.current = Math.max(waveLevelRef.current * 0.72, Math.min(1, rms * 10));
+      };
+
+      recordSourceRef.current = source;
+      recordAnalyserRef.current = analyser;
+      recordProcessorRef.current = processor;
+      recordSilenceGainRef.current = silenceGain;
+
+      setPronStage("recording");
+      recordStartAtRef.current = Date.now();
+      setRecordingSeconds(0);
+      setPronDuration("00:00");
+
+      recordTimerRef.current = window.setInterval(() => {
+        const elapsedSec = Math.max(0, Math.floor((Date.now() - recordStartAtRef.current) / 1000));
+        setRecordingSeconds(elapsedSec);
+        setPronDuration(formatSeconds(elapsedSec));
+      }, 200);
+
+      const animateWaveform = () => {
+        waveformPhaseRef.current += 1;
+        const analyserNode = recordAnalyserRef.current;
+        let liveLevel = waveLevelRef.current;
+        if (analyserNode) {
+          const data = new Uint8Array(analyserNode.fftSize);
+          analyserNode.getByteTimeDomainData(data);
+          let peak = 0;
+          for (let i = 0; i < data.length; i += 1) {
+            const normalized = Math.abs((data[i] - 128) / 128);
+            if (normalized > peak) peak = normalized;
+          }
+          liveLevel = Math.max(liveLevel, peak * 2.4);
+        }
+        const visualLevel = Math.max(0.14, liveLevel, 0.14 + Math.abs(Math.sin(waveformPhaseRef.current * 0.22)) * 0.08);
+        setWaveformBars(makeWaveformBars(visualLevel, 32, waveformPhaseRef.current));
+        waveLevelRef.current *= 0.92;
+        waveformAnimRef.current = window.requestAnimationFrame(animateWaveform);
+      };
+      waveformAnimRef.current = window.requestAnimationFrame(animateWaveform);
+    } catch (error) {
+      console.error(error);
+      const err = error as DOMException | Error | undefined;
+      const errName = err?.name || "";
+      let message = "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+
+      if (errName === "NotAllowedError" || errName === "SecurityError") {
+        message = "마이크 권한이 거부되었습니다. 브라우저에서 마이크 권한을 허용해 주세요.";
+      } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
+        message = "사용할 수 있는 마이크를 찾지 못했습니다.";
+      } else if (errName === "NotReadableError" || errName === "TrackStartError") {
+        message = "다른 앱이 마이크를 사용 중일 수 있습니다. 마이크 사용 중인 앱을 닫고 다시 시도해 주세요.";
+      } else if (errName === "AbortError") {
+        message = "녹음 시작이 중단되었습니다. 다시 시도해 주세요.";
+      } else if (errName === "TypeError") {
+        message = "이 브라우저에서는 현재 녹음 설정을 시작할 수 없습니다.";
+      }
+
+      setPronError(message);
+      await stopRecordingInternal();
+      setPronStage("idle");
+    }
+  };
+
+  const scorePronunciation = async (audioBlob: Blob, answerJp: string) => {
+    try {
+      setPronScoring(true);
+      setPronChecked(false);
+      setPronScore(null);
+      setPronFeedback("");
+      setPronTranscript("");
+      setPronError("");
+
+      const form = new FormData();
+      form.append("file", audioBlob, "speech.wav");
+      form.append("answer_jp", answerJp);
+
+      const res = await fetch("/api/talk-pron-score", {
+        method: "POST",
+        body: form,
+      });
+
+      const raw = await res.text();
+      let data: any = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = {};
+      }
+      if (!res.ok) {
+        throw new Error(String(data?.error || raw || "말하기 점수를 계산하지 못했습니다."));
+      }
+
+      const transcript = String(data?.transcript || "").trim();
+      const score = Number(data?.score ?? 0);
+      const feedback = String(data?.feedback || "").trim();
+
+      setPronChecked(true);
+      setPronScore(Number.isFinite(score) ? score : 0);
+      setPronTranscript(transcript || "-");
+      setPronFeedback(feedback);
+      setPronError("");
+      if (Number.isFinite(score) && score >= 100) {
+        playSfx("correct");
+      }
+    } catch (error) {
+      console.error(error);
+      const message = error instanceof Error ? error.message : "말하기 점수를 계산하지 못했습니다.";
+      setPronChecked(false);
+      setPronScore(null);
+      setPronTranscript("");
+      setPronFeedback("");
+      setPronError(message || "말하기 점수를 계산하지 못했습니다.");
+    } finally {
+      setPronScoring(false);
+    }
+  };
+
+  const stopPronRecording = async () => {
+    if (pronStage !== "recording") return;
+
+    try {
+      const elapsedSec = Math.max(1, Math.floor((Date.now() - recordStartAtRef.current) / 1000));
+      setRecordingSeconds(elapsedSec);
+      setPronDuration(formatSeconds(elapsedSec));
+      await stopRecordingInternal();
+
+      const merged = mergeFloat32Arrays(pcmChunksRef.current);
+      if (!merged.length) {
+        setPronStage("idle");
+        setPronError("녹음 데이터가 저장되지 않았습니다. 다시 시도해 주세요.");
+        setWaveformBars(makeWaveformBars(0.06));
+        return;
+      }
+
+      const wavBlob = encodeWav(merged, recordSampleRateRef.current || 44100);
+      if (!wavBlob.size) {
+        setPronStage("idle");
+        setPronError("녹음 파일을 만들지 못했습니다. 다시 시도해 주세요.");
+        setWaveformBars(makeWaveformBars(0.06));
+        return;
+      }
+
+      const nextUrl = URL.createObjectURL(wavBlob);
+      setRecordedAudioUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return nextUrl;
+      });
+      setPronStage("recorded");
+      setPronError("");
+      setWaveformBars(makeWaveformBars(0.58, 32, 2));
+      setSpokenSentenceCount((prev) => prev + 1);
+
+      if (currentQuestion?.answer_jp) {
+        await scorePronunciation(wavBlob, currentQuestion.answer_jp);
+      }
+    } catch (error) {
+      console.error(error);
+      setPronStage("idle");
+      setPronError("녹음을 저장하지 못했습니다. 다시 시도해 주세요.");
+      setWaveformBars(makeWaveformBars(0.06));
+    }
+  };
+
+  const playRecordedPronunciation = async () => {
+    if (!recordedAudioUrl) {
+      setPronError("먼저 녹음을 완료해 주세요.");
+      return;
+    }
+
+    try {
+      setPronError("");
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      const audio = new Audio(recordedAudioUrl);
+      audioRef.current = audio;
+      audio.onended = () => setIsRecordedPlaying(false);
+      audio.onpause = () => setIsRecordedPlaying(false);
+      setIsRecordedPlaying(true);
+      await audio.play();
+    } catch (error) {
+      console.error(error);
+      setIsRecordedPlaying(false);
+      setPronError("내 녹음 재생을 지원하지 않는 브라우저입니다. Chrome 또는 Edge에서 다시 시도해 주세요.");
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      void stopRecordingInternal();
+      if (recordedAudioUrl) {
+        URL.revokeObjectURL(recordedAudioUrl);
+      }
+    };
+  }, [recordedAudioUrl]);
 
   useEffect(() => {
     const loadCsv = async () => {
@@ -351,26 +849,16 @@ export default function TalkPage() {
         audioRef.current.pause();
         audioRef.current = null;
       }
-      if (recordTimerRef.current) {
-        window.clearInterval(recordTimerRef.current);
-        recordTimerRef.current = null;
-      }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-        mediaStreamRef.current = null;
-      }
-      if (recordedAudioUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(recordedAudioUrl);
-      }
     };
-  }, [recordedAudioUrl]);
+  }, []);
 
   const isCorrect = submitted && selected === currentQuestion?.answer_jp;
   const isWrong = submitted && selected !== currentQuestion?.answer_jp;
   const isPro = userPlan === "PRO";
+  const isPronPerfect = pronChecked && (pronScore ?? 0) >= 100;
+  const showRewardCard = isPronPerfect && isCorrect;
+  const showPronOnlyNotice = rewardNoticeRequested && isPronPerfect && !isCorrect;
+  const showNeedPerfectNotice = rewardNoticeRequested && pronChecked && !isPronPerfect;
 
   const solvedCount = submitted ? currentIndex + 1 : currentIndex;
   const totalCount = questions.length || QUIZ_SET_SIZE;
@@ -444,17 +932,9 @@ export default function TalkPage() {
         setCoachError("");
         setCoachLoading(false);
         setCoachQuestion("");
-        setAudioError("");
+setAudioError("");
         setAudioLoadingKey("");
-        setPronStage("idle");
-        setPronChecked(false);
-        setPronScore(null);
-        setPronFeedback("");
-        setPronTranscript("");
-        setPronDuration("00:00");
-        setRecordedAudioUrl("");
-        setPronError("");
-        setRewardChecked(false);
+        resetPronunciationState();
         setReviewNotice("");
         setIsReviewing(false);
         setReviewPanelOpen(false);
@@ -535,105 +1015,21 @@ export default function TalkPage() {
     }
   };
 
-  const startPronRecording = async () => {
-    if (typeof window === "undefined") return;
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setPronError("이 브라우저에서는 녹음을 지원하지 않습니다.");
-      return;
-    }
-
-    try {
-      if (recordedAudioUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(recordedAudioUrl);
-      }
-
-      setPronError("");
-      setRewardChecked(false);
-      setPronChecked(false);
-      setPronScore(null);
-      setPronFeedback("");
-      setPronTranscript("");
-      setPronDuration("00:00");
-      setRecordedAudioUrl("");
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = mediaRecorder;
-      recordChunksRef.current = [];
-      recordSecondsRef.current = 0;
-      setPronStage("recording");
-      setPronDuration("00:00");
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          recordChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        if (recordTimerRef.current) {
-          window.clearInterval(recordTimerRef.current);
-          recordTimerRef.current = null;
-        }
-
-        const blob = new Blob(recordChunksRef.current, { type: mimeType });
-        if (blob.size > 0) {
-          const nextUrl = URL.createObjectURL(blob);
-          setRecordedAudioUrl(nextUrl);
-          setPronStage("recorded");
-          setPronDuration(formatSeconds(recordSecondsRef.current));
-        } else {
-          setPronStage("idle");
-          setPronError("녹음된 오디오를 찾지 못했습니다. 다시 시도해 주세요.");
-        }
-
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-          mediaStreamRef.current = null;
-        }
-      };
-
-      mediaRecorder.start();
-      recordTimerRef.current = window.setInterval(() => {
-        recordSecondsRef.current += 1;
-        setPronDuration(formatSeconds(recordSecondsRef.current));
-      }, 1000);
-    } catch (error) {
-      console.error(error);
-      setPronStage("idle");
-      setPronError("마이크 권한을 확인한 뒤 다시 시도해 주세요.");
-    }
-  };
-
-  const stopPronRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-    }
-  };
-
   const handlePronCheck = () => {
     if (!currentQuestion) return;
-    if (pronStage !== "recorded" || !recordedAudioUrl) {
-      setPronError("먼저 녹음한 뒤 점수를 확인해 주세요.");
+    if (!recordedAudioUrl) {
+      setPronError("먼저 녹음을 완료해 주세요.");
       return;
     }
-
-    const answer = currentQuestion.answer_jp || "";
-    const durationSec = Math.max(recordSecondsRef.current, 0);
-    const fakeScore = durationSec >= 2 ? 100 : 0;
-
-    setPronChecked(true);
-    setPronScore(fakeScore);
-    setPronTranscript(fakeTranscript(answer, fakeScore));
-    setPronFeedback(fakePronComment(fakeScore, answer));
-    setRewardChecked(true);
+    if (pronScoring) {
+      setPronError("점수 계산 중입니다. 잠시만 기다려 주세요.");
+      return;
+    }
+    if (!pronChecked) {
+      setPronError("점수 계산이 아직 완료되지 않았습니다.");
+      return;
+    }
     setPronError("");
-    setSpokenSentenceCount((prev) => prev + 1);
   };
 
   const handleAskCustomCoach = async () => {
@@ -715,17 +1111,9 @@ export default function TalkPage() {
     setCoachError("");
     setCoachLoading(false);
     setCoachQuestion("");
-    setAudioError("");
+setAudioError("");
     setAudioLoadingKey("");
-    setPronStage("idle");
-    setPronChecked(false);
-    setPronScore(null);
-    setPronFeedback("");
-    setPronTranscript("");
-    setPronDuration("00:00");
-    setRecordedAudioUrl("");
-    setPronError("");
-    setRewardChecked(false);
+    resetPronunciationState();
     setReviewNotice(
       reviewRows.length === 1
         ? "오답노트 복습 모드입니다."
@@ -767,7 +1155,7 @@ export default function TalkPage() {
       return;
     }
 
-    const picked = shuffleArray(pool).slice(0, Math.min(QUIZ_SET_SIZE, pool.length));
+    const picked: TalkCsvRow[] = shuffleArray(pool).slice(0, Math.min(QUIZ_SET_SIZE, pool.length));
 
     setQuestions(picked);
     setCurrentIndex(0);
@@ -780,17 +1168,9 @@ export default function TalkPage() {
     setCoachError("");
     setCoachLoading(false);
     setCoachQuestion("");
-    setAudioError("");
+setAudioError("");
     setAudioLoadingKey("");
-    setPronStage("idle");
-    setPronChecked(false);
-    setPronScore(null);
-    setPronFeedback("");
-    setPronTranscript("");
-    setPronDuration("00:00");
-    setRecordedAudioUrl("");
-    setPronError("");
-    setRewardChecked(false);
+    resetPronunciationState();
     setViewMode("quiz");
 
     await saveDailyState(
@@ -862,17 +1242,9 @@ export default function TalkPage() {
     setCoachError("");
     setCoachLoading(false);
     setCoachQuestion("");
-    setAudioError("");
+setAudioError("");
     setAudioLoadingKey("");
-    setPronStage("idle");
-    setPronChecked(false);
-    setPronScore(null);
-    setPronFeedback("");
-    setPronTranscript("");
-    setPronDuration("00:00");
-    setRecordedAudioUrl("");
-    setPronError("");
-    setRewardChecked(false);
+    resetPronunciationState();
     setIsReviewing(true);
     setReviewNotice(`복습중 · ${reviewModeLabel(reviewModeType)}`);
     setReviewPanelOpen(false);
@@ -929,18 +1301,11 @@ export default function TalkPage() {
     setCoachError("");
     setCoachLoading(false);
     setCoachQuestion("");
-    setAudioError("");
+setAudioError("");
     setAudioLoadingKey("");
-    setPronStage("idle");
-    setPronChecked(false);
-    setPronScore(null);
-    setPronFeedback("");
-    setPronTranscript("");
-    setPronDuration("00:00");
-    setRecordedAudioUrl("");
-    setPronError("");
-    setRewardChecked(false);
+    resetPronunciationState();
     setSubmitted(true);
+    playSfx(ok ? "correct" : "wrong");
 
     try {
       await pushRecentTurn(
@@ -1020,14 +1385,9 @@ export default function TalkPage() {
       setCoachError("");
       setCoachLoading(false);
       setCoachQuestion("");
-      setAudioError("");
-      setAudioLoadingKey("");
-      setPronStage("idle");
-      setPronChecked(false);
-      setPronScore(null);
-      setPronFeedback("");
-      setPronTranscript("");
-      setPronDuration("00:00");
+setAudioError("");
+    setAudioLoadingKey("");
+    resetPronunciationState();
 
       await saveDailyState(
         {
@@ -1047,15 +1407,27 @@ export default function TalkPage() {
   };
 
   const handleRewardComplete = async () => {
-    if (!rewardChecked) {
-      handlePronCheck();
+    setRewardNoticeRequested(true);
+    if (saving) return;
+    if (pronScoring) {
+      setPronError("점수 계산 중입니다. 잠시만 기다려 주세요.");
+      return;
+    }
+    if (!pronChecked) {
+      setPronError("먼저 녹음을 완료해 주세요.");
+      return;
+    }
+    if (!showRewardCard) {
+      if (showPronOnlyNotice) {
+        setPronError("발음은 100점이지만, 문제 선택이 오답이라 보상은 지급되지 않습니다. (정답/발음은 별개로 관리돼요.)");
+      } else if (showNeedPerfectNotice) {
+        setPronError("보상은 '녹음 + 100점'일 때만 받을 수 있어요. 지금 바로 녹음하고 100점을 만들어 보세요.");
+      }
       return;
     }
 
-    if (pronScore !== 100) {
-      return;
-    }
-
+    setPronError("");
+    playSfx("reward");
     await handleNext();
   };
 
@@ -1082,17 +1454,9 @@ export default function TalkPage() {
     setCoachError("");
     setCoachLoading(false);
     setCoachQuestion("");
-    setAudioError("");
+setAudioError("");
     setAudioLoadingKey("");
-    setPronStage("idle");
-    setPronChecked(false);
-    setPronScore(null);
-    setPronFeedback("");
-    setPronTranscript("");
-    setPronDuration("00:00");
-    setRecordedAudioUrl("");
-    setPronError("");
-    setRewardChecked(false);
+    resetPronunciationState();
     setReviewNotice("");
     setDailyStateLoaded(false);
     setIsReviewing(false);
@@ -1103,17 +1467,6 @@ export default function TalkPage() {
   const handleOpenWrongTalk = () => {
     window.location.href = "/mypage/wrong-talk";
   };
-
-  const rewardMessage = (() => {
-    if (!rewardChecked) return "";
-    if ((pronScore ?? 0) < 100) {
-      return "보상은 '녹음 + 100점'일 때만 받을 수 있어요. 지금 바로 다시 녹음해 100점을 만들어 보세요.";
-    }
-    if (!isCorrect) {
-      return "발음은 100점이지만, 문제 선택이 오답이라 보상은 지급되지 않습니다. (정답/발음은 별개로 관리돼요.)";
-    }
-    return "";
-  })();
 
   if (loading || !dailyStateLoaded) {
     return (
@@ -1154,14 +1507,14 @@ export default function TalkPage() {
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               onClick={handleRestart}
-              className="rounded-2xl bg-black px-5 py-3 text-white"
+              className="rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
             >
               다시 선택하기
             </button>
 
             <a
               href="/mypage/wrong-talk"
-              className="rounded-2xl border border-gray-300 px-5 py-3 text-gray-800"
+              className="rounded-2xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-800"
             >
               오답노트 보기
             </a>
@@ -1175,61 +1528,83 @@ export default function TalkPage() {
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto w-full max-w-3xl">
         <section className="mt-4">
-          <h1 className="text-4xl font-bold">일본어회화</h1>
+          <h1 className="text-3xl font-bold">일본어회화</h1>
           <p className="mt-3 text-base text-gray-600">
             1문제씩: 상황 → 상대 발화 → 보기 선택 → 제출 → 정답/설명
           </p>
 
-          <div className="mt-8 space-y-6 rounded-3xl border border-gray-200 bg-white p-6">
-            <div>
-              <label className="block text-base font-semibold text-gray-700">코스 선택</label>
-              <select
-                value={selectedStage}
-                onChange={(e) => handleStageChange(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3"
-              >
+          <div className="mt-6 space-y-4 rounded-3xl border border-gray-200 bg-gradient-to-b from-white to-gray-50/70 p-6 shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
+            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
+              <label className="block text-sm font-semibold tracking-[-0.01em] text-gray-700">코스 선택</label>
+              <div className="relative mt-2">
+                <select
+                  value={selectedStage}
+                  onChange={(e) => handleStageChange(e.target.value)}
+                  className="w-full appearance-none rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-11 text-base font-medium text-gray-900 shadow-sm outline-none transition focus:border-gray-300 focus:ring-4 focus:ring-gray-100"
+                >
                 {stageOptions.map((stage) => (
                   <option key={stage} value={stage}>
                     LV{stage}: 말문 트기
                   </option>
                 ))}
-              </select>
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-base font-semibold text-gray-700">유형 선택</label>
-              <select
-                value={selectedTag}
-                onChange={(e) => handleTagChange(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3"
-              >
+            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
+              <label className="block text-sm font-semibold tracking-[-0.01em] text-gray-700">유형 선택</label>
+              <div className="relative mt-2">
+                <select
+                  value={selectedTag}
+                  onChange={(e) => handleTagChange(e.target.value)}
+                  className="w-full appearance-none rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-11 text-base font-medium text-gray-900 shadow-sm outline-none transition focus:border-gray-300 focus:ring-4 focus:ring-gray-100"
+                >
                 {tagOptions.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
                   </option>
                 ))}
-              </select>
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-base font-semibold text-gray-700">상황 선택</label>
-              <select
-                value={selectedSub}
-                onChange={(e) => setSelectedSub(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3"
-              >
+            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
+              <label className="block text-sm font-semibold tracking-[-0.01em] text-gray-700">상황 선택</label>
+              <div className="relative mt-2">
+                <select
+                  value={selectedSub}
+                  onChange={(e) => setSelectedSub(e.target.value)}
+                  className="w-full appearance-none rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-11 text-base font-medium text-gray-900 shadow-sm outline-none transition focus:border-gray-300 focus:ring-4 focus:ring-gray-100"
+                >
                 <option value="전체">전체</option>
                 {subOptions.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
                   </option>
                 ))}
-              </select>
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              </div>
             </div>
 
             <button
+              type="button"
               onClick={makeQuizSet}
-              className="w-full rounded-2xl bg-black px-6 py-4 text-lg font-semibold text-white"
+              className="w-full rounded-[22px] bg-black px-6 py-4 text-lg font-semibold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] transition hover:translate-y-[-1px]"
             >
               시작하기
             </button>
@@ -1274,15 +1649,17 @@ export default function TalkPage() {
 
             <div className="grid grid-cols-1 gap-3">
               <button
+                type="button"
                 onClick={makeQuizSet}
-                className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold"
+                className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold"
               >
                 🔄 새 세트
               </button>
 
               <button
+                type="button"
                 onClick={() => setReviewPanelOpen((prev) => !prev)}
-                className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold"
+                className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold"
               >
                 📚 복습 {reviewPanelOpen ? "⌃" : "⌄"}
               </button>
@@ -1378,7 +1755,7 @@ export default function TalkPage() {
           ) : null}
         </section>
 
-        <section className="mt-8 rounded-3xl border border-gray-200 bg-white p-6">
+        <section className="mt-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-base text-gray-500">
             문항 진행: {questions.length > 0 ? currentIndex + 1 : 0}/{questions.length || QUIZ_SET_SIZE}
           </p>
@@ -1392,9 +1769,9 @@ export default function TalkPage() {
           <div className="mt-6">
             <div className="flex items-center justify-between">
               <p className="text-xl font-bold">상대(말)</p>
-              {currentQuestion?.partner_mp3 ? (
+              {currentQuestion?.partner_mp3 && !isPro ? (
                 <button
-                  className="rounded-xl border border-gray-300 px-3 py-2 text-sm"
+                  className="shrink-0 p-1 text-xl leading-none"
                   onClick={() =>
                     playAudio(
                       currentQuestion.partner_mp3,
@@ -1410,15 +1787,31 @@ export default function TalkPage() {
               ) : null}
             </div>
 
-            <div className="mt-4 rounded-2xl border border-gray-200 p-5">
-              <p className="text-lg">{currentQuestion?.partner_jp || "-"}</p>
-              <p className="mt-2 text-sm text-gray-500">
-                {currentQuestion?.partner_kr || "-"}
-              </p>
+            <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-5 min-h-[92px]">
+              {!isPro ? (
+                <p lang="ja" style={JA_FONT_STYLE} className="text-lg">{currentQuestion?.partner_jp || "-"}</p>
+              ) : currentQuestion?.partner_mp3 ? (
+                <div className="flex min-h-[52px] items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      playAudio(
+                        currentQuestion.partner_mp3,
+                        `partner-${currentQuestion.qid}`
+                      )
+                    }
+                    disabled={audioLoadingKey === `partner-${currentQuestion?.qid}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-base font-semibold text-gray-700 shadow-sm disabled:opacity-60"
+                  >
+                    <span className="text-lg leading-none">🔊</span>
+                    <span>{audioLoadingKey === `partner-${currentQuestion?.qid}` ? "재생 중..." : "먼저 듣기"}</span>
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-gray-200 p-5">
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
             <p className="text-lg font-semibold">내가 할 말(선택)</p>
 
             <div className="mt-4 space-y-3">
@@ -1446,10 +1839,11 @@ export default function TalkPage() {
                 return (
                   <button
                     key={choice}
+                    type="button"
                     onClick={() => handleSelect(choice)}
                     className={className}
                   >
-                    {choice}
+                    <span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
                   </button>
                 );
               })}
@@ -1457,6 +1851,7 @@ export default function TalkPage() {
 
             {!submitted ? (
               <button
+                type="button"
                 onClick={handleSubmit}
                 className="mt-6 w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
               >
@@ -1511,11 +1906,15 @@ export default function TalkPage() {
                 />
               </div>
 
-              <div className="mt-5 rounded-2xl border border-gray-200 p-4">
+              <p className="mt-4 text-sm text-gray-500">
+                상황: {currentQuestion?.situation_kr || "-"}
+              </p>
+
+              <div className="mt-4 rounded-2xl border border-gray-200 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-gray-800">
-                      상대(말) {currentQuestion?.partner_jp || "-"}
+                      상대(말) <span lang="ja" style={JA_FONT_STYLE}>{currentQuestion?.partner_jp || "-"}</span>
                     </p>
                     <p className="mt-1 text-sm text-gray-500">
                       {currentQuestion?.partner_kr || "-"}
@@ -1535,7 +1934,7 @@ export default function TalkPage() {
                         audioLoadingKey ===
                         `partner-dialog-${currentQuestion?.qid}`
                       }
-                      className="shrink-0 rounded-xl border border-gray-300 px-3 py-2 text-xs"
+                      className="shrink-0 p-1 text-xl leading-none"
                     >
                       {audioLoadingKey ===
                       `partner-dialog-${currentQuestion?.qid}`
@@ -1550,7 +1949,7 @@ export default function TalkPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-gray-800">
-                      내(말) {currentQuestion?.answer_jp || "-"}
+                      내(말) <span lang="ja" style={JA_FONT_STYLE}>{currentQuestion?.answer_jp || "-"}</span>
                     </p>
                     <p className="mt-1 text-sm text-gray-500">
                       {currentQuestion?.answer_kr || "-"}
@@ -1570,7 +1969,7 @@ export default function TalkPage() {
                         audioLoadingKey ===
                         `answer-dialog-${currentQuestion?.qid}`
                       }
-                      className="shrink-0 rounded-xl border border-gray-300 px-3 py-2 text-xs"
+                      className="shrink-0 p-1 text-xl leading-none"
                     >
                       {audioLoadingKey ===
                       `answer-dialog-${currentQuestion?.qid}`
@@ -1581,86 +1980,86 @@ export default function TalkPage() {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl bg-blue-50 p-4 text-sm text-blue-900">
+              <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
                 <p className="font-medium">하테나쌤 원포인트 일본어</p>
                 <p className="mt-2">{currentQuestion?.explain_kr || "-"}</p>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-red-300 bg-white p-4">
+              <div className="mt-5 overflow-hidden rounded-2xl border border-red-300 bg-white">
                 <button
                   type="button"
                   onClick={() => setCoachOpen((prev) => !prev)}
-                  className="flex w-full items-center gap-2 text-left text-lg font-medium text-gray-800"
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[15px] font-medium text-gray-700"
                 >
-                  <span className="text-sm">{coachOpen ? "⌄" : "›"}</span>
-                  <span>☺ 원포인트 일본어가 어려우면 하테나쌤에게 물어보세요</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{coachOpen ? "⌄" : "›"}</span>
+                    <span>🤖 원포인트 일본어가 어려우면 하테나쌤에게 물어보세요</span>
+                  </div>
                 </button>
 
                 {coachOpen ? (
-                  <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-4">
-                    <TitleImage
-                      src={TITLE_PATHS.coach}
-                      alt="하테나쌤 스마트 코치"
-                      fallback="하테나쌤 스마트 코치"
-                    />
+                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-5">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                      <TitleImage
+                        src={TITLE_PATHS.coach}
+                        alt="하테나쌤 스마트 코치"
+                        fallback="하테나쌤 스마트 코치"
+                      />
 
-                    {isPro ? (
-                      <>
-                        {!coachLoading && coachError ? (
-                          <p className="mt-3 text-sm text-red-500">{coachError}</p>
-                        ) : null}
-
-                        {!coachLoading && !coachError && coachAnswer ? (
-                          <div className="mt-3 whitespace-pre-line text-sm text-gray-700">
-                            {coachAnswer}
-                          </div>
-                        ) : null}
-
-                        {coachLoading ? (
-                          <p className="mt-3 text-sm text-gray-500">답변 중...</p>
-                        ) : null}
-
-                        <div className="mt-4">
+                      {isPro ? (
+                        <>
                           <textarea
                             value={coachQuestion}
                             onChange={(e) => setCoachQuestion(e.target.value)}
                             placeholder="예) 더 자연스러운 표현도 있어요?"
-                            className="w-full rounded-2xl border border-gray-300 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-black"
+                            className="mt-5 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                             rows={3}
                           />
                           <p className="mt-3 text-sm text-gray-500">
                             회화 표현·뉘앙스·자연스러움 위주 질문에 최적화되어 있어요.
                           </p>
+
+                          {!coachLoading && coachError ? (
+                            <p className="mt-3 text-sm text-red-500">{coachError}</p>
+                          ) : null}
+
+                          {!coachLoading && !coachError && coachAnswer ? (
+                            <div className="mt-4 whitespace-pre-line rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
+                              {coachAnswer}
+                            </div>
+                          ) : null}
+
+                          {coachLoading ? (
+                            <p className="mt-3 text-sm text-gray-500">답변 중...</p>
+                          ) : null}
+
                           <button
                             type="button"
                             onClick={handleAskCustomCoach}
                             disabled={coachLoading}
                             className="mt-4 w-full rounded-2xl border border-gray-300 px-4 py-3 text-base font-semibold"
                           >
-                            {coachLoading ? "질문 중..." : "AI 코칭 받기 시작"}
+                            {coachLoading ? "AI 코칭 받는 중..." : "AI 코칭 받기 시작"}
                           </button>
+                        </>
+                      ) : (
+                        <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
+                          AI 스마트코치는 PRO에서 이용할 수 있습니다.
                         </div>
-                      </>
-                    ) : (
-                      <div className="mt-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
-                        AI 스마트코치는 PRO에서 이용할 수 있습니다.
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 ) : null}
               </div>
             </div>
 
             <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <EmojiBox src={myEmojiUrl} size="small" />
-                  <TitleImage
-                    src={TITLE_PATHS.check}
-                    alt="발음체크"
-                    fallback="발음 체크"
-                  />
-                </div>
+              <div className="flex items-center justify-between gap-3">
+                <TitleImage
+                  src={TITLE_PATHS.check}
+                  alt="발음체크"
+                  fallback="발음체크"
+                />
                 <p className="text-sm font-semibold text-gray-500">
                   📘 진행: {currentIndex + 1}/{totalCount}
                 </p>
@@ -1681,7 +2080,7 @@ export default function TalkPage() {
                     !currentQuestion?.answer_mp3 ||
                     audioLoadingKey === `answer-pron-${currentQuestion?.qid}`
                   }
-                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold disabled:opacity-50"
+                  className="w-full rounded-2xl border border-gray-300 bg-white px-5 py-4 text-lg font-semibold disabled:opacity-50"
                 >
                   {audioLoadingKey === `answer-pron-${currentQuestion?.qid}`
                     ? "재생 중..."
@@ -1690,125 +2089,139 @@ export default function TalkPage() {
               </div>
 
               <div className="mt-6">
-                <p className="text-lg font-semibold">
-                  🎤 (선택) 내 발음을 녹음하고 들어보세요
-                </p>
+                <p className="text-lg font-semibold">🎤 (선택) 내 발음을 녹음하고 들어보세요</p>
 
-                <div className="mt-4 rounded-2xl bg-gray-50 p-5">
+                <div className="mt-4 rounded-[22px] bg-gray-100 px-4 py-4">
                   <div className="flex items-center gap-4 text-gray-500">
-                    <span className="text-xl">🎙️</span>
-                    <span className="text-lg">{pronStage === "recorded" ? "▶️" : "●"}</span>
-                    <Waveform active={pronStage !== "idle"} />
-                    <span className="text-lg">{pronDuration}</span>
+                    <button
+                      type="button"
+                      onClick={pronStage === "recording" ? stopPronRecording : startPronRecording}
+                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 ${pronStage === "recording" ? "ring-4 ring-red-100" : "hover:shadow-md"}`}
+                      aria-label={pronStage === "recording" ? "녹음 정지" : "녹음 시작"}
+                    >
+                      {pronStage === "recording" ? (
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] bg-gray-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                          <span className="h-3 w-3 rounded-[3px] bg-white/95" />
+                        </span>
+                      ) : (
+                        <span aria-label="녹음 시작" className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-400 bg-white">
+                          <span className="h-3.5 w-3.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.16)]" />
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={playRecordedPronunciation}
+                      disabled={!recordedAudioUrl}
+                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${isRecordedPlaying ? "ring-4 ring-gray-200 shadow-md" : "hover:shadow-md"}`}
+                      aria-label="내 녹음 재생"
+                    >
+                      <span className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${isRecordedPlaying ? "border-l-black" : "border-l-gray-700"}`} />
+                    </button>
+
+                    <div className="flex flex-1 items-center justify-center overflow-hidden">
+                      {waveformBars.some((bar) => bar > 0.12) ? (
+                        <div className="flex items-center gap-[3px]">
+                          {waveformBars.map((bar, idx) => (
+                            <span
+                              key={idx}
+                              className="w-[4px] rounded-full bg-gray-400 transition-all duration-100"
+                              style={{ height: `${Math.max(6, Math.round(bar * 42))}px` }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-[6px]">
+                          {Array.from({ length: 34 }).map((_, idx) => (
+                            <span key={idx} className="h-[6px] w-[6px] rounded-full bg-gray-300" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <span className="min-w-[72px] text-right text-[22px] font-medium tracking-[0.08em] text-gray-500">
+                      {pronDuration}
+                    </span>
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={startPronRecording}
-                    disabled={pronStage === "recording"}
-                    className="rounded-2xl border border-gray-300 px-4 py-3 text-base font-semibold disabled:opacity-50"
-                  >
-                    🎙️ 녹음 시작
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={stopPronRecording}
-                    disabled={pronStage !== "recording"}
-                    className="rounded-2xl border border-gray-300 px-4 py-3 text-base font-semibold disabled:opacity-50"
-                  >
-                    ⏹️ 녹음 끝내기
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      recordedAudioUrl
-                        ? playAudio(recordedAudioUrl, `recorded-${currentQuestion?.qid}`)
-                        : undefined
-                    }
-                    disabled={!recordedAudioUrl}
-                    className="rounded-2xl border border-gray-300 px-4 py-3 text-base font-semibold disabled:opacity-50"
-                  >
-                    ▶️ 내 녹음 듣기
-                  </button>
-                </div>
+                {pronError ? (
+                  <p className="mt-4 text-sm text-red-500">{pronError}</p>
+                ) : null}
               </div>
 
-              {pronError ? (
-                <p className="mt-4 text-sm text-red-500">{pronError}</p>
-              ) : null}
-            </div>
-
-            <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5">
-              <div className="flex items-center gap-3">
-                <EmojiBox src={myEmojiUrl} size="small" />
+              <div className="mt-8 border-t border-gray-100 pt-6">
                 <TitleImage
                   src={TITLE_PATHS.score}
                   alt="말하기 점수"
                   fallback="말하기 점수"
                 />
-              </div>
 
-              {pronChecked ? (
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <p className="text-base font-semibold text-gray-500">
-                      인식 결과(참고)
+                {pronScoring ? (
+                  <div className="mt-4">
+                    <p className="text-lg text-gray-600">점수 계산 중...</p>
+                  </div>
+                ) : pronChecked ? (
+                  <div className="mt-4 space-y-5">
+                    <div>
+                      <p className="text-base text-gray-500">인식 결과(참고)</p>
+                      <p className="mt-3 text-[32px] leading-tight text-gray-800">{pronTranscript || "-"}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-base text-gray-700">점수</p>
+                      <p className="mt-2 text-6xl font-bold leading-none text-gray-800">{pronScore ?? 0}</p>
+                    </div>
+
+                    {pronFeedback ? (
+                      <div className="whitespace-pre-line text-lg font-semibold text-red-500">
+                        {pronFeedback}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <p className="text-lg text-gray-600">
+                      정답을 보고 2~3번 따라 말해 보세요. 녹음이 끝나면 점수가 자동으로 계산됩니다.
                     </p>
-                    <p className="mt-3 text-2xl">{pronTranscript || "-"}</p>
                   </div>
+                )}
 
-                  <div>
-                    <p className="text-base font-semibold text-gray-700">점수</p>
-                    <p className="mt-2 text-5xl font-bold">{pronScore ?? 0}</p>
-                  </div>
 
-                  <div className="whitespace-pre-line text-lg font-semibold text-red-500">
-                    {pronFeedback}
-                  </div>
+                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={handleRewardComplete}
+                    className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
+                  >
+                    ✅ 다 했어요 (보상 받기)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSkipNext}
+                    className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
+                  >
+                    ➡️ 다음 문제로 (보상 없이)
+                  </button>
                 </div>
-              ) : (
-                <div className="mt-4 space-y-4">
-                  <p className="text-lg text-gray-600">
-                    정답을 보고 2~3번 따라 말해 보세요. 녹음을 마친 뒤 직접 점수를 확인할 수 있습니다.
-                  </p>
-                </div>
-              )}
 
-              <p className="mt-4 text-lg text-gray-600">
-                정답을 보고 2~3번 따라 말해 보세요. 녹음이 끝나면 점수가 자동으로 계산됩니다.
-              </p>
+                {showPronOnlyNotice ? (
+                  <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-[15px] font-medium text-yellow-800">
+                    발음은 100점이지만, 문제 선택이 오답이라 보상은 지급되지 않습니다. (정답/발음은 별개로 관리돼요.)
+                  </div>
+                ) : null}
 
-              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={handlePronCheck}
-                  className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
-                >
-                  ✅ 다 했어요 (보상 받기)
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSkipNext}
-                  disabled={saving}
-                  className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold disabled:opacity-60"
-                >
-                  ➡️ 다음 문제로 (보상 없이)
-                </button>
+                {showNeedPerfectNotice ? (
+                  <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-[15px] font-medium text-yellow-800">
+                    보상은 '녹음 + 100점'일 때만 받을 수 있어요. 지금 바로 녹음하고 100점을 만들어 보세요.
+                  </div>
+                ) : null}
               </div>
-
-              {rewardMessage ? (
-                <div className="mt-5 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-base font-medium text-yellow-800">
-                  {rewardMessage}
-                </div>
-              ) : null}
             </div>
 
-            {rewardChecked && isCorrect && pronScore === 100 ? (
+            {showRewardCard ? (
               <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5">
                 <TitleImage
                   src={TITLE_PATHS.reward}
@@ -1816,30 +2229,28 @@ export default function TalkPage() {
                   fallback="말하기 완료 보상"
                 />
 
-                <div className="mt-5 rounded-2xl bg-green-50 p-5 text-lg font-semibold text-green-700">
-                  +2 XP 🎤 (말하기 완료 보상)
+                <div className="mt-5 rounded-2xl bg-green-50 px-5 py-5 text-xl font-semibold text-green-700">
+                  +2 XP 🔊 (말하기 완료 보상)
                 </div>
 
-                <p className="mt-5 text-base text-gray-600">
+                <p className="mt-5 text-lg text-gray-500">
                   👇 아래 버튼을 누르면 다음 문제로 넘어갑니다.
                 </p>
 
-                <div className="mt-5">
-                  <button
-                    type="button"
-                    onClick={handleRewardComplete}
-                    disabled={saving}
-                    className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold disabled:opacity-60"
-                  >
-                    {saving ? "저장 중..." : "➡️ 다음 문제 풀기"}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleRewardComplete}
+                  disabled={saving}
+                  className="mt-5 w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold disabled:opacity-60"
+                >
+                  {saving ? "저장 중..." : "➡️ 다음 문제 풀기"}
+                </button>
               </div>
             ) : null}
           </section>
         ) : null}
 
-        {saveDone ? (
+        {!submitted && saveDone ? (
           <div className="mt-8">
             <p className="text-sm text-blue-600">결과 저장이 완료되었습니다.</p>
           </div>

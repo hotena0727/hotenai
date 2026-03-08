@@ -1,7 +1,15 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  getCurrentPushSubscription,
+  isPushSupported,
+  subscribePush,
+  syncExistingPushSubscription,
+  unsubscribePush,
+} from "@/lib/push";
 import {
   fetchAllAttempts,
   fetchRecentAttempts,
@@ -13,6 +21,7 @@ import {
   isWordAttempt,
   detectAppKind,
   getAppLabelFromPosMode,
+  getPrettyPosModeLabel,
 } from "@/lib/labels";
 
 type MyProfile = {
@@ -33,6 +42,13 @@ type DayStat = {
   word: number;
   kanji: number;
   talk: number;
+};
+
+type NoticeStatus = {
+  supported: boolean;
+  permission: "default" | "granted" | "denied" | "unknown";
+  subscribed: boolean;
+  serviceWorkerReady: boolean;
 };
 
 function calcAveragePercent(attempts: QuizAttemptRow[]): number {
@@ -61,6 +77,52 @@ function parseDate(value?: string): Date | null {
   if (!value) return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+
+function formatRelativeMessageTime(value?: string | null) {
+  const d = parseDate(value);
+  if (!d) return "방금 업데이트";
+
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (diffMin < 1) return "방금 도착";
+  if (diffMin < 60) return `${diffMin}분 전`;
+  if (diffMin < 1440) return `${Math.floor(diffMin / 60)}시간 전`;
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+
+  const sameYesterday =
+    d.getFullYear() === yesterday.getFullYear() &&
+    d.getMonth() === yesterday.getMonth() &&
+    d.getDate() === yesterday.getDate();
+
+  if (sameDay) {
+    return `오늘 ${d.toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  }
+
+  if (sameYesterday) {
+    return `어제 ${d.toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  }
+
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${d.toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
 }
 
 function buildLast7Days(attempts: QuizAttemptRow[]): DayStat[] {
@@ -150,6 +212,20 @@ function calcProgressPercent(thisWeekCount: number, target = 20) {
   return Math.min(100, Math.round((thisWeekCount / target) * 100));
 }
 
+function withFullIfMissing(posMode?: string): string {
+  const label = getPrettyPosModeLabel(posMode);
+  const parts = String(label || "")
+    .split("·")
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+  if (parts.length === 2) {
+    return `${parts[0]} · ${parts[1]} · 전체`;
+  }
+
+  return label;
+}
+
 export default function MyPage() {
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [recentAttempts, setRecentAttempts] = useState<QuizAttemptRow[]>([]);
@@ -163,6 +239,19 @@ export default function MyPage() {
   const [searchText, setSearchText] = useState("");
   const [repeatOnly, setRepeatOnly] = useState(false);
   const [wrongFilter, setWrongFilter] = useState<WrongFilterKey>("all");
+
+  const [noticeRefreshing, setNoticeRefreshing] = useState(false);
+  const [noticeEnabling, setNoticeEnabling] = useState(false);
+  const [noticeDisabling, setNoticeDisabling] = useState(false);
+  const [noticeTesting, setNoticeTesting] = useState(false);
+  const [noticeError, setNoticeError] = useState("");
+  const [noticeMessage, setNoticeMessage] = useState("");
+  const [noticeStatus, setNoticeStatus] = useState<NoticeStatus>({
+    supported: false,
+    permission: "unknown",
+    subscribed: false,
+    serviceWorkerReady: false,
+  });
 
   useEffect(() => {
     const loadMyPage = async () => {
@@ -231,6 +320,52 @@ export default function MyPage() {
     void loadMyPage();
   }, []);
 
+  const refreshNoticeStatus = async () => {
+    try {
+      setNoticeRefreshing(true);
+      setNoticeError("");
+
+      const supported = await isPushSupported();
+
+      if (!supported) {
+        setNoticeStatus({
+          supported: false,
+          permission: "unknown",
+          subscribed: false,
+          serviceWorkerReady: false,
+        });
+        return;
+      }
+
+      const permission =
+        typeof Notification !== "undefined"
+          ? (Notification.permission as "default" | "granted" | "denied")
+          : "unknown";
+
+      const sub = await getCurrentPushSubscription();
+
+      setNoticeStatus({
+        supported: true,
+        permission,
+        subscribed: !!sub,
+        serviceWorkerReady: true,
+      });
+
+      if (sub) {
+        await syncExistingPushSubscription();
+      }
+    } catch (error) {
+      console.error(error);
+      setNoticeError("알림 상태를 확인하지 못했습니다.");
+    } finally {
+      setNoticeRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshNoticeStatus();
+  }, []);
+
   const stats = useMemo(() => {
     const talkAttempts = allAttempts.filter((item) => isTalkAttempt(item.pos_mode));
     const wordAttempts = allAttempts.filter((item) => isWordAttempt(item.pos_mode));
@@ -278,12 +413,17 @@ export default function MyPage() {
       base = base.filter((item) => isTalkAttempt(item.pos_mode));
     }
 
+    if (repeatOnly) {
+      base = base.filter((item) => Number(item.wrong_count || 0) >= 3);
+    }
+
     const q = searchText.trim().toLowerCase();
     if (!q) return base;
 
     return base.filter((item) => {
       const joined = [
         item.pos_mode || "",
+        withFullIfMissing(item.pos_mode),
         item.level || "",
         String(item.score || ""),
         String(item.quiz_len || ""),
@@ -294,7 +434,92 @@ export default function MyPage() {
 
       return joined.includes(q);
     });
-  }, [recentAttempts, wrongFilter, searchText]);
+  }, [recentAttempts, wrongFilter, searchText, repeatOnly]);
+
+  const handleEnableNotice = async () => {
+    try {
+      setNoticeEnabling(true);
+      setNoticeError("");
+      setNoticeMessage("");
+
+      const result = await subscribePush();
+
+      if (!result.ok) {
+        setNoticeError(result.error);
+        await refreshNoticeStatus();
+        return;
+      }
+
+      setNoticeMessage(
+        result.mode === "new"
+          ? "알림이 이 브라우저에 연결되었습니다."
+          : "기존 알림 연결을 다시 확인했습니다."
+      );
+
+      await refreshNoticeStatus();
+    } catch (error) {
+      console.error("[mypage] handleEnableNotice error =", error);
+      setNoticeError("알림 연결에 실패했습니다.");
+    } finally {
+      setNoticeEnabling(false);
+    }
+  };
+
+  const handleDisableNotice = async () => {
+    try {
+      setNoticeDisabling(true);
+      setNoticeError("");
+      setNoticeMessage("");
+
+      const result = await unsubscribePush();
+
+      if (!result.ok) {
+        setNoticeError(result.error);
+        await refreshNoticeStatus();
+        return;
+      }
+
+      setNoticeMessage("이 브라우저의 알림 연결을 해제했습니다.");
+      await refreshNoticeStatus();
+    } catch (error) {
+      console.error(error);
+      setNoticeError("알림 구독 해제에 실패했습니다.");
+    } finally {
+      setNoticeDisabling(false);
+    }
+  };
+
+  const handleSendTestPush = async () => {
+    try {
+      setNoticeTesting(true);
+      setNoticeError("");
+      setNoticeMessage("");
+
+      const res = await fetch("/api/push-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "하테나 테스트",
+          body: "실제 웹 푸시 테스트입니다.",
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(String(data?.error || "테스트 푸시 발송 실패"));
+      }
+
+      setNoticeMessage(`테스트 푸시를 보냈습니다. (${data.successCount || 0}건)`);
+    } catch (error) {
+      console.error(error);
+      setNoticeError(
+        error instanceof Error ? error.message : "테스트 푸시 발송에 실패했습니다."
+      );
+    } finally {
+      setNoticeTesting(false);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -313,10 +538,105 @@ export default function MyPage() {
     window.location.href = "/mypage/wrong-talk";
   };
 
+  const todayMessageTitle =
+    stats.streak >= 5
+      ? "좋아요, 흐름이 이어지고 있어요"
+      : stats.totalAttempts === 0
+      ? "오늘의 첫 기록을 만들어볼까요?"
+      : "지금 페이스가 나쁘지 않아요";
+
+  const todayMessageBody =
+    stats.streak >= 5
+      ? `최근 ${stats.streak}일 연속으로 학습했어요. 오늘도 짧게라도 이어가면 흐름이 더 단단해집니다.`
+      : stats.totalAttempts === 0
+      ? "아직 저장된 학습 기록이 없어요. 회화나 단어를 한 세트만 해도 메시지가 달라지기 시작합니다."
+      : `지금까지 총 ${stats.totalAttempts}회 학습했고, 이번 주에는 ${stats.thisWeekCount}회 진행했어요. 오늘도 가볍게 한 세트 이어가 보세요.`;
+
+  const coachTipTitle =
+    stats.topWrongType === "회화"
+      ? "오늘의 코치 팁 · 회화"
+      : stats.topWrongType === "한자"
+      ? "오늘의 코치 팁 · 한자"
+      : stats.topWrongType === "단어"
+      ? "오늘의 코치 팁 · 단어"
+      : "오늘의 코치 팁";
+
+  const coachTipBody =
+    stats.topWrongType === "회화"
+      ? "오답이 많은 회화는 정답을 읽는 것보다 소리 내어 2~3번 따라 하는 쪽이 훨씬 오래 남습니다. 짧게라도 입으로 꺼내 보세요."
+      : stats.topWrongType === "한자"
+      ? "한자는 많이 보기보다 헷갈린 것만 다시 보는 편이 효율적입니다. 오늘은 오답노트에서 자주 틀린 것부터 정리해 보세요."
+      : stats.topWrongType === "단어"
+      ? "단어는 뜻만 보지 말고 짧은 문장 안에서 다시 만나야 기억이 오래 갑니다. 오늘은 오답 10개만 가볍게 복습해 보세요."
+      : "오늘의 학습 기록을 바탕으로, 가장 부담 없는 루틴부터 다시 이어가 보세요.";
+
+  const warmMessage =
+    stats.totalWrong === 0
+      ? "지금 흐름이 아주 좋습니다. 오늘은 유지하는 것만으로도 충분해요."
+      : stats.totalWrong <= 10
+      ? "조금 틀려도 괜찮아요. 기록은 흔들림이 아니라, 다시 올라가는 발판이 됩니다."
+      : "오답이 쌓였다는 건 그만큼 시도했다는 뜻이기도 해요. 오늘은 많이 말고, 한 번 더 보는 것에 집중해 봅시다.";
+
+  const latestAttemptAt = allAttempts[0]?.created_at || recentAttempts[0]?.created_at || null;
+  const secondAttemptAt = allAttempts[1]?.created_at || latestAttemptAt;
+  const thirdAttemptAt = allAttempts[2]?.created_at || secondAttemptAt;
+
+  const messageHistory = [
+    {
+      id: "today-message",
+      section: "오늘",
+      badge: "NEW",
+      title: todayMessageTitle,
+      body: todayMessageBody,
+      time: latestAttemptAt,
+    },
+    {
+      id: "warm-message",
+      section: "오늘",
+      badge: "",
+      title: "현재 학습 코멘트",
+      body: warmMessage,
+      time: secondAttemptAt,
+    },
+    {
+      id: "coach-message",
+      section: "최근",
+      badge: "",
+      title: coachTipTitle,
+      body: coachTipBody,
+      time: thirdAttemptAt,
+    },
+  ];
+
+  const groupedMessageHistory = messageHistory.reduce<Record<string, typeof messageHistory>>((acc, item) => {
+    if (!acc[item.section]) acc[item.section] = [];
+    acc[item.section].push(item);
+    return acc;
+  }, {});
+
+  const noticePermissionLabel =
+    noticeStatus.permission === "granted"
+      ? "허용됨"
+      : noticeStatus.permission === "denied"
+      ? "차단됨"
+      : noticeStatus.permission === "default"
+      ? "아직 미설정"
+      : "-";
+
+  const noticeSummary = !noticeStatus.supported
+    ? "이 브라우저에서는 푸시 알림을 지원하지 않습니다."
+    : noticeStatus.subscribed
+    ? "푸시 알림이 켜져 있습니다."
+    : noticeStatus.permission === "denied"
+    ? "브라우저에서 알림이 차단되어 있습니다."
+    : noticeStatus.permission === "granted"
+    ? "권한은 허용되어 있지만, 푸시 연결은 아직 꺼져 있습니다."
+    : "알림이 아직 설정되지 않았습니다.";
+
   if (loading) {
     return (
-      <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
-        <div className="mx-auto w-full max-w-5xl">
+      <main className="min-h-screen bg-white text-gray-900">
+        <div className="mx-auto max-w-3xl px-4 py-6">
           <p className="text-sm text-gray-600">불러오는 중...</p>
         </div>
       </main>
@@ -325,8 +645,8 @@ export default function MyPage() {
 
   if (errorMsg) {
     return (
-      <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
-        <div className="mx-auto w-full max-w-5xl">
+      <main className="min-h-screen bg-white text-gray-900">
+        <div className="mx-auto max-w-3xl px-4 py-6">
           <p className="text-sm text-red-500">{errorMsg}</p>
         </div>
       </main>
@@ -334,59 +654,22 @@ export default function MyPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="mt-4 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-medium">
-          ✨ {profile?.plan === "PRO" ? "PRO 이용 중입니다" : "FREE 이용 중입니다"}
-        </div>
-
+    <main className="min-h-screen bg-white text-gray-900">
+      <div className="mx-auto max-w-3xl px-4 py-6">
         <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-600">
-                  は
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold">하테나일본어 · 마이페이지</h1>
-                  <p className="mt-1 text-sm text-gray-500">
-                    핵심은 위에, 상세는 아래에서 빠르게 확인하세요.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <a
-                href="/"
-                className="rounded-2xl border border-gray-300 px-5 py-3 text-sm font-medium text-gray-800"
-              >
-                🏠 홈
-              </a>
-              <button
-                onClick={handleLogout}
-                className="rounded-2xl border border-gray-300 px-5 py-3 text-sm font-medium text-gray-800"
-              >
-                🚪 로그아웃
-              </button>
-            </div>
+          <div className="h-3 rounded-full bg-gray-100">
+            <div
+              className="h-3 rounded-full bg-blue-500"
+              style={{ width: `${stats.progressPercent}%` }}
+            />
           </div>
 
-          <div className="mt-6">
-            <div className="h-3 rounded-full bg-gray-100">
-              <div
-                className="h-3 rounded-full bg-blue-500"
-                style={{ width: `${stats.progressPercent}%` }}
-              />
+          <div className="mt-4 flex flex-wrap gap-3">
+            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+              이번 달 {stats.thisMonthCount}/20회
             </div>
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                이번 달 {stats.thisMonthCount}/20회
-              </div>
-              <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                {stats.progressPercent}% 진행
-              </div>
+            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+              {stats.progressPercent}% 진행
             </div>
           </div>
         </div>
@@ -481,6 +764,7 @@ export default function MyPage() {
         </div>
 
         <button
+          type="button"
           onClick={() => {
             setMainTab("wrong");
             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -493,6 +777,7 @@ export default function MyPage() {
         <div className="mt-8 border-b border-gray-200">
           <div className="flex flex-wrap gap-6">
             <button
+              type="button"
               onClick={() => setMainTab("wrong")}
               className={
                 mainTab === "wrong"
@@ -503,6 +788,7 @@ export default function MyPage() {
               📚 오답
             </button>
             <button
+              type="button"
               onClick={() => setMainTab("history")}
               className={
                 mainTab === "history"
@@ -513,6 +799,7 @@ export default function MyPage() {
               📈 기록
             </button>
             <button
+              type="button"
               onClick={() => setMainTab("message")}
               className={
                 mainTab === "message"
@@ -523,6 +810,7 @@ export default function MyPage() {
               💌 메시지
             </button>
             <button
+              type="button"
               onClick={() => setMainTab("notice")}
               className={
                 mainTab === "notice"
@@ -537,128 +825,115 @@ export default function MyPage() {
 
         {mainTab === "wrong" ? (
           <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
-            <h2 className="text-2xl font-bold">📚 오답</h2>
-            <p className="mt-2 text-sm text-gray-500">
-              앱 선택 + 검색 + 반복오답 토글 + 점검 목록.
-            </p>
-
-            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-gray-700">오답으로 시험보기</p>
-                <div className="mt-3 flex flex-wrap gap-5">
-                  <label className="flex items-center gap-2 text-base">
-                    <input
-                      type="radio"
-                      name="wrong-app"
-                      checked={wrongApp === "word"}
-                      onChange={() => setWrongApp("word")}
-                    />
-                    단어
-                  </label>
-                  <label className="flex items-center gap-2 text-base">
-                    <input
-                      type="radio"
-                      name="wrong-app"
-                      checked={wrongApp === "kanji"}
-                      onChange={() => setWrongApp("kanji")}
-                    />
-                    한자
-                  </label>
-                  <label className="flex items-center gap-2 text-base">
-                    <input
-                      type="radio"
-                      name="wrong-app"
-                      checked={wrongApp === "talk"}
-                      onChange={() => setWrongApp("talk")}
-                    />
-                    회화
-                  </label>
+                <h2 className="text-2xl font-bold">📚 오답</h2>
+                <p className="mt-2 text-sm text-gray-500">
+                  반복해서 틀린 문제부터 가볍게 정리해 보세요.
+                </p>
+              </div>
+              <div className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600">
+                최근 오답 {filteredRecent.length}개
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-3xl border border-gray-200 bg-gradient-to-b from-gray-50 to-white p-5">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">오답으로 시험보기</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {[
+                      { key: "word", label: "단어" },
+                      { key: "kanji", label: "한자" },
+                      { key: "talk", label: "회화" },
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setWrongApp(item.key as WrongAppKey)}
+                        className={
+                          wrongApp === item.key
+                            ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
+                            : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                        }
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">문항 수</p>
+                  <div className="relative mt-2">
+                    <select
+                      value={wrongCount}
+                      onChange={(e) => setWrongCount(e.target.value)}
+                      className="w-full appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-10 text-base font-medium text-gray-900"
+                    >
+                      <option value="10">10문제</option>
+                      <option value="20">20문제</option>
+                      <option value="30">30문제</option>
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
+                      ⌄
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <p className="text-sm font-semibold text-gray-700">문항 수</p>
-                <select
-                  value={wrongCount}
-                  onChange={(e) => setWrongCount(e.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3"
-                >
-                  <option value="10">10</option>
-                  <option value="20">20</option>
-                  <option value="30">30</option>
-                </select>
+              <button
+                type="button"
+                onClick={handleWrongExamStart}
+                className="mt-5 w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
+              >
+                📝 오답으로 시험보기
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">검색</label>
+                  <input
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3"
+                    placeholder="유형, 레벨, 점수로 검색하세요."
+                  />
+                </div>
+
+                <label className="inline-flex items-center gap-3 rounded-2xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={repeatOnly}
+                    onChange={(e) => setRepeatOnly(e.target.checked)}
+                  />
+                  🔥 반복 오답만 보기 (3회+)
+                </label>
               </div>
-            </div>
 
-            <button
-              onClick={handleWrongExamStart}
-              className="mt-5 w-full rounded-2xl border border-gray-300 bg-white px-5 py-4 text-lg font-semibold text-gray-800"
-            >
-              📝 오답으로 시험보기
-            </button>
-
-            <div className="mt-6">
-              <label className="text-sm font-semibold text-gray-700">
-                검색 (단어/뜻/발음)
-              </label>
-              <input
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3"
-                placeholder="검색어를 입력하세요."
-              />
-            </div>
-
-            <label className="mt-5 flex items-center gap-3 text-base font-semibold text-gray-700">
-              <input
-                type="checkbox"
-                checked={repeatOnly}
-                onChange={(e) => setRepeatOnly(e.target.checked)}
-              />
-              🔥 반복 오답만 보기 (3회+)
-            </label>
-
-            <div className="mt-5 grid grid-cols-4 gap-3">
-              <button
-                onClick={() => setWrongFilter("all")}
-                className={
-                  wrongFilter === "all"
-                    ? "rounded-2xl bg-red-500 px-4 py-3 text-base font-semibold text-white"
-                    : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-800"
-                }
-              >
-                전체
-              </button>
-              <button
-                onClick={() => setWrongFilter("word")}
-                className={
-                  wrongFilter === "word"
-                    ? "rounded-2xl bg-red-500 px-4 py-3 text-base font-semibold text-white"
-                    : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-800"
-                }
-              >
-                단어
-              </button>
-              <button
-                onClick={() => setWrongFilter("kanji")}
-                className={
-                  wrongFilter === "kanji"
-                    ? "rounded-2xl bg-red-500 px-4 py-3 text-base font-semibold text-white"
-                    : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-800"
-                }
-              >
-                한자
-              </button>
-              <button
-                onClick={() => setWrongFilter("talk")}
-                className={
-                  wrongFilter === "talk"
-                    ? "rounded-2xl bg-red-500 px-4 py-3 text-base font-semibold text-white"
-                    : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-800"
-                }
-              >
-                회화
-              </button>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {[
+                  { key: "all", label: "전체" },
+                  { key: "word", label: "단어" },
+                  { key: "kanji", label: "한자" },
+                  { key: "talk", label: "회화" },
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setWrongFilter(item.key as WrongFilterKey)}
+                    className={
+                      wrongFilter === item.key
+                        ? "rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
+                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800"
+                    }
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="mt-6 space-y-3">
@@ -670,32 +945,35 @@ export default function MyPage() {
                 filteredRecent.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-2xl border border-gray-200 p-5"
+                    className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-lg font-bold text-gray-900">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
                           {getAppLabelFromPosMode(item.pos_mode)}
+                        </div>
+                        <p className="mt-3 text-lg font-bold text-gray-900">
+                          {getPrettyPosModeLabel(item.pos_mode)}
                         </p>
-                        <p className="mt-1 text-sm text-gray-500">
-                          {item.pos_mode || "-"}
+                        <p className="mt-2 text-sm text-gray-600">
+                          {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
                         </p>
                       </div>
-                      <div className="text-right text-sm text-gray-500">
-                        <p>{item.level || "-"}</p>
-                        <p>{item.created_at ? new Date(item.created_at).toLocaleString("ko-KR") : "-"}</p>
-                      </div>
-                    </div>
 
-                    <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-                      <div className="rounded-xl bg-gray-50 p-3">
-                        점수 {Number(item.score || 0)} / {Number(item.quiz_len || 0)}
-                      </div>
-                      <div className="rounded-xl bg-gray-50 p-3">
-                        오답 {Number(item.wrong_count || 0)}
-                      </div>
-                      <div className="rounded-xl bg-gray-50 p-3">
-                        앱 {getAppLabelFromPosMode(item.pos_mode)}
+                      <div className="text-right text-sm text-gray-500">
+                        <p>
+                          {item.created_at
+                            ? new Date(item.created_at).toLocaleDateString("ko-KR")
+                            : "-"}
+                        </p>
+                        <p className="mt-1">
+                          {item.created_at
+                            ? new Date(item.created_at).toLocaleTimeString("ko-KR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "-"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -709,39 +987,197 @@ export default function MyPage() {
           <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
             <h2 className="text-2xl font-bold">📈 기록</h2>
             <p className="mt-3 text-sm text-gray-500">
-              최근 학습 기록을 더 자세히 보여주는 영역입니다.
+              최근 학습 흐름을 한눈에 확인해 보세요. 가장 최근에 저장된 결과부터 보여드립니다.
             </p>
 
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">최근 기록</p>
+                <p className="mt-2 text-2xl font-bold">{recentAttempts.length}개</p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">평균 점수</p>
+                <p className="mt-2 text-2xl font-bold">{calcAveragePercent(recentAttempts)}%</p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">가장 많이 한 학습</p>
+                <p className="mt-2 text-2xl font-bold">
+                  {getTopWrongType(recentAttempts) === "-" ? "-" : getTopWrongType(recentAttempts)}
+                </p>
+              </div>
+            </div>
+
             <div className="mt-6 space-y-3">
-              {recentAttempts.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-2xl border border-gray-200 p-4"
-                >
-                  <p className="text-sm font-medium text-gray-900">
-                    {item.pos_mode || "-"}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-600">
-                    레벨: {item.level || "-"}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-600">
-                    점수: {Number(item.score || 0)} / {Number(item.quiz_len || 0)}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-600">
-                    오답 수: {Number(item.wrong_count || 0)}
-                  </p>
+              {recentAttempts.length === 0 ? (
+                <div className="rounded-2xl border border-gray-200 p-5 text-sm text-gray-500">
+                  표시할 기록이 없습니다.
                 </div>
-              ))}
+              ) : (
+                recentAttempts.map((item) => {
+                  const kind = detectAppKind(item.pos_mode);
+                  const tone =
+                    kind === "talk"
+                      ? "border-purple-200 bg-purple-50 text-purple-700"
+                      : kind === "word"
+                      ? "border-blue-200 bg-blue-50 text-blue-700"
+                      : kind === "kanji"
+                      ? "border-green-200 bg-green-50 text-green-700"
+                      : "border-gray-200 bg-gray-50 text-gray-700";
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-gray-200 bg-white p-5"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${tone}`}>
+                            {getAppLabelFromPosMode(item.pos_mode)}
+                          </div>
+                          <p className="mt-3 text-base font-semibold text-gray-900">
+                            {withFullIfMissing(item.pos_mode)}
+                          </p>
+                          <p className="mt-2 text-sm text-gray-600">
+                            {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-right text-xs text-gray-500">
+                          {item.created_at ? new Date(item.created_at).toLocaleString("ko-KR") : "-"}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         ) : null}
 
         {mainTab === "message" ? (
-          <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
-            <h2 className="text-2xl font-bold">💌 메시지</h2>
-            <p className="mt-3 text-sm text-gray-500">
-              추후 학습 독려 메시지, 코치 피드백 등을 모아볼 영역입니다.
-            </p>
+          <div className="mt-6 space-y-4">
+            <div className="rounded-3xl border border-gray-200 bg-white p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-bold">💌 메시지</h2>
+                  <p className="mt-3 text-sm text-gray-500">
+                    오늘의 학습 흐름을 바탕으로, 짧고 따뜻한 메시지를 모아보았습니다.
+                  </p>
+                </div>
+                <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                  최신 업데이트 · {formatRelativeMessageTime(latestAttemptAt)}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-semibold text-blue-700">오늘의 한마디</p>
+                <div className="rounded-full border border-blue-200 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700">
+                  {formatRelativeMessageTime(latestAttemptAt)}
+                </div>
+              </div>
+              <p className="mt-3 text-2xl font-bold text-gray-900">{todayMessageTitle}</p>
+              <p className="mt-3 text-base leading-7 text-gray-700">{todayMessageBody}</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-3xl border border-gray-200 bg-white p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-semibold text-gray-500">현재 학습 코멘트</p>
+                  <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(secondAttemptAt)}</p>
+                </div>
+                <p className="mt-3 text-lg font-semibold text-gray-900">{warmMessage}</p>
+                <div className="mt-5 rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
+                  최근 7일 학습 {stats.last7.reduce((sum, day) => sum + (day.total > 0 ? 1 : 0), 0)}일 · 연속 학습 {stats.streak}일 · 이번 주 풀이 {stats.thisWeekCount}회
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-gray-200 bg-white p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-semibold text-gray-500">{coachTipTitle}</p>
+                  <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(thirdAttemptAt)}</p>
+                </div>
+                <p className="mt-3 text-lg font-semibold text-gray-900">오늘은 너무 넓게 말고, 하나만 정확히</p>
+                <p className="mt-3 text-base leading-7 text-gray-700">{coachTipBody}</p>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-gray-200 bg-white p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">메시지 기록</p>
+                  <p className="mt-2 text-sm text-gray-500">언제 받은 메시지인지 한눈에 구분할 수 있게 최근 흐름으로 정리했습니다.</p>
+                </div>
+                <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                  총 {messageHistory.length}개
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-5">
+                {Object.entries(groupedMessageHistory).map(([section, items]) => (
+                  <div key={section}>
+                    <div className="mb-3 flex items-center gap-2">
+                      <div className="h-px flex-1 bg-gray-200" />
+                      <p className="shrink-0 text-xs font-semibold tracking-wide text-gray-400">{section}</p>
+                      <div className="h-px flex-1 bg-gray-200" />
+                    </div>
+
+                    <div className="space-y-3">
+                      {items.map((item) => (
+                        <div key={item.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-gray-900">{item.title}</p>
+                              {item.badge ? (
+                                <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-500">
+                                  {item.badge}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(item.time)}</p>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-gray-600">{item.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-gray-200 bg-white p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">지금 추천하는 루틴</p>
+                  <p className="mt-2 text-sm text-gray-500">부담 없이 이어가기 좋은 루틴부터 시작해 보세요.</p>
+                </div>
+                <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                  {profile?.full_name ? `${profile.full_name}님 맞춤` : "오늘의 추천"}
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <a
+                  href={
+                    stats.topWrongType === "회화"
+                      ? "/mypage/wrong-talk"
+                      : stats.topWrongType === "한자"
+                      ? "/mypage/wrong-kanji"
+                      : "/mypage/wrong-word"
+                  }
+                  className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
+                >
+                  🔁 가장 많이 틀린 유형 복습
+                </a>
+                <a
+                  href="/talk"
+                  className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
+                >
+                  🗣️ 회화 1세트 이어가기
+                </a>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -749,12 +1185,89 @@ export default function MyPage() {
           <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
             <h2 className="text-2xl font-bold">🔔 알림</h2>
             <p className="mt-3 text-sm text-gray-500">
-              추후 공지, 업데이트, 학습 알림 등을 보여줄 영역입니다.
+              지금 이 브라우저에서 푸시 알림이 켜져 있는지 바로 확인할 수 있습니다.
             </p>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">브라우저 권한</p>
+                <p className="mt-2 text-xl font-bold">{noticePermissionLabel}</p>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">푸시 연결 상태</p>
+                <p className="mt-2 text-xl font-bold">
+                  {noticeStatus.subscribed ? "켜짐" : "꺼짐"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">서비스워커</p>
+                <p className="mt-2 text-xl font-bold">
+                  {noticeStatus.serviceWorkerReady ? "준비됨" : "미확인"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+              <p className="text-base font-semibold text-blue-900">{noticeSummary}</p>
+              <p className="mt-2 text-sm text-blue-800">
+                {noticeStatus.permission === "denied"
+                  ? "브라우저 설정에서 알림 권한을 다시 허용해야 합니다."
+                  : "권한과 푸시 연결 상태를 함께 기준으로 보여줍니다."}
+              </p>
+            </div>
+
+            {noticeError ? (
+              <p className="mt-4 text-sm text-red-500">{noticeError}</p>
+            ) : null}
+
+            {noticeMessage ? (
+              <p className="mt-4 text-sm text-green-600">{noticeMessage}</p>
+            ) : null}
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={handleEnableNotice}
+                disabled={noticeEnabling}
+                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
+              >
+                {noticeEnabling ? "알림 연결 중..." : "알림 켜기"}
+              </button>
+
+              <button
+                type="button"
+                onClick={refreshNoticeStatus}
+                disabled={noticeRefreshing}
+                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
+              >
+                {noticeRefreshing ? "상태 확인 중..." : "상태 새로고침"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDisableNotice}
+                disabled={noticeDisabling}
+                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
+              >
+                {noticeDisabling ? "해제 중..." : "알림 끄기"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSendTestPush}
+                disabled={noticeTesting}
+                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
+              >
+                {noticeTesting ? "테스트 발송 중..." : "테스트 알림 보내기"}
+              </button>
+            </div>
           </div>
         ) : null}
 
         <button
+          type="button"
           onClick={handleLogout}
           className="mt-8 w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
         >

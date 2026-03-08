@@ -1,8 +1,13 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchAttemptsByPrefix, type QuizAttemptRow } from "@/lib/attempts";
 import { supabase } from "@/lib/supabase";
+
+const JA_FONT_STYLE = {
+  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
+} as const;
 
 type KanjiWrongItem = {
   app: "kanji";
@@ -56,6 +61,41 @@ function qtypeLabel(qtype?: string): string {
   }
 }
 
+
+function WrongPageTabs({
+  current,
+}: {
+  current: "word" | "kanji" | "talk";
+}) {
+  const tabs = [
+    { key: "word", label: "단어 오답", href: "/mypage/wrong-word" },
+    { key: "kanji", label: "한자 오답", href: "/mypage/wrong-kanji" },
+    { key: "talk", label: "회화 오답", href: "/mypage/wrong-talk" },
+  ] as const;
+
+  return (
+    <div className="mt-5 flex flex-wrap gap-2">
+      {tabs.map((tab) => {
+        const active = current === tab.key;
+
+        return (
+          <a
+            key={tab.key}
+            href={tab.href}
+            className={
+              active
+                ? "rounded-full border border-gray-900 bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+            }
+          >
+            {tab.label}
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function WrongKanjiPage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
@@ -79,16 +119,15 @@ export default function WrongKanjiPage() {
 
         if (userError || !user) {
           setErrorMsg("로그인이 필요합니다.");
-          setLoading(false);
           return;
         }
 
         const rows = await fetchAttemptsByPrefix(user.id, "한자", 50);
         setAttempts(rows);
-        setLoading(false);
       } catch (error) {
         console.error(error);
         setErrorMsg("오답노트를 불러오지 못했습니다.");
+      } finally {
         setLoading(false);
       }
     };
@@ -207,8 +246,8 @@ export default function WrongKanjiPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-white px-6 py-10 text-gray-900">
-        <div className="mx-auto max-w-3xl">
+      <main className="min-h-screen bg-white text-gray-900">
+        <div className="mx-auto max-w-3xl px-4 py-6">
           <h1 className="text-3xl font-bold">한자 오답노트</h1>
           <p className="mt-4 text-gray-600">불러오는 중...</p>
         </div>
@@ -218,8 +257,8 @@ export default function WrongKanjiPage() {
 
   if (errorMsg) {
     return (
-      <main className="min-h-screen bg-white px-6 py-10 text-gray-900">
-        <div className="mx-auto max-w-3xl">
+      <main className="min-h-screen bg-white text-gray-900">
+        <div className="mx-auto max-w-3xl px-4 py-6">
           <h1 className="text-3xl font-bold">한자 오답노트</h1>
           <p className="mt-4 text-red-500">{errorMsg}</p>
         </div>
@@ -227,22 +266,42 @@ export default function WrongKanjiPage() {
     );
   }
 
+  const summaryCount = filteredItems.length;
+  const selectedCount = selectedKeys.length;
+
   return (
-    <main className="min-h-screen bg-white px-6 py-10 text-gray-900">
-      <div className="mx-auto max-w-3xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-bold">한자 오답노트</h1>
-            <p className="mt-2 text-sm text-gray-500">
-              최근 한자 훈련에서 틀린 문제들을 다시 복습합니다.
-            </p>
+    <main className="min-h-screen bg-white text-gray-900">
+      <div className="mx-auto max-w-3xl px-4 py-6">
+        <section className="mt-4">
+          <h1 className="text-3xl font-bold">한자 오답노트</h1>
+          <p className="mt-3 text-base text-gray-600">
+            헷갈렸던 한자를 다시 묶어, 오늘 복습 루틴으로 차분히 정리해보세요.
+          </p>
+          <WrongPageTabs current="kanji" />
+        </section>
+
+        <div className="mt-6 rounded-3xl border border-gray-200 bg-gradient-to-b from-white to-gray-50/70 p-5 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 font-semibold text-gray-700">
+              저장된 오답 {flattened.length}개
+            </span>
+            <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 font-semibold text-gray-700">
+              현재 필터 {summaryCount}개
+            </span>
+            <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 font-semibold text-gray-700">
+              선택 {selectedCount}개
+            </span>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <p className="mt-4 text-sm text-gray-600">
+            읽기와 뜻이 흔들린 한자만 골라 다시 복습할 수 있습니다.
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={startReviewSet}
-              className="rounded-2xl bg-black px-4 py-2 text-sm text-white"
+              className="rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
             >
               선택한 문제 복습하기
             </button>
@@ -250,7 +309,7 @@ export default function WrongKanjiPage() {
             <button
               type="button"
               onClick={selectAllVisible}
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
             >
               전체 선택
             </button>
@@ -258,7 +317,7 @@ export default function WrongKanjiPage() {
             <button
               type="button"
               onClick={clearAllVisible}
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
             >
               전체 해제
             </button>
@@ -271,104 +330,113 @@ export default function WrongKanjiPage() {
                 setSearchText("");
                 setSelectedKeys([]);
               }}
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
             >
               필터 초기화
             </button>
-
-            <a
-              href="/kanji"
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
-            >
-              한자로 돌아가기
-            </a>
-
             <a
               href="/mypage"
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
             >
               마이페이지
             </a>
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              문제 유형 필터
-            </label>
-            <select
-              value={selectedQType}
-              onChange={(e) => {
-                setSelectedQType(e.target.value);
-                setSelectedLevel("전체");
-                setSelectedKeys([]);
-              }}
-              className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm"
-            >
-              {qtypeOptions.map((item) => (
-                <option key={item} value={item}>
-                  {item === "전체" ? item : qtypeLabel(item)}
-                </option>
-              ))}
-            </select>
+            <p className="text-sm font-semibold text-gray-700">문제 유형</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {qtypeOptions.map((item) => {
+                const active = selectedQType === item;
+                const label = item === "전체" ? "전체" : qtypeLabel(item);
+
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setSelectedQType(item);
+                      setSelectedLevel("전체");
+                      setSelectedKeys([]);
+                    }}
+                    className={
+                      active
+                        ? "rounded-full border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
+                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+                    }
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              레벨 필터
-            </label>
-            <select
-              value={selectedLevel}
+          <div className="mt-5 border-t border-gray-100 pt-5">
+            <p className="text-sm font-semibold text-gray-700">레벨</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {levelOptions.map((item) => {
+                const active = selectedLevel === item;
+
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setSelectedLevel(item);
+                      setSelectedKeys([]);
+                    }}
+                    className={
+                      active
+                        ? "rounded-full border border-gray-900 bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+                    }
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-gray-100 pt-5">
+            <label className="block text-sm font-semibold text-gray-700">검색</label>
+            <input
+              type="text"
+              value={searchText}
               onChange={(e) => {
-                setSelectedLevel(e.target.value);
+                setSearchText(e.target.value);
                 setSelectedKeys([]);
               }}
-              className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm"
-            >
-              {levelOptions.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+              placeholder="단어, 읽기, 뜻, 내가 고른 답으로 검색"
+              className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-400"
+            />
           </div>
-        </div>
-
-        <div className="mt-3">
-          <label className="block text-sm font-medium text-gray-700">검색</label>
-          <input
-            type="text"
-            value={searchText}
-            onChange={(e) => {
-              setSearchText(e.target.value);
-              setSelectedKeys([]);
-            }}
-            placeholder="단어, 읽기, 뜻, 내가 고른 답으로 검색"
-            className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm"
-          />
         </div>
 
         {flattened.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-gray-200 p-6">
-            <p className="text-sm text-gray-600">저장된 한자 오답이 없습니다.</p>
+          <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <p className="text-lg font-semibold text-gray-900">좋아요. 저장된 한자 오답이 아직 없습니다.</p>
+            <p className="mt-2 text-sm text-gray-600">
+              한자 문제를 풀고 다시 오면, 헷갈린 문제들이 여기에 정리됩니다.
+            </p>
+            <a
+              href="/kanji"
+              className="mt-5 inline-flex rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
+            >
+              한자 훈련 하러 가기
+            </a>
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-gray-200 p-6">
-            <p className="text-sm text-gray-600">
-              현재 필터 조건에 맞는 오답이 없습니다.
+          <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <p className="text-lg font-semibold text-gray-900">현재 필터 조건에 맞는 오답이 없습니다.</p>
+            <p className="mt-2 text-sm text-gray-600">
+              레벨이나 문제 유형을 넓혀 다시 확인해보세요.
             </p>
           </div>
         ) : (
           <>
-            <div className="mt-8 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm text-gray-700">
-                총 <span className="font-semibold">{filteredItems.length}</span>개의 오답이 있습니다.
-              </p>
-              <p className="mt-2 text-sm text-gray-600">
-                현재 선택된 문제: {selectedKeys.length}개
-              </p>
-            </div>
 
             <div className="mt-6 space-y-4">
               {filteredItems.map((item, idx) => {
@@ -377,7 +445,7 @@ export default function WrongKanjiPage() {
                 return (
                   <div
                     key={`${item.attempt_id}-${item.item_key}-${idx}`}
-                    className="rounded-2xl border border-gray-200 bg-white p-5"
+                    className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
                   >
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -393,35 +461,32 @@ export default function WrongKanjiPage() {
                         href={`/kanji?review=1&qids=${encodeURIComponent(
                           item.item_key
                         )}&qtype=${encodeURIComponent(item.qtype)}&level=${encodeURIComponent(
-                          item.level
+                          item.level || ""
                         )}`}
-                        className="inline-flex rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+                        className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
                       >
-                        다시 풀기
+                        이 문제만 복습
                       </a>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                      <span>{item.pos_mode || "한자"}</span>
-                      <span>·</span>
-                      <span>{formatDate(item.created_at)}</span>
-                      {typeof item.score === "number" &&
-                      typeof item.quiz_len === "number" ? (
-                        <>
-                          <span>·</span>
-                          <span>
-                            점수 {item.score}/{item.quiz_len}
-                          </span>
-                        </>
-                      ) : null}
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                      <span className="rounded-full bg-gray-100 px-2 py-1">
+                        {qtypeLabel(item.qtype)}
+                      </span>
+                      <span className="rounded-full bg-gray-100 px-2 py-1">
+                        {item.level || "-"}
+                      </span>
+                      <span className="rounded-full bg-gray-100 px-2 py-1">
+                        {formatDate(item.created_at)}
+                      </span>
                     </div>
 
-                    <div className="mt-4 rounded-2xl border border-gray-200 p-4">
-                      <p className="text-sm font-medium text-gray-800">단어</p>
-                      <p className="mt-2 text-lg font-semibold text-gray-900">
+                    <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                      <p className="text-sm font-medium text-blue-800">문제 한자</p>
+                      <p className="mt-1 text-xl font-bold text-gray-900">
                         {item.jp_word || "-"}
                       </p>
-                      <p className="mt-1 text-sm text-gray-600">
+                      <p className="mt-2 text-sm text-gray-600">
                         읽기: {item.reading || "-"}
                       </p>
                       <p className="mt-1 text-sm text-gray-600">
@@ -431,22 +496,12 @@ export default function WrongKanjiPage() {
 
                     <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
                       <p className="text-sm font-medium text-red-700">내가 고른 답</p>
-                      <p className="mt-1 text-sm text-gray-800">
-                        {item.selected || "-"}
-                      </p>
+                      <p className="mt-1 text-sm text-gray-800">{item.selected || "-"}</p>
                     </div>
 
                     <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
                       <p className="text-sm font-medium text-green-700">정답</p>
-                      <p className="mt-1 text-sm text-gray-800">
-                        {item.correct || "-"}
-                      </p>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-500">
-                      <span>유형: {qtypeLabel(item.qtype)}</span>
-                      {item.level ? <span>레벨: {item.level}</span> : null}
-                      {item.pos ? <span>품사: {item.pos}</span> : null}
+                      <p className="mt-1 text-sm text-gray-800">{item.correct || "-"}</p>
                     </div>
                   </div>
                 );

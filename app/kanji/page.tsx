@@ -8,6 +8,10 @@ import { loadKanjiRows } from "@/lib/kanji-loader";
 import { buildKanjiQuiz } from "@/lib/kanji-quiz";
 import { buildKanjiAttemptPayload } from "@/lib/kanji-payload";
 
+const JA_FONT_STYLE = {
+  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
+} as const;
+
 const LEVEL_OPTIONS = ["N5", "N4", "N3", "N2", "N1"] as const;
 
 const QTYPE_OPTIONS: Array<{ value: KanjiQType; label: string }> = [
@@ -341,9 +345,9 @@ export default function KanjiPage() {
   return (
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto max-w-3xl">
-        <h1 className="mt-4 text-4xl font-bold">✨ 한자</h1>
+        <h1 className="mt-4 text-3xl font-bold">✨ 한자</h1>
 
-        <div className="mt-8">
+        <div className="mt-6">
           <p className="text-lg font-semibold text-gray-700">✨ 레벨을 선택하세요</p>
           <div className="mt-3 grid grid-cols-5 gap-3">
             {LEVEL_OPTIONS.map((level) => {
@@ -394,14 +398,14 @@ export default function KanjiPage() {
             <button
               type="button"
               onClick={makeNewQuiz}
-              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-800"
             >
               🔄 새문제(랜덤 10문항)
             </button>
             <button
               type="button"
               onClick={resetExcludedWords}
-              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-800"
             >
               맞힌 단어 제외 초기화
             </button>
@@ -433,7 +437,7 @@ export default function KanjiPage() {
         </div>
 
         {questions.length > 0 ? (
-          <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
+          <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             {audioError ? (
               <p className="mb-4 text-sm text-red-500">{audioError}</p>
             ) : null}
@@ -449,7 +453,7 @@ export default function KanjiPage() {
                   <div key={`${q.jp_word}-${idx}`}>
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-2xl font-semibold">
-                        {circleNumber(idx)} {q.prompt}
+                        {circleNumber(idx)} <span lang="ja" style={JA_FONT_STYLE}>{q.prompt}</span>
                       </p>
 
                       {q.qtype === "meaning" ? (
@@ -495,7 +499,7 @@ export default function KanjiPage() {
                                   : ""
                               }
                             >
-                              {choice}
+                              <span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
                             </span>
                           </label>
                         );
@@ -516,10 +520,10 @@ export default function KanjiPage() {
                           {isRight ? "정답입니다." : "오답입니다."}
                         </p>
                         <p className="mt-2 text-sm text-gray-700">
-                          정답: {correct}
+                          정답: <span lang="ja" style={JA_FONT_STYLE}>{correct}</span>
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
-                          단어: {q.jp_word} / 읽기: {q.reading} / 뜻: {q.meaning}
+                          단어: <span lang="ja" style={JA_FONT_STYLE}>{q.jp_word}</span> / 읽기: <span lang="ja" style={JA_FONT_STYLE}>{q.reading}</span> / 뜻: {q.meaning}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
                           레벨: {q.level} / 유형: {qtypeLabel(q.qtype)}

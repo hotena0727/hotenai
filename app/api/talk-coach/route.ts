@@ -20,7 +20,7 @@ function normalizeParagraphs(text: string): string {
         .map((line) => line.trim())
         .filter(Boolean)
         .join(" ")
-        .trim()
+        .trim(),
     )
     .filter(Boolean)
     .slice(0, 2);
@@ -28,7 +28,10 @@ function normalizeParagraphs(text: string): string {
   if (parts.length === 0) return fallbackMessage();
 
   const splitSentences = (s: string) => {
-    const chunks = s.split(/(?<=[。！？!?\.])\s+/).map((x) => x.trim()).filter(Boolean);
+    const chunks = s
+      .split(/(?<=[。！？!?\.])\s+/)
+      .map((x) => x.trim())
+      .filter(Boolean);
     return chunks.length ? chunks : [s];
   };
 
@@ -95,7 +98,7 @@ ${plan === "pro" ? "- 현재 사용자는 PRO 플랜 사용자다." : ""}
 `.trim();
 
     const response = await client.responses.create({
-      model: "gpt-5-mini",
+      model: process.env.OPENAI_MODEL_LOW || "gpt-4o-mini",
       input: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -109,8 +112,11 @@ ${plan === "pro" ? "- 현재 사용자는 PRO 플랜 사용자다." : ""}
   } catch (error) {
     console.error(error);
     return Response.json(
-      { answer: fallbackMessage(), error: "AI 코치 응답 생성 중 오류가 발생했습니다." },
-      { status: 200 }
+      {
+        answer: fallbackMessage(),
+        error: "AI 코치 응답 생성 중 오류가 발생했습니다.",
+      },
+      { status: 200 },
     );
   }
 }

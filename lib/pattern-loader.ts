@@ -97,4 +97,4 @@ export function filterPatternRows(
 
     return posOk && searchOk;
   });
-}d
+}

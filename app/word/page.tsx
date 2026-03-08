@@ -76,6 +76,10 @@ function circleNumber(index: number): string {
   return nums[index] || `${index + 1}.`;
 }
 
+const JA_FONT_STYLE = {
+  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
+} as const;
+
 export default function WordPage() {
   const [rows, setRows] = useState<WordRow[]>([]);
   const [patternRows, setPatternRows] = useState<PatternRow[]>([]);
@@ -438,9 +442,9 @@ export default function WordPage() {
   return (
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto max-w-3xl">
-        <h1 className="mt-4 text-4xl font-bold">✨ 단어</h1>
+        <h1 className="mt-4 text-3xl font-bold">✨ 단어</h1>
 
-        <div className="mt-8">
+        <div className="mt-6">
           <p className="text-lg font-semibold text-gray-700">✨ 품사를 선택하세요</p>
           <div className="mt-3 grid grid-cols-5 gap-3">
             {POS_GROUP_OPTIONS.map((item) => {
@@ -464,7 +468,7 @@ export default function WordPage() {
         </div>
 
         {selectedPosGroup === "other" ? (
-          <div className="mt-5 rounded-2xl border border-gray-300 bg-white">
+          <div className="mt-5 rounded-3xl border border-gray-200 bg-white shadow-sm">
             <button
               type="button"
               onClick={() => setOtherPanelOpen((prev) => !prev)}
@@ -587,14 +591,14 @@ export default function WordPage() {
             <button
               type="button"
               onClick={makeNewQuiz}
-              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-800"
             >
               🔄 새문제(랜덤 10문항)
             </button>
             <button
               type="button"
               onClick={resetExcludedWords}
-              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-800"
             >
               맞힌 단어 제외 초기화
             </button>
@@ -602,7 +606,7 @@ export default function WordPage() {
         </div>
 
         {questions.length > 0 ? (
-          <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
+          <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             {audioError ? (
               <p className="mb-4 text-sm text-red-500">{audioError}</p>
             ) : null}
@@ -618,7 +622,7 @@ export default function WordPage() {
                   <div key={`${q.jp_word}-${idx}`}>
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-2xl font-semibold">
-                        {circleNumber(idx)} {q.prompt}
+                        {circleNumber(idx)} <span lang="ja" style={JA_FONT_STYLE}>{q.prompt}</span>
                       </p>
 
                       {q.qtype === "meaning" ? (
@@ -664,7 +668,7 @@ export default function WordPage() {
                                   : ""
                               }
                             >
-                              {choice}
+                              <span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
                             </span>
                           </label>
                         );
@@ -771,13 +775,13 @@ export default function WordPage() {
                       <div className="mt-4 space-y-4">
                         {wrongItems.slice(0, 3).map((item, i) => (
                           <div
-                            key={`${item.question.jp_word}-${i}`}
+                            key={`$<span lang="ja" style={JA_FONT_STYLE}>{item.question.jp_word}</span>-${i}`}
                             className="rounded-3xl border border-gray-200 bg-white p-5"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <p className="text-2xl font-bold">
-                                  Q{item.index + 1}. {item.question.jp_word}
+                                  Q{item.index + 1}. <span lang="ja" style={JA_FONT_STYLE}>{item.question.jp_word}</span>
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
                                   {item.question.prompt} · 품사: {posLabel(item.question.pos)} ·
@@ -794,7 +798,7 @@ export default function WordPage() {
                                 <span className="font-semibold">내 답</span>　{item.selected}
                               </p>
                               <p>
-                                <span className="font-semibold">정답</span>　{item.question.correct_text}
+                                <span className="font-semibold">정답</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.question.correct_text}</span>
                               </p>
                               <p>
                                 <span className="font-semibold">발음</span>　{item.question.reading}

@@ -84,47 +84,45 @@ export default function AppTopNav() {
       : "py-5 text-center text-base font-semibold text-gray-500";
 
   return (
-    <>
-      <div className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-3xl px-4">
-          <nav className="grid grid-cols-5">
-            <a href="/" className={linkClass("home")}>
-              홈
-            </a>
-            <a href="/word" className={linkClass("word")}>
-              단어
-            </a>
-            <a href="/kanji" className={linkClass("kanji")}>
-              한자
-            </a>
-            <a href="/talk" className={linkClass("talk")}>
-              회화
-            </a>
-            <a href="/mypage" className={linkClass("mypage")}>
-              MY
-            </a>
-          </nav>
-        </div>
-      </div>
-
-      <div className="mx-auto mt-3 max-w-3xl px-4">
-        <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-base font-medium">
-          <span>
-            {profile.plan === "PRO" ? "✨ PRO 이용 중입니다" : "FREE 이용 중입니다"}
-          </span>
+    <div
+      className={
+        profile.plan === "PRO"
+          ? "border-b border-blue-100 bg-blue-50/60"
+          : "border-b border-gray-200 bg-white"
+      }
+    >
+      <div className="mx-auto max-w-3xl px-4">
+        <nav className="grid grid-cols-6 items-center">
+          <a href="/" className={linkClass("home")}>
+            홈
+          </a>
+          <a href="/word" className={linkClass("word")}>
+            단어
+          </a>
+          <a href="/kanji" className={linkClass("kanji")}>
+            한자
+          </a>
+          <a href="/talk" className={linkClass("talk")}>
+            회화
+          </a>
+          <a href="/mypage" className={linkClass("mypage")}>
+            MY
+          </a>
 
           {profile.is_admin ? (
             <a
               href="/admin"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-sm text-gray-700"
+              className="inline-flex h-8 w-8 items-center justify-center justify-self-center rounded-full bg-white/80 text-sm text-gray-600 transition hover:bg-white"
               aria-label="관리자"
               title="관리자"
             >
               ⚙️
             </a>
-          ) : null}
-        </div>
+          ) : (
+            <div />
+          )}
+        </nav>
       </div>
-    </>
+    </div>
   );
 }

@@ -1,9 +1,14 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchAttemptsByPrefix, type QuizAttemptRow } from "@/lib/attempts";
 import { supabase } from "@/lib/supabase";
 import type { TalkAttemptWrongItem } from "@/lib/talk-payload";
+
+const JA_FONT_STYLE = {
+  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
+} as const;
 
 type FlattenedWrongItem = TalkAttemptWrongItem & {
   attempt_id?: string;
@@ -31,6 +36,41 @@ function formatDate(value?: string): string {
   }
 }
 
+
+
+function WrongPageTabs({
+  current,
+}: {
+  current: "word" | "kanji" | "talk";
+}) {
+  const tabs = [
+    { key: "word", label: "단어 오답", href: "/mypage/wrong-word" },
+    { key: "kanji", label: "한자 오답", href: "/mypage/wrong-kanji" },
+    { key: "talk", label: "회화 오답", href: "/mypage/wrong-talk" },
+  ] as const;
+
+  return (
+    <div className="mt-5 flex flex-wrap gap-2">
+      {tabs.map((tab) => {
+        const active = current === tab.key;
+        return (
+          <a
+            key={tab.key}
+            href={tab.href}
+            className={
+              active
+                ? "rounded-full border border-gray-900 bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+            }
+          >
+            {tab.label}
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function WrongTalkPage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
@@ -54,7 +94,6 @@ export default function WrongTalkPage() {
 
         if (userError || !user) {
           setErrorMsg("로그인이 필요합니다.");
-          setLoading(false);
           return;
         }
 
@@ -138,6 +177,8 @@ export default function WrongTalkPage() {
         item.partner_kr || "",
         item.answer_kr || "",
         item.explain_kr || "",
+        item.tag_kr || "",
+        item.sub_kr || "",
       ]
         .join(" ")
         .toLowerCase();
@@ -176,8 +217,8 @@ export default function WrongTalkPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-white px-6 py-10 text-gray-900">
-        <div className="mx-auto max-w-3xl">
+      <main className="min-h-screen bg-white text-gray-900">
+        <div className="mx-auto max-w-3xl px-4 py-6">
           <h1 className="text-3xl font-bold">회화 오답노트</h1>
           <p className="mt-4 text-gray-600">불러오는 중...</p>
         </div>
@@ -187,8 +228,8 @@ export default function WrongTalkPage() {
 
   if (errorMsg) {
     return (
-      <main className="min-h-screen bg-white px-6 py-10 text-gray-900">
-        <div className="mx-auto max-w-3xl">
+      <main className="min-h-screen bg-white text-gray-900">
+        <div className="mx-auto max-w-3xl px-4 py-6">
           <h1 className="text-3xl font-bold">회화 오답노트</h1>
           <p className="mt-4 text-red-500">{errorMsg}</p>
         </div>
@@ -196,22 +237,42 @@ export default function WrongTalkPage() {
     );
   }
 
+  const summaryCount = filteredItems.length;
+  const selectedCount = selectedQids.length;
+
   return (
-    <main className="min-h-screen bg-white px-6 py-10 text-gray-900">
-      <div className="mx-auto max-w-3xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-bold">회화 오답노트</h1>
-            <p className="mt-2 text-sm text-gray-500">
-              최근 회화 세트에서 틀린 문장들을 다시 복습합니다.
-            </p>
+    <main className="min-h-screen bg-white text-gray-900">
+      <div className="mx-auto max-w-3xl px-4 py-6">
+        <section className="mt-4">
+          <h1 className="text-3xl font-bold">회화 오답노트</h1>
+          <p className="mt-3 text-base text-gray-600">
+            막혔던 대화문만 모아 다시 복습하고, 말문을 자연스럽게 이어가세요.
+          </p>
+          <WrongPageTabs current="talk" />
+        </section>
+
+        <div className="mt-6 rounded-3xl border border-gray-200 bg-gradient-to-b from-white to-gray-50/70 p-5 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 font-semibold text-gray-700">
+              저장된 오답 {flattened.length}개
+            </span>
+            <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 font-semibold text-gray-700">
+              현재 필터 {summaryCount}개
+            </span>
+            <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 font-semibold text-gray-700">
+              선택 {selectedCount}개
+            </span>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <p className="mt-4 text-sm text-gray-600">
+            상황과 표현을 기준으로 묶어, 필요한 회화 오답만 바로 다시 볼 수 있습니다.
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={startReviewSet}
-              className="rounded-2xl bg-black px-4 py-2 text-sm text-white"
+              className="rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
             >
               선택한 문제 복습하기
             </button>
@@ -219,7 +280,7 @@ export default function WrongTalkPage() {
             <button
               type="button"
               onClick={selectAllVisible}
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
             >
               전체 선택
             </button>
@@ -227,7 +288,7 @@ export default function WrongTalkPage() {
             <button
               type="button"
               onClick={clearAllVisible}
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
             >
               전체 해제
             </button>
@@ -240,110 +301,119 @@ export default function WrongTalkPage() {
                 setSearchText("");
                 setSelectedQids([]);
               }}
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
             >
               필터 초기화
             </button>
 
             <a
-              href="/talk"
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
-            >
-              회화로 돌아가기
-            </a>
-
-            <a
               href="/mypage"
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
             >
               마이페이지
             </a>
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              유형 필터
-            </label>
-            <select
-              value={selectedTag}
-              onChange={(e) => {
-                setSelectedTag(e.target.value);
-                setSelectedSub("전체");
-                setSelectedQids([]);
-              }}
-              className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm"
-            >
-              {tagOptions.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+            <p className="text-sm font-semibold text-gray-700">유형</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {tagOptions.map((item) => {
+                const active = selectedTag === item;
+
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTag(item);
+                      setSelectedSub("전체");
+                      setSelectedQids([]);
+                    }}
+                    className={
+                      active
+                        ? "rounded-full border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
+                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+                    }
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              상황 필터
-            </label>
-            <select
-              value={selectedSub}
+          <div className="mt-5 border-t border-gray-100 pt-5">
+            <p className="text-sm font-semibold text-gray-700">상황</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {subOptions.map((item) => {
+                const active = selectedSub === item;
+
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSub(item);
+                      setSelectedQids([]);
+                    }}
+                    className={
+                      active
+                        ? "rounded-full border border-gray-900 bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+                    }
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-gray-100 pt-5">
+            <label className="block text-sm font-semibold text-gray-700">검색</label>
+            <input
+              type="text"
+              value={searchText}
               onChange={(e) => {
-                setSelectedSub(e.target.value);
+                setSearchText(e.target.value);
                 setSelectedQids([]);
               }}
-              className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm"
-            >
-              {subOptions.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+              placeholder="상황, 상대(말), 정답, 내가 고른 답으로 검색"
+              className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-400"
+            />
           </div>
-        </div>
-
-        <div className="mt-3">
-          <label className="block text-sm font-medium text-gray-700">검색</label>
-          <input
-            type="text"
-            value={searchText}
-            onChange={(e) => {
-              setSearchText(e.target.value);
-              setSelectedQids([]);
-            }}
-            placeholder="상황, 상대(말), 정답, 내가 고른 답으로 검색"
-            className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm"
-          />
         </div>
 
         {flattened.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-gray-200 p-6">
-            <p className="text-sm text-gray-600">저장된 회화 오답이 없습니다.</p>
+          <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <p className="text-lg font-semibold text-gray-900">좋아요. 저장된 회화 오답이 아직 없습니다.</p>
+            <p className="mt-2 text-sm text-gray-600">
+              회화 세트를 풀고 다시 오면, 막혔던 문장들이 여기에 정리됩니다.
+            </p>
+            <a
+              href="/talk"
+              className="mt-5 inline-flex rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
+            >
+              회화 훈련 하러 가기
+            </a>
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-gray-200 p-6">
-            <p className="text-sm text-gray-600">
-              현재 필터 조건에 맞는 오답이 없습니다.
+          <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <p className="text-lg font-semibold text-gray-900">현재 필터 조건에 맞는 오답이 없습니다.</p>
+            <p className="mt-2 text-sm text-gray-600">
+              유형이나 상황을 넓혀 다시 확인해보세요.
             </p>
           </div>
         ) : (
           <>
-            <div className="mt-8 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm text-gray-700">
-                총 <span className="font-semibold">{filteredItems.length}</span>개의 오답이 있습니다.
-              </p>
-              <p className="mt-2 text-sm text-gray-600">
-                현재 선택된 문제: {selectedQids.length}개
-              </p>
-            </div>
 
             <div className="mt-6 space-y-4">
               {filteredItems.map((item, idx) => (
                 <div
                   key={`${item.attempt_id}-${item.qid}-${idx}`}
-                  className="rounded-2xl border border-gray-200 bg-white p-5"
+                  className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -356,75 +426,57 @@ export default function WrongTalkPage() {
                     </label>
 
                     <a
-                      href={`/talk?qid=${encodeURIComponent(item.qid)}&review=1`}
-                      className="inline-flex rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+                      href={`/talk?review=1&qids=${encodeURIComponent(item.qid)}`}
+                      className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
                     >
-                      다시 풀기
+                      이 문제만 복습
                     </a>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                    <span>{item.pos_mode || "회화"}</span>
-                    <span>·</span>
-                    <span>{formatDate(item.created_at)}</span>
-                    {typeof item.score === "number" &&
-                    typeof item.quiz_len === "number" ? (
-                      <>
-                        <span>·</span>
-                        <span>
-                          점수 {item.score}/{item.quiz_len}
-                        </span>
-                      </>
+                  <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                    {item.tag_kr ? (
+                      <span className="rounded-full bg-gray-100 px-2 py-1">{item.tag_kr}</span>
                     ) : null}
+                    {item.sub_kr ? (
+                      <span className="rounded-full bg-gray-100 px-2 py-1">{item.sub_kr}</span>
+                    ) : null}
+                    <span className="rounded-full bg-gray-100 px-2 py-1">
+                      {formatDate(item.created_at)}
+                    </span>
                   </div>
 
-                  <div className="mt-4">
-                    <p className="text-sm font-semibold text-gray-800">상황</p>
-                    <p className="mt-2 text-sm text-gray-700">
-                      {item.situation_kr || "-"}
-                    </p>
-                  </div>
+                  {item.situation_kr ? (
+                    <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                      <p className="text-sm font-medium text-blue-800">상황</p>
+                      <p className="mt-1 text-sm text-gray-900">{item.situation_kr}</p>
+                    </div>
+                  ) : null}
 
-                  <div className="mt-4 rounded-2xl border border-gray-200 p-4">
-                    <p className="text-sm font-medium text-gray-800">
-                      상대(말) {item.partner_jp || "-"}
-                    </p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {item.partner_kr || "-"}
-                    </p>
+                  <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                    <p className="text-sm font-medium text-gray-700">상대(말)</p>
+                    <p className="mt-1 text-sm text-gray-800"><span lang="ja" style={JA_FONT_STYLE}>{item.partner_jp || "-"}</span></p>
+                    <p className="mt-1 text-sm text-gray-500">{item.partner_kr || "-"}</p>
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
                     <p className="text-sm font-medium text-red-700">내가 고른 답</p>
-                    <p className="mt-1 text-sm text-gray-800">
-                      {item.selected || "-"}
-                    </p>
+                    <p className="mt-1 text-sm text-gray-800"><span lang="ja" style={JA_FONT_STYLE}>{item.selected || "-"}</span></p>
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
                     <p className="text-sm font-medium text-green-700">정답</p>
-                    <p className="mt-1 text-sm text-gray-800">
-                      {item.answer_jp || item.correct || "-"}
-                    </p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {item.answer_kr || "-"}
-                    </p>
+                    <p className="mt-1 text-sm text-gray-800"><span lang="ja" style={JA_FONT_STYLE}>{item.answer_jp || item.correct || "-"}</span></p>
+                    <p className="mt-1 text-sm text-gray-500">{item.answer_kr || "-"}</p>
                   </div>
 
-                  <div className="mt-3 rounded-2xl bg-blue-50 p-4">
-                    <p className="text-sm font-medium text-blue-900">
-                      하테나쌤 원포인트 일본어
-                    </p>
-                    <p className="mt-2 text-sm text-blue-900">
-                      {item.explain_kr || "-"}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-500">
-                    {item.tag_kr ? <span>유형: {item.tag_kr}</span> : null}
-                    {item.sub_kr ? <span>상황: {item.sub_kr}</span> : null}
-                    {item.stage ? <span>코스: LV{item.stage}</span> : null}
-                  </div>
+                  {item.explain_kr ? (
+                    <div className="mt-3 rounded-2xl bg-blue-50 p-4">
+                      <p className="text-sm font-medium text-blue-900">
+                        하테나쌤 원포인트 일본어
+                      </p>
+                      <p className="mt-2 text-sm text-blue-900">{item.explain_kr}</p>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
