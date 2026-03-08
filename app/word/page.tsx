@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { saveQuizAttempt } from "@/lib/attempts";
-import type { WordQType, WordQuestion, WordRow } from "@/types/word";
+import type { WordQType, WordQuestion, WordRow } from "@/app/types/word";
 import { loadWordRows } from "@/lib/word-loader";
 import { buildWordQuiz } from "@/lib/word-quiz";
 import { buildWordAttemptPayload } from "@/lib/word-payload";
 import { loadPatternRows, filterPatternRows } from "@/lib/pattern-loader";
-import type { PatternRow } from "@/types/pattern";
+import type { PatternRow } from "@/app/types/pattern";
 
 const POS_GROUP_OPTIONS = [
   { value: "noun", label: "명사" },
