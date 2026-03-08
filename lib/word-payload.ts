@@ -1,4 +1,4 @@
-import type { WordQuestion, WordWrongItem, WordAttemptPayload } from "@/types/word";
+import type { WordQuestion, WordWrongItem, WordAttemptPayload } from "@/app/types/word";
 
 type RawWrongItem = {
   jp_word: string;

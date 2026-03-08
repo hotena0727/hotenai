@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import type { KanjiRow } from "@/types/kanji";
+import type { KanjiRow } from "@/app/types/kanji";
 
 function normalizeLevel(raw: string): string {
   const s = String(raw || "").trim().toUpperCase().replace(/\s+/g, "");

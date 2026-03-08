@@ -1,4 +1,4 @@
-import type { WordQType, WordQuestion, WordRow } from "@/types/word";
+import type { WordQType, WordQuestion, WordRow } from "@/app/types/word";
 
 const QUIZ_SET_SIZE = 10;
 

@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import type { WordRow } from "@/types/word";
+import type { WordRow } from "@/app/types/word";
 
 function normalizeLevel(raw: string): string {
   const s = String(raw || "").trim().toUpperCase().replace(/\s+/g, "");

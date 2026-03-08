@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import type { SubOption, TagOption, TalkCsvRow } from "@/types/talk";
+import type { SubOption, TagOption, TalkCsvRow } from "@/app/types/talk";
 
 function clean(value: unknown): string {
   return String(value ?? "").trim();

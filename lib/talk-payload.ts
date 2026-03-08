@@ -1,4 +1,4 @@
-import type { TalkCsvRow, TalkWrongItem } from "@/types/talk";
+import type { TalkCsvRow, TalkWrongItem } from "@/app/types/talk";
 
 export type TalkAttemptWrongItem = {
   app: "talk";

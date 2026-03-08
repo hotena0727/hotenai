@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import type { PatternOption, PatternRow } from "@/types/pattern";
+import type { PatternOption, PatternRow } from "@/app/types/pattern";
 
 function clean(value: unknown): string {
   return String(value ?? "").trim();

@@ -2,7 +2,7 @@ import type {
   KanjiAttemptPayload,
   KanjiQuestion,
   KanjiWrongItem,
-} from "@/types/kanji";
+} from "@/app/types/kanji";
 
 type RawWrongItem = {
   jp_word: string;

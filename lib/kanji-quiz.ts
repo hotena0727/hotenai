@@ -1,4 +1,4 @@
-import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/types/kanji";
+import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/app/types/kanji";
 
 const QUIZ_SET_SIZE = 10;
 
