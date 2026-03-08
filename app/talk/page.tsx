@@ -274,7 +274,7 @@ function playSfx(kind: "correct" | "wrong" | "reward") {
       activeSfxAudio = audio;
       audio.preload = "auto";
       audio.volume = 1;
-      audio.playsInline = true;
+      (audio as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
       audio.onended = () => {
         if (activeSfxAudio === audio) activeSfxAudio = null;
       };
