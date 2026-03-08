@@ -27,10 +27,16 @@ import {
   getTagOptions,
   loadTalkRows,
 } from "@/lib/talk-loader";
+import {
+  consumeTalkFeatureUsage,
+  fetchTalkFeatureUsage,
+} from "@/lib/talk-usage";
 
 const QUIZ_SET_SIZE = 10;
 const BASE_AUDIO_URL = "https://hotena.com/hotena/app/mp3/";
 const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx/";
+const DAILY_TALK_LISTEN_LIMIT = 3;
+const DAILY_TALK_RECORD_LIMIT = 3;
 let activeSfxAudio: HTMLAudioElement | null = null;
 
 type ReviewModeType = "wrong" | "random" | "old" | "mixed";
@@ -345,6 +351,9 @@ export default function TalkPage() {
   const [coachOpen, setCoachOpen] = useState(false);
 
   const [userPlan, setUserPlan] = useState("FREE");
+  const [listenUsed, setListenUsed] = useState(0);
+  const [recordUsed, setRecordUsed] = useState(0);
+  const [quotaMessage, setQuotaMessage] = useState("");
 
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
@@ -486,6 +495,26 @@ export default function TalkPage() {
       if (!navigator.mediaDevices?.getUserMedia) {
         setPronError("이 브라우저에서는 녹음 기능을 지원하지 않습니다.");
         return;
+      }
+
+      if (userPlan !== "PRO") {
+        const usage = await consumeTalkFeatureUsage(
+          "talk_record",
+          DAILY_TALK_RECORD_LIMIT
+        );
+        if (usage.ok) {
+          setRecordUsed(Number(usage.used || 0));
+          setQuotaMessage("");
+        } else {
+          setRecordUsed(Number(usage.used || DAILY_TALK_RECORD_LIMIT));
+          setQuotaMessage(
+            "오늘 FREE 녹음 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있어요."
+          );
+          setPronError(
+            "오늘 FREE 녹음 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있어요."
+          );
+          return;
+        }
       }
 
       await stopRecordingInternal();
@@ -792,6 +821,36 @@ export default function TalkPage() {
     void loadCsv();
   }, []);
 
+
+  useEffect(() => {
+    const loadTalkQuota = async () => {
+      try {
+        if (userPlan === "PRO") {
+          setListenUsed(0);
+          setRecordUsed(0);
+          setQuotaMessage("");
+          return;
+        }
+
+        const [listenStatus, recordStatus] = await Promise.all([
+          fetchTalkFeatureUsage("talk_listen", DAILY_TALK_LISTEN_LIMIT),
+          fetchTalkFeatureUsage("talk_record", DAILY_TALK_RECORD_LIMIT),
+        ]);
+
+        if (listenStatus.ok) {
+          setListenUsed(Number(listenStatus.used || 0));
+        }
+        if (recordStatus.ok) {
+          setRecordUsed(Number(recordStatus.used || 0));
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void loadTalkQuota();
+  }, [userPlan]);
+
   useEffect(() => {
     if (!selectedStage || allRows.length === 0) return;
 
@@ -857,6 +916,10 @@ export default function TalkPage() {
   const isCorrect = submitted && selected === currentQuestion?.answer_jp;
   const isWrong = submitted && selected !== currentQuestion?.answer_jp;
   const isPro = userPlan === "PRO";
+  const listenLimitReached =
+    !isPro && listenUsed >= DAILY_TALK_LISTEN_LIMIT;
+  const recordLimitReached =
+    !isPro && recordUsed >= DAILY_TALK_RECORD_LIMIT;
   const isPronPerfect = pronChecked && (pronScore ?? 0) >= 100;
   const showRewardCard = isPronPerfect && isCorrect;
   const showPronOnlyNotice = rewardNoticeRequested && isPronPerfect && !isCorrect;
@@ -992,6 +1055,24 @@ setAudioError("");
     try {
       setAudioError("");
       setAudioLoadingKey(key);
+
+      if (userPlan !== "PRO") {
+        const usage = await consumeTalkFeatureUsage(
+          "talk_listen",
+          DAILY_TALK_LISTEN_LIMIT
+        );
+        if (usage.ok) {
+          setListenUsed(Number(usage.used || 0));
+          setQuotaMessage("");
+        } else {
+          setListenUsed(Number(usage.used || DAILY_TALK_LISTEN_LIMIT));
+          setQuotaMessage(
+            "오늘 FREE 발음듣기 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있어요."
+          );
+          setAudioLoadingKey("");
+          return;
+        }
+      }
 
       if (audioRef.current) {
         audioRef.current.pause();
@@ -1157,7 +1238,7 @@ setAudioError("");
       return;
     }
 
-    const picked: TalkCsvRow[] = shuffleArray(pool).slice(0, Math.min(QUIZ_SET_SIZE, pool.length));
+    const picked: TalkCsvRow[] = pool.slice(0, Math.min(QUIZ_SET_SIZE, pool.length));
 
     setQuestions(picked);
     setCurrentIndex(0);
@@ -1535,6 +1616,21 @@ setAudioError("");
             1문제씩: 상황 → 상대 발화 → 보기 선택 → 제출 → 정답/설명
           </p>
 
+          <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+            <p className="text-sm font-semibold text-gray-800">
+              {isPro
+                ? "PRO 이용 중 · 발음듣기와 녹음을 제한 없이 이용할 수 있습니다."
+                : `FREE 이용 중 · 발음듣기 ${listenUsed}/${DAILY_TALK_LISTEN_LIMIT}회 · 녹음 ${recordUsed}/${DAILY_TALK_RECORD_LIMIT}회`}
+            </p>
+
+            {!isPro ? (
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                {quotaMessage ||
+                  "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 PRO에서 이용할 수 있습니다."}
+              </p>
+            ) : null}
+          </div>
+
           <div className="mt-6 space-y-4 rounded-3xl border border-gray-200 bg-gradient-to-b from-white to-gray-50/70 p-6 shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
               <label className="block text-sm font-semibold tracking-[-0.01em] text-gray-700">코스 선택</label>
@@ -1780,7 +1876,7 @@ setAudioError("");
                       `partner-${currentQuestion.qid}`
                     )
                   }
-                  disabled={audioLoadingKey === `partner-${currentQuestion?.qid}`}
+                  disabled={listenLimitReached || audioLoadingKey === `partner-${currentQuestion?.qid}`}
                 >
                   {audioLoadingKey === `partner-${currentQuestion?.qid}`
                     ? "재생 중..."
@@ -1802,7 +1898,7 @@ setAudioError("");
                         `partner-${currentQuestion.qid}`
                       )
                     }
-                    disabled={audioLoadingKey === `partner-${currentQuestion?.qid}`}
+                    disabled={listenLimitReached || audioLoadingKey === `partner-${currentQuestion?.qid}`}
                     className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-base font-semibold text-gray-700 shadow-sm disabled:opacity-60"
                   >
                     <span className="text-lg leading-none">🔊</span>
@@ -1933,6 +2029,7 @@ setAudioError("");
                         )
                       }
                       disabled={
+                        listenLimitReached ||
                         audioLoadingKey ===
                         `partner-dialog-${currentQuestion?.qid}`
                       }
@@ -1968,6 +2065,7 @@ setAudioError("");
                         )
                       }
                       disabled={
+                        listenLimitReached ||
                         audioLoadingKey ===
                         `answer-dialog-${currentQuestion?.qid}`
                       }
@@ -2067,6 +2165,13 @@ setAudioError("");
                 </p>
               </div>
 
+              {!isPro && (listenLimitReached || recordLimitReached || quotaMessage) ? (
+                <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm leading-6 text-gray-700">
+                  {quotaMessage ||
+                    "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다."}
+                </div>
+              ) : null}
+
               <div className="mt-5">
                 <button
                   type="button"
@@ -2079,6 +2184,7 @@ setAudioError("");
                       : undefined
                   }
                   disabled={
+                    listenLimitReached ||
                     !currentQuestion?.answer_mp3 ||
                     audioLoadingKey === `answer-pron-${currentQuestion?.qid}`
                   }
@@ -2098,7 +2204,8 @@ setAudioError("");
                     <button
                       type="button"
                       onClick={pronStage === "recording" ? stopPronRecording : startPronRecording}
-                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 ${pronStage === "recording" ? "ring-4 ring-red-100" : "hover:shadow-md"}`}
+                      disabled={recordLimitReached && pronStage !== "recording"}
+                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${pronStage === "recording" ? "ring-4 ring-red-100" : "hover:shadow-md"}`}
                       aria-label={pronStage === "recording" ? "녹음 정지" : "녹음 시작"}
                     >
                       {pronStage === "recording" ? (
