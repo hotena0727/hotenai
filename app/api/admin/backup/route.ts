@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
       .toISOString()
       .slice(0, 10)}.zip`;
 
-    return new NextResponse(archive, {
+    return new NextResponse(new Uint8Array(archive), {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
