@@ -76,6 +76,9 @@ export default function KanjiPage() {
     .filter((item) => submitted && item.selected !== item.question.correct_text);
 
   const isPerfect = submitted && questions.length > 0 && score === questions.length;
+  
+  const isDailyLimitReached =
+  userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
 
   const levelCounts = useMemo(() => {
     const map: Record<string, number> = {
