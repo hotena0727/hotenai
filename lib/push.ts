@@ -10,7 +10,7 @@ function normalizeEnv(value?: string | null) {
   return (value ?? "").trim().replace(/^["']|["']$/g, "");
 }
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const normalized = base64String.replace(/-/g, "+").replace(/_/g, "/");
   const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
   const base64 = normalized + padding;
@@ -94,7 +94,7 @@ export async function subscribePush(): Promise<PushSubscribeResult> {
     if (!subscription) {
       subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
       });
       mode = "new";
     }
