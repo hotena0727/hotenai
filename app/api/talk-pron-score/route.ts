@@ -108,7 +108,11 @@ export async function POST(req: Request) {
     const inputFile = form.get("file");
     const answerJp = String(form.get("answer_jp") || "").trim();
 
-    if (!(inputFile instanceof File || inputFile instanceof Blob)) {
+    if (
+      !inputFile ||
+      typeof inputFile !== "object" ||
+      !("arrayBuffer" in inputFile)
+    ) {
       return Response.json({ error: "녹음 파일이 없습니다." }, { status: 400 });
     }
     if (!answerJp) {
