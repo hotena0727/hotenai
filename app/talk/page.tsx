@@ -1,9 +1,5 @@
-import dynamic from "next/dynamic";
-
-const TalkPageClient = dynamic(() => import("./TalkPageClient"), {
-  ssr: false,
-});
+import TalkPageShell from "./TalkPageShell";
 
 export default function TalkPage() {
-  return <TalkPageClient />;
+  return <TalkPageShell />;
 }
