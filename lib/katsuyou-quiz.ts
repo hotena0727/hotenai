@@ -112,6 +112,13 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     te_form_a: "비싸고",
     te_form_b: "비싸서",
   },
+  짜: {
+    polite_present: "짭니다",
+    plain_past: "짰다",
+    polite_past: "짰습니다",
+    te_form_a: "짜고",
+    te_form_b: "짜서",
+  },
 };
 
 function buildKrFormsByPattern(
@@ -337,7 +344,7 @@ function getAltEquivalentAnswers(form: GeneratedForm): string[] {
   return [];
 }
 
-function buildChoicesForForm(form: GeneratedForm, siblings: GeneratedForm[]): string[] {
+function buildChoicesForJpAnswer(form: GeneratedForm, siblings: GeneratedForm[]): string[] {
   const excludedEquivalent = new Set(getAltEquivalentAnswers(form));
 
   const pool = siblings
@@ -347,6 +354,17 @@ function buildChoicesForForm(form: GeneratedForm, siblings: GeneratedForm[]): st
 
   const wrongs = shuffleArray(uniqueStrings(pool)).slice(0, 3);
   const merged = uniqueStrings([form.answerJp, ...wrongs]);
+
+  return shuffleArray(merged).slice(0, 4);
+}
+
+function buildChoicesForKrAnswer(form: GeneratedForm, siblings: GeneratedForm[]): string[] {
+  const pool = siblings
+    .map((item) => item.promptKr)
+    .filter((v) => v !== form.promptKr);
+
+  const wrongs = shuffleArray(uniqueStrings(pool)).slice(0, 3);
+  const merged = uniqueStrings([form.promptKr, ...wrongs]);
 
   return shuffleArray(merged).slice(0, 4);
 }
@@ -424,7 +442,7 @@ export function buildKatsuyouQuiz({
   excludedWords?: string[];
   size?: number;
 }): KatsuyouQuestion[] {
-  if (pos !== "i_adj" || qtype !== "kr2jp") {
+  if (pos !== "i_adj") {
     return buildLegacyQuiz({
       rows,
       qtype,
@@ -451,21 +469,38 @@ export function buildKatsuyouQuiz({
     if (!forms.length) continue;
 
     const pickedForm = shuffleArray(forms)[0];
-    const choices = buildChoicesForForm(pickedForm, forms);
 
-    if (choices.length < 4) continue;
+    if (qtype === "kr2jp") {
+      const choices = buildChoicesForJpAnswer(pickedForm, forms);
+      if (choices.length < 4) continue;
 
-    questions.push({
-      pos: "i_adj",
-      qtype: "kr2jp",
-      formKey: pickedForm.formKey,
-      prompt: pickedForm.promptKr,
-      choices,
-      correct_text: pickedForm.answerJp,
-      jp_word: pickedForm.baseJp,
-      kr_word: pickedForm.baseKr,
-      reading: pickedForm.reading,
-    });
+      questions.push({
+        pos: "i_adj",
+        qtype: "kr2jp",
+        formKey: pickedForm.formKey,
+        prompt: pickedForm.promptKr,
+        choices,
+        correct_text: pickedForm.answerJp,
+        jp_word: pickedForm.baseJp,
+        kr_word: pickedForm.baseKr,
+        reading: pickedForm.reading,
+      });
+    } else {
+      const choices = buildChoicesForKrAnswer(pickedForm, forms);
+      if (choices.length < 4) continue;
+
+      questions.push({
+        pos: "i_adj",
+        qtype: "jp2kr",
+        formKey: pickedForm.formKey,
+        prompt: pickedForm.answerJp,
+        choices,
+        correct_text: pickedForm.promptKr,
+        jp_word: pickedForm.baseJp,
+        kr_word: pickedForm.baseKr,
+        reading: pickedForm.reading,
+      });
+    }
   }
 
   return questions;
