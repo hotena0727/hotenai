@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -14,7 +15,6 @@ import {
   fetchRecentAttempts,
   type QuizAttemptRow,
 } from "@/lib/attempts";
-import InstallButton from "@/components/install-button";
 import {
   isKanjiAttempt,
   isTalkAttempt,
@@ -30,8 +30,6 @@ type MyProfile = {
   full_name: string;
   plan: string;
   is_admin: boolean;
-  plan_started_at?: string | null;
-  plan_expires_at?: string | null;
 };
 
 type MainTabKey = "wrong" | "history" | "message" | "notice";
@@ -81,6 +79,7 @@ function parseDate(value?: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+
 function formatRelativeMessageTime(value?: string | null) {
   const d = parseDate(value ?? undefined);
   if (!d) return "방금 업데이트";
@@ -124,16 +123,6 @@ function formatRelativeMessageTime(value?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   })}`;
-}
-
-function formatDateOnly(value?: string | null) {
-  const d = parseDate(value ?? undefined);
-  if (!d) return "-";
-  return d.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
 }
 
 function buildLast7Days(attempts: QuizAttemptRow[]): DayStat[] {
@@ -234,29 +223,7 @@ function withFullIfMissing(posMode?: string): string {
     return `${parts[0]} · ${parts[1]} · 전체`;
   }
 
-
-  if (parts.length >= 3 && parts[0] === "회화" && !parts[2]) {
-    return `${parts[0]} · ${parts[1]} · 전체`;
-  }
-
   return label;
-}
-
-function prettyAttemptLabel(posMode?: string): string {
-  const raw = String(posMode || "").trim();
-
-  return raw
-    .replace(/\breading\b/g, "발음")
-    .replace(/\bmeaning\b/g, "뜻")
-    .replace(/\bkr2jp\b/g, "한→일")
-    .replace(/\bnoun\b/g, "명사")
-    .replace(/\bverb\b/g, "동사")
-    .replace(/\badj_i\b/g, "い형용사")
-    .replace(/\badj_na\b/g, "な형용사")
-    .replace(/\badverb\b/g, "부사")
-    .replace(/\bparticle\b/g, "조사")
-    .replace(/\bconjunction\b/g, "접속사")
-    .replace(/\binterjection\b/g, "감탄사");
 }
 
 export default function MyPage() {
@@ -313,7 +280,7 @@ export default function MyPage() {
 
         const { data: profileRow, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, plan, is_admin, plan_started_at, plan_expires_at")
+          .select("full_name, plan, is_admin")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -336,8 +303,6 @@ export default function MyPage() {
           full_name: profileRow?.full_name || googleName || "",
           plan: String(profileRow?.plan || "FREE").toUpperCase(),
           is_admin: Boolean(profileRow?.is_admin),
-          plan_started_at: profileRow?.plan_started_at ?? null,
-          plan_expires_at: profileRow?.plan_expires_at ?? null,
         });
 
         const recent = await fetchRecentAttempts(user.id, 12);
@@ -705,34 +670,8 @@ export default function MyPage() {
   return (
     <main className="min-h-screen bg-white text-gray-900">
       <div className="mx-auto max-w-3xl px-4 py-6">
-        <div className="mt-2">
-          <p className="text-3xl font-bold text-gray-900">마이페이지</p>
-          <p className="mt-1 text-sm text-gray-500">
-            학습 기록과 오답, 메시지를 한눈에 확인하세요.
-          </p>
-        </div>
-
         <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-500">현재 플랜</p>
-              <p className="mt-2 text-lg font-bold text-gray-900">
-                {profile?.plan === "PRO"
-                  ? `PRO 이용 중 · ${formatDateOnly(profile?.plan_expires_at)}까지`
-                  : "FREE 이용 중"}
-              </p>
-              <p className="mt-2 text-sm text-gray-600">
-                {profile?.plan === "PRO"
-                  ? `시작일 ${formatDateOnly(profile?.plan_started_at)} · 만료일 ${formatDateOnly(profile?.plan_expires_at)}`
-                  : "현재는 FREE 플랜으로 이용 중입니다."}
-              </p>
-            </div>
-            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-              {profile?.full_name ? `${profile.full_name}님` : "학습 중"}
-            </div>
-          </div>
-
-          <div className="mt-5 h-3 rounded-full bg-gray-100">
+          <div className="h-3 rounded-full bg-gray-100">
             <div
               className="h-3 rounded-full bg-blue-500"
               style={{ width: `${stats.progressPercent}%` }}
@@ -749,41 +688,29 @@ export default function MyPage() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-3xl border border-gray-200 bg-white p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-base font-bold text-gray-900">앱처럼 설치하기</p>
-              <p className="mt-1 text-sm text-gray-500">
-                홈 화면에 추가하면 더 빠르고 편하게 사용할 수 있어요.
-              </p>
-            </div>
-            <InstallButton />
-          </div>
-        </div>
-
-        <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
-          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">{stats.streak}</p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">연속 학습일</p>
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <div className="rounded-3xl border border-gray-200 bg-white p-5">
+            <p className="text-4xl font-bold">{stats.streak}</p>
+            <p className="mt-2 text-lg font-semibold text-gray-700">연속 학습일</p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">{stats.thisWeekCount}</p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">이번 주 풀이수</p>
+          <div className="rounded-3xl border border-gray-200 bg-white p-5">
+            <p className="text-4xl font-bold">{stats.thisWeekCount}</p>
+            <p className="mt-2 text-lg font-semibold text-gray-700">이번 주 풀이수</p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">{stats.topWrongType}</p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">최다 오답 유형</p>
+          <div className="rounded-3xl border border-gray-200 bg-white p-5">
+            <p className="text-4xl font-bold">{stats.topWrongType}</p>
+            <p className="mt-2 text-lg font-semibold text-gray-700">최다 오답 유형</p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">{stats.totalWrong}</p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">오답</p>
+          <div className="rounded-3xl border border-gray-200 bg-white p-5">
+            <p className="text-4xl font-bold">{stats.totalWrong}</p>
+            <p className="mt-2 text-lg font-semibold text-gray-700">오답</p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">
+          <div className="rounded-3xl border border-gray-200 bg-white p-5">
+            <p className="text-4xl font-bold">
               {stats.totalAttempts === 0
                 ? "0%"
                 : `${Math.round(
@@ -792,14 +719,14 @@ export default function MyPage() {
                   100
                 )}%`}
             </p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">평균 정답률</p>
+            <p className="mt-2 text-lg font-semibold text-gray-700">평균 정답률</p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">
+          <div className="rounded-3xl border border-gray-200 bg-white p-5">
+            <p className="text-4xl font-bold">
               {stats.last7.reduce((sum, day) => sum + (day.total > 0 ? 1 : 0), 0)}
             </p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">최근 7일 학습</p>
+            <p className="mt-2 text-lg font-semibold text-gray-700">최근 7일 학습</p>
           </div>
         </div>
 
@@ -825,16 +752,16 @@ export default function MyPage() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-7 gap-2">
+          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-7">
             {stats.last7.map((day, idx) => (
               <div
                 key={`${day.label}-${idx}`}
-                className="rounded-2xl border border-blue-200 bg-blue-50 p-2 sm:p-4 text-center"
+                className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-center"
               >
-                <p className="text-xs sm:text-lg font-bold">{day.label}</p>
-                <p className="mt-2 sm:mt-3 text-lg sm:text-3xl font-bold">{idx + 1}</p>
-                <p className="mt-1 sm:mt-2 text-[10px] sm:text-sm font-semibold text-gray-700">{day.total}회</p>
-                <div className="mt-2 sm:mt-3 text-[10px] sm:text-sm text-gray-600">
+                <p className="text-lg font-bold">{day.label}</p>
+                <p className="mt-3 text-3xl font-bold">{idx + 1}</p>
+                <p className="mt-2 text-sm font-semibold text-gray-700">{day.total}회</p>
+                <div className="mt-3 text-sm text-gray-600">
                   <p>단어 {day.word}</p>
                   <p>한자 {day.kanji}</p>
                   <p>회화 {day.talk}</p>
@@ -1040,7 +967,7 @@ export default function MyPage() {
                           {getAppLabelFromPosMode(item.pos_mode)}
                         </div>
                         <p className="mt-3 text-lg font-bold text-gray-900">
-                          {prettyAttemptLabel(withFullIfMissing(item.pos_mode))}
+                          {getPrettyPosModeLabel(item.pos_mode)}
                         </p>
                         <p className="mt-2 text-sm text-gray-600">
                           {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
@@ -1122,7 +1049,7 @@ export default function MyPage() {
                             {getAppLabelFromPosMode(item.pos_mode)}
                           </div>
                           <p className="mt-3 text-base font-semibold text-gray-900">
-                            {prettyAttemptLabel(withFullIfMissing(item.pos_mode))}
+                            {withFullIfMissing(item.pos_mode)}
                           </p>
                           <p className="mt-2 text-sm text-gray-600">
                             {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
@@ -1148,7 +1075,7 @@ export default function MyPage() {
                 <div>
                   <h2 className="text-2xl font-bold">💌 메시지</h2>
                   <p className="mt-3 text-sm text-gray-500">
-                    관리자가 직접 보낸 메시지가 아니라, 오늘의 학습 흐름을 바탕으로 자동 생성된 피드백 메시지입니다.
+                    오늘의 학습 흐름을 바탕으로, 짧고 따뜻한 메시지를 모아보았습니다.
                   </p>
                 </div>
                 <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">

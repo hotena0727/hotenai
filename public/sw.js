@@ -1,9 +1,103 @@
+const SW_VERSION = "hotena-sw-v1";
+const CACHE_NAME = `hotena-cache-${SW_VERSION}`;
+const OFFLINE_URL = "/offline";
+
 self.addEventListener("install", (event) => {
-  self.skipWaiting();
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => {
+        return cache.addAll([
+          "/",
+          OFFLINE_URL,
+          "/icon-192.png",
+          "/icon-512.png",
+        ]);
+      })
+      .catch(() => {
+        // 일부 리소스가 없더라도 설치 자체는 진행
+      })
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key))
+        )
+      )
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+
+  // 같은 오리진만 처리
+  if (url.origin !== self.location.origin) return;
+
+  // Next 내부 정적 파일/API는 네트워크 우선
+  if (
+    url.pathname.startsWith("/_next/") ||
+    url.pathname.startsWith("/api/")
+  ) {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // 문서 이동은 네트워크 우선, 실패 시 캐시/오프라인
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+
+          const offline = await caches.match(OFFLINE_URL);
+          if (offline) return offline;
+
+          return new Response("Offline", {
+            status: 503,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          });
+        })
+    );
+    return;
+  }
+
+  // 이미지/기본 GET 요청은 캐시 우선 + 없으면 네트워크
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+
+      return fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(() => {
+          return caches.match("/icon-192.png");
+        });
+    })
+  );
 });
 
 self.addEventListener("push", (event) => {
@@ -38,10 +132,15 @@ self.addEventListener("notificationclick", (event) => {
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ("focus" in client) {
-          client.navigate(targetUrl);
+          try {
+            if ("navigate" in client) {
+              client.navigate(targetUrl);
+            }
+          } catch (_) {}
           return client.focus();
         }
       }
+
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }

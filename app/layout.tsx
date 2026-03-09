@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import AppTopNav from "@/components/AppTopNav";
+import PWARegister from "@/components/pwa-register";
 
 export const metadata: Metadata = {
   title: "하테나일본어",
