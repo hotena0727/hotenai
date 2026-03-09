@@ -1127,7 +1127,7 @@ export default function MyPage() {
                 </div>
               ) : (
                 recentAttempts.map((item) => {
-                  const kind = detectAppKind(item.pos_mode);
+                  const kind = detectAppKind(item);
                   const tone =
                     kind === "talk"
                       ? "border-purple-200 bg-purple-50 text-purple-700"
