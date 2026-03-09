@@ -15,6 +15,8 @@ type AdminProfile = {
   is_admin: boolean;
   created_at?: string | null;
   updated_at?: string | null;
+  plan_started_at?: string | null;
+  plan_expires_at?: string | null;
 };
 
 type PushDebugInfo = {
@@ -32,6 +34,19 @@ type CleanupPreview = {
   days: number;
   total: number;
 };
+
+const PLAN_DURATION_OPTIONS = [
+  { value: 30, label: "30일" },
+  { value: 90, label: "90일" },
+  { value: 180, label: "6개월" },
+  { value: 365, label: "1년" },
+] as const;
+
+function addDays(base: Date, days: number) {
+  const next = new Date(base);
+  next.setDate(next.getDate() + days);
+  return next;
+}
 
 function toDate(value: string | null | undefined) {
   if (!value) return null;
@@ -151,6 +166,7 @@ export default function AdminPage() {
   const [memberSearch, setMemberSearch] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [planDrafts, setPlanDrafts] = useState<Record<string, "FREE" | "PRO">>({});
+  const [durationDrafts, setDurationDrafts] = useState<Record<string, number>>({});
   const [savingUserId, setSavingUserId] = useState("");
   const [memberMessage, setMemberMessage] = useState("");
 
@@ -213,7 +229,7 @@ export default function AdminPage() {
 
         const { data: myProfile, error: myProfileError } = await supabase
           .from("profiles")
-          .select("id, email, full_name, plan, is_admin, created_at, updated_at")
+          .select("id, email, full_name, plan, is_admin, created_at, updated_at, plan_started_at, plan_expires_at")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -232,7 +248,7 @@ export default function AdminPage() {
 
         const { data: profileRows, error: profileRowsError } = await supabase
           .from("profiles")
-          .select("id, email, full_name, plan, is_admin, created_at, updated_at")
+          .select("id, email, full_name, plan, is_admin, created_at, updated_at, plan_started_at, plan_expires_at")
           .order("created_at", { ascending: false });
 
         if (profileRowsError) {
@@ -250,6 +266,8 @@ export default function AdminPage() {
           is_admin: Boolean(row.is_admin),
           created_at: row.created_at ?? null,
           updated_at: row.updated_at ?? null,
+          plan_started_at: row.plan_started_at ?? null,
+          plan_expires_at: row.plan_expires_at ?? null,
         }));
 
         setProfiles(normalizedProfiles);
@@ -257,6 +275,9 @@ export default function AdminPage() {
           Object.fromEntries(
             normalizedProfiles.map((item) => [item.id, item.plan === "PRO" ? "PRO" : "FREE"])
           )
+        );
+        setDurationDrafts(
+          Object.fromEntries(normalizedProfiles.map((item) => [item.id, 30]))
         );
         if (normalizedProfiles[0]?.id) setSelectedMemberId(normalizedProfiles[0].id);
 
@@ -368,6 +389,14 @@ export default function AdminPage() {
 
   const handlePlanDraftChange = (userId: string, value: "FREE" | "PRO") => {
     setPlanDrafts((prev) => ({ ...prev, [userId]: value }));
+    if (value === "PRO") {
+      setDurationDrafts((prev) => ({ ...prev, [userId]: prev[userId] || 30 }));
+    }
+    setMemberMessage("");
+  };
+
+  const handleDurationDraftChange = (userId: string, value: number) => {
+    setDurationDrafts((prev) => ({ ...prev, [userId]: value }));
     setMemberMessage("");
   };
 
@@ -385,10 +414,14 @@ export default function AdminPage() {
 
   const handleSavePlan = async (userId: string) => {
     const nextPlan = planDrafts[userId];
+    const durationDays = durationDrafts[userId] || 30;
     const current = profiles.find((item) => item.id === userId);
     if (!current || !nextPlan) return;
 
-    if ((current.plan === "PRO" ? "PRO" : "FREE") === nextPlan) {
+    const currentPlan = current.plan === "PRO" ? "PRO" : "FREE";
+    const changed = currentPlan !== nextPlan || nextPlan === "PRO";
+
+    if (!changed) {
       setMemberMessage("변경된 플랜이 없습니다.");
       return;
     }
@@ -410,16 +443,38 @@ export default function AdminPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ userId, plan: nextPlan }),
+        body: JSON.stringify({
+          userId,
+          plan: nextPlan,
+          durationDays: nextPlan === "PRO" ? durationDays : 0,
+        }),
       });
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(String(data?.error || "플랜 저장 중 오류가 발생했습니다."));
 
+      const nowIso = new Date().toISOString();
+      const expiresIso =
+        nextPlan === "PRO" ? addDays(new Date(), durationDays).toISOString() : null;
+
       setProfiles((prev) =>
-        prev.map((item) => (item.id === userId ? { ...item, plan: nextPlan } : item))
+        prev.map((item) =>
+          item.id === userId
+            ? {
+                ...item,
+                plan: nextPlan,
+                plan_started_at: nextPlan === "PRO" ? nowIso : null,
+                plan_expires_at: expiresIso,
+              }
+            : item
+        )
       );
-      setMemberMessage(`${current.email} 회원의 플랜을 ${nextPlan}로 저장했습니다.`);
+
+      setMemberMessage(
+        nextPlan === "PRO"
+          ? `${current.email} 회원의 플랜을 ${durationDays}일 PRO로 저장했습니다.`
+          : `${current.email} 회원의 플랜을 FREE로 저장했습니다.`
+      );
     } catch (error) {
       console.error(error);
       setMemberMessage(error instanceof Error ? error.message : "플랜 저장 중 오류가 발생했습니다.");
@@ -935,7 +990,8 @@ export default function AdminPage() {
             <div className="mt-6 space-y-4">
               {filteredProfiles.map((item) => {
                 const draft = planDrafts[item.id] || (item.plan === "PRO" ? "PRO" : "FREE");
-                const changed = draft !== (item.plan === "PRO" ? "PRO" : "FREE");
+                const durationDraft = durationDrafts[item.id] || 30;
+                const changed = draft !== (item.plan === "PRO" ? "PRO" : "FREE") || draft === "PRO";
                 const saving = savingUserId === item.id;
 
                 return (
@@ -959,6 +1015,9 @@ export default function AdminPage() {
                         <p className="mt-1 text-sm text-gray-600">
                           최근 학습: {memberRecentMap.get(item.id) || "-"}
                         </p>
+                        <p className="mt-1 text-sm text-gray-600">
+                          만료: {item.plan === "PRO" ? formatDateTime(item.plan_expires_at) : "-"}
+                        </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <span className={item.plan === "PRO" ? "rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-gray-700" : "rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700"}>
                             {item.plan.toLowerCase()}
@@ -970,15 +1029,47 @@ export default function AdminPage() {
                       </button>
 
                       <div className="w-full max-w-xs space-y-3">
-                        <label className="block text-sm font-semibold text-gray-800">플랜 변경</label>
-                        <select
-                          value={draft}
-                          onChange={(e) => handlePlanDraftChange(item.id, e.target.value === "PRO" ? "PRO" : "FREE")}
-                          className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
-                        >
-                          <option value="FREE">FREE</option>
-                          <option value="PRO">PRO</option>
-                        </select>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-800">플랜 변경</label>
+                            <select
+                              value={draft}
+                              onChange={(e) => handlePlanDraftChange(item.id, e.target.value === "PRO" ? "PRO" : "FREE")}
+                              className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                            >
+                              <option value="FREE">FREE</option>
+                              <option value="PRO">PRO</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-800">기간</label>
+                            <select
+                              value={durationDraft}
+                              onChange={(e) => handleDurationDraftChange(item.id, Number(e.target.value))}
+                              disabled={draft !== "PRO"}
+                              className={
+                                draft !== "PRO"
+                                  ? "mt-2 w-full rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-base text-gray-400 outline-none"
+                                  : "mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                              }
+                            >
+                              {PLAN_DURATION_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {draft === "PRO" ? (
+                          <p className="text-xs text-gray-500">
+                            만료 예정일: {formatDateTime(addDays(new Date(), durationDraft).toISOString())}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-500">FREE로 변경하면 기간 정보는 비워집니다.</p>
+                        )}
 
                         <button
                           type="button"
