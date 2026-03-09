@@ -132,6 +132,12 @@ export default function WordPage() {
     [patternRows, selectedPosGroup]
   );
 
+  const featuredPattern = useMemo(() => {
+    if (visiblePatterns.length === 0) return null;
+    const randomIndex = Math.floor(Math.random() * visiblePatterns.length);
+    return visiblePatterns[randomIndex];
+  }, [visiblePatterns]);
+
   const visibleQtypes =
     selectedPosGroup === "other"
       ? QTYPE_OPTIONS.filter(
@@ -769,30 +775,31 @@ export default function WordPage() {
 
           {patternOpen ? (
             <div className="border-t border-gray-200 px-4 py-4">
-              {visiblePatterns.length === 0 ? (
+              {!featuredPattern ? (
                 <p className="text-sm text-gray-500">표시할 패턴이 없습니다.</p>
               ) : (
                 <div className="space-y-4">
-                  {visiblePatterns.map((item, idx) => (
-                    <div
-                      key={`${item.title}-${idx}`}
-                      className="rounded-3xl border border-gray-200 p-5"
-                    >
-                      <p className="text-2xl sm:text-3xl font-bold">{item.title}</p>
-                      <p className="mt-4 text-xl sm:text-2xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{item.jp}</span></p>
-                      <p className="mt-2 text-xl text-gray-700">{item.kr}</p>
+                  <div className="rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600">
+                    랜덤 1개 패턴
+                  </div>
 
-                      <div className="mt-6">
-                        <p className="text-base sm:text-xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{item.ex1_jp}</span></p>
-                        <p className="mt-1 text-sm sm:text-lg text-gray-700">{item.ex1_kr}</p>
-                      </div>
+                  <div
+                    className="rounded-3xl border border-gray-200 p-5"
+                  >
+                    <p className="text-2xl sm:text-3xl font-bold">{featuredPattern.title}</p>
+                    <p className="mt-4 text-xl sm:text-2xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{featuredPattern.jp}</span></p>
+                    <p className="mt-2 text-xl text-gray-700">{featuredPattern.kr}</p>
 
-                      <div className="mt-5">
-                        <p className="text-base sm:text-xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{item.ex2_jp}</span></p>
-                        <p className="mt-1 text-sm sm:text-lg text-gray-700">{item.ex2_kr}</p>
-                      </div>
+                    <div className="mt-6">
+                      <p className="text-base sm:text-xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{featuredPattern.ex1_jp}</span></p>
+                      <p className="mt-1 text-sm sm:text-lg text-gray-700">{featuredPattern.ex1_kr}</p>
                     </div>
-                  ))}
+
+                    <div className="mt-5">
+                      <p className="text-base sm:text-xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{featuredPattern.ex2_jp}</span></p>
+                      <p className="mt-1 text-sm sm:text-lg text-gray-700">{featuredPattern.ex2_kr}</p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
