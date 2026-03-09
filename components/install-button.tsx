@@ -2,39 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-};
-
 export default function InstallButton() {
-  const [deferredPrompt, setDeferredPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
-  const [installed, setInstalled] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      console.log('[PWA] beforeinstallprompt fired');
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
-
-    const handleAppInstalled = () => {
-      console.log('[PWA] app installed');
-      setInstalled(true);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
   }, []);
 
   const isIOS = useMemo(() => {
@@ -47,57 +19,36 @@ export default function InstallButton() {
     if (!mounted) return false;
     return (
       window.matchMedia('(display-mode: standalone)').matches ||
-      // iOS Safari
       (window.navigator as Navigator & { standalone?: boolean }).standalone === true
     );
   }, [mounted]);
 
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
-
-    await deferredPrompt.prompt();
-    const choice = await deferredPrompt.userChoice;
-    console.log('[PWA] userChoice:', choice.outcome);
-    setDeferredPrompt(null);
-  };
-
   if (!mounted) return null;
 
-  if (installed || isStandalone) {
+  if (isStandalone) {
     return (
-      <div className="text-sm font-medium text-green-600">
-        이미 앱처럼 설치되어 있어요.
+      <div className="rounded-2xl bg-green-50 px-4 py-3 text-sm font-medium leading-6 text-green-700">
+        이미 홈 화면에 추가되어 앱처럼 사용 중입니다.
       </div>
-    );
-  }
-
-  if (deferredPrompt) {
-    return (
-      <button
-        onClick={handleInstall}
-        className="inline-flex items-center justify-center rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-      >
-        앱처럼 설치하기
-      </button>
     );
   }
 
   if (isIOS) {
     return (
-      <div className="text-sm text-gray-600 leading-6">
-        Safari 하단 공유 버튼을 누른 뒤
-        <br />
-        <span className="font-semibold">‘홈 화면에 추가’</span>를 선택해 주세요.
+      <div className="rounded-2xl bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-700">
+        <div className="font-semibold text-gray-900">Safari에서 설치하는 방법</div>
+        <div className="mt-2">
+          1. 아래쪽 <span className="font-semibold">공유 버튼</span>을 누르세요.
+          <br />
+          2. <span className="font-semibold">홈 화면에 추가</span>를 선택하세요.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="text-sm text-gray-500 leading-6">
-      이 브라우저에서는 자동 설치 버튼이 바로 나타나지 않을 수 있어요.
-      <br />
-      Chrome 메뉴에서 <span className="font-semibold">설치</span> 또는
-      <span className="font-semibold"> 홈 화면에 추가</span>를 확인해 주세요.
+    <div className="rounded-2xl bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-600">
+      Chrome 또는 Edge에서는 브라우저 메뉴에서 설치 기능을 사용할 수 있어요.
     </div>
   );
 }
