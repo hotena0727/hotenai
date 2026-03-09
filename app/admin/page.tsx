@@ -949,12 +949,12 @@ export default function AdminPage() {
                         onClick={() => setSelectedMemberId(item.id)}
                         className="text-left"
                       >
-                        <p className="text-xl font-bold">{getAdminDisplayName(item)}</p>
+                        <p className="text-xl font-bold">{item.full_name?.trim() || "-"}</p>
                         <p className="mt-2 text-sm text-gray-600">
-                          {item.full_name?.trim() ? `이메일: ${getAdminSubLabel(item)}` : `ID: ${getAdminSubLabel(item)}`}
+                          가입: {formatDateTime(item.created_at)}
                         </p>
-                        <p className="mt-2 text-sm text-gray-600">
-                          가입: {formatDateTime(item.created_at)} · 최근 학습: {memberRecentMap.get(item.id) || "-"}
+                        <p className="mt-1 text-sm text-gray-600">
+                          최근 학습: {memberRecentMap.get(item.id) || "-"}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <span className={item.plan === "PRO" ? "rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-gray-700" : "rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700"}>
