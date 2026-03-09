@@ -1,4 +1,4 @@
-const SW_VERSION = "hotena-sw-v1";
+const SW_VERSION = "hotena-sw-v2";
 const CACHE_NAME = `hotena-cache-${SW_VERSION}`;
 const OFFLINE_URL = "/offline";
 
@@ -10,12 +10,7 @@ self.addEventListener("install", (event) => {
         return cache.addAll([
           "/",
           OFFLINE_URL,
-          "/icon-192.png",
-          "/icon-512.png",
         ]);
-      })
-      .catch(() => {
-        // 일부 리소스가 없더라도 설치 자체는 진행
       })
       .then(() => self.skipWaiting())
   );
@@ -43,10 +38,22 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  // 같은 오리진만 처리
   if (url.origin !== self.location.origin) return;
 
-  // Next 내부 정적 파일/API는 네트워크 우선
+  // ✅ manifest / sw / 주요 아이콘은 항상 네트워크 우선
+  if (
+    url.pathname === "/manifest.json" ||
+    url.pathname === "/sw.js" ||
+    url.pathname === "/icon-192.png" ||
+    url.pathname === "/icon-512.png" ||
+    url.pathname === "/icon-maskable-512.png" ||
+    url.pathname === "/apple-touch-icon.png"
+  ) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // ✅ Next 내부 리소스 / API는 네트워크 우선
   if (
     url.pathname.startsWith("/_next/") ||
     url.pathname.startsWith("/api/")
@@ -57,7 +64,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 문서 이동은 네트워크 우선, 실패 시 캐시/오프라인
+  // ✅ 문서 이동은 네트워크 우선, 실패 시 캐시/오프라인
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -82,7 +89,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 이미지/기본 GET 요청은 캐시 우선 + 없으면 네트워크
+  // ✅ 일반 정적 리소스는 캐시 우선
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
@@ -92,9 +99,6 @@ self.addEventListener("fetch", (event) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
-        })
-        .catch(() => {
-          return caches.match("/icon-192.png");
         });
     })
   );
