@@ -30,7 +30,6 @@ export function buildKatsuyouAttemptPayload({
     user_email,
     app_kind: "katsuyou",
     quiz_type: "katsuyou",
-    level: null,
     pos,
     pos_mode,
     quiz_len,
