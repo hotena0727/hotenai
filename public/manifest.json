@@ -1,6 +1,6 @@
 {
-  "name": "Hotena",
-  "short_name": "Hotena",
+  "name": "하테나일본어",
+  "short_name": "하테나일본어",
   "description": "일본어 학습 앱",
   "start_url": "/",
   "display": "standalone",
