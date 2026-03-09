@@ -19,9 +19,6 @@ const QTYPE_OPTIONS: Array<{ value: KanjiQType; label: string }> = [
 type AnswerMap = Record<number, string>;
 type ExcludedWordMap = Record<string, boolean>;
 
-const DAILY_FREE_SET_LIMIT = 3;
-const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx/";
-
 function qtypeLabel(qtype: KanjiQType): string {
   switch (qtype) {
     case "reading":
@@ -39,6 +36,12 @@ function circleNumber(index: number): string {
   const nums = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
   return nums[index] || `${index + 1}.`;
 }
+
+const JA_FONT_STYLE = {
+  fontFamily: `"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif`,
+} as const;
+
+const DAILY_FREE_SET_LIMIT = 3;
 
 export default function KanjiPage() {
   const [rows, setRows] = useState<KanjiRow[]>([]);
@@ -60,7 +63,49 @@ export default function KanjiPage() {
 
   const didAutoCreateRef = useRef(false);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const activeSfxAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const resultSfxAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const playResultSfx = (kind: "perfect" | "good" | "fail") => {
+    try {
+      if (typeof window === "undefined") return;
+
+      if (resultSfxAudioRef.current) {
+        resultSfxAudioRef.current.pause();
+        resultSfxAudioRef.current.currentTime = 0;
+        resultSfxAudioRef.current = null;
+      }
+
+      const src =
+        kind === "perfect"
+          ? "https://hotena.com/hotena/app/mp3/sfx/perfect.mp3"
+          : kind === "good"
+          ? "https://hotena.com/hotena/app/mp3/sfx/correct.mp3"
+          : "https://hotena.com/hotena/app/mp3/sfx/wrong.mp3";
+
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.volume = 1;
+      audio.onended = () => {
+        if (resultSfxAudioRef.current === audio) {
+          resultSfxAudioRef.current = null;
+        }
+      };
+      audio.onerror = () => {
+        if (resultSfxAudioRef.current === audio) {
+          resultSfxAudioRef.current = null;
+        }
+      };
+
+      resultSfxAudioRef.current = audio;
+      void audio.play().catch((error) => {
+        console.error("[sfx] play failed:", error);
+      });
+    } catch (error) {
+      console.error("[sfx] unexpected error:", error);
+    }
+  };
+
 
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
@@ -78,9 +123,10 @@ export default function KanjiPage() {
     .filter((item) => submitted && item.selected !== item.question.correct_text);
 
   const isPerfect = submitted && questions.length > 0 && score === questions.length;
-  
+
   const isDailyLimitReached =
-  userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
+    userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
+  const remainingSets = Math.max(DAILY_FREE_SET_LIMIT - todayWordKanjiSets, 0);
 
   const levelCounts = useMemo(() => {
     const map: Record<string, number> = {
@@ -117,8 +163,6 @@ export default function KanjiPage() {
     void init();
   }, []);
 
-
-
   useEffect(() => {
     const loadPlanAndUsage = async () => {
       try {
@@ -153,7 +197,7 @@ export default function KanjiPage() {
 
         if (plan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
           setLimitMessage(
-            "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
+            "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
           );
         } else {
           setLimitMessage("");
@@ -169,13 +213,22 @@ export default function KanjiPage() {
   useEffect(() => {
     return () => {
       try {
+        if (resultSfxAudioRef.current) {
+          resultSfxAudioRef.current.pause();
+          resultSfxAudioRef.current.currentTime = 0;
+          resultSfxAudioRef.current = null;
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      try {
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           window.speechSynthesis.cancel();
-        }
-        if (activeSfxAudioRef.current) {
-          activeSfxAudioRef.current.pause();
-          activeSfxAudioRef.current.currentTime = 0;
-          activeSfxAudioRef.current = null;
         }
       } catch (error) {
         console.error(error);
@@ -220,51 +273,16 @@ export default function KanjiPage() {
     }
   };
 
-  const playResultSfx = (kind: "correct" | "wrong" | "reward") => {
-    try {
-      if (typeof window === "undefined") return;
-
-      if (activeSfxAudioRef.current) {
-        activeSfxAudioRef.current.pause();
-        activeSfxAudioRef.current.currentTime = 0;
-        activeSfxAudioRef.current = null;
-      }
-
-      const filename =
-        kind === "reward" ? "perfect.mp3" : kind === "correct" ? "correct.mp3" : "wrong.mp3";
-
-      const audio = new Audio(`${BASE_SFX_URL}${filename}`);
-      audio.preload = "auto";
-      audio.volume = 1;
-      audio.onended = () => {
-        if (activeSfxAudioRef.current === audio) {
-          activeSfxAudioRef.current = null;
-        }
-      };
-      audio.onerror = () => {
-        if (activeSfxAudioRef.current === audio) {
-          activeSfxAudioRef.current = null;
-        }
-      };
-
-      activeSfxAudioRef.current = audio;
-      void audio.play().catch((error) => {
-        console.error("[sfx] play failed:", error);
-      });
-    } catch (error) {
-      console.error("[sfx] unexpected error:", error);
-    }
-  };
-
   const generateQuiz = () => {
     try {
-      if (userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT) {
+      if (isDailyLimitReached) {
         setLimitMessage(
-          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
         );
         setQuestions([]);
         return;
       }
+
       const blockedWords = Object.keys(excludedWords).filter((k) => excludedWords[k]);
 
       const quiz = buildKanjiQuiz({
@@ -302,13 +320,6 @@ export default function KanjiPage() {
     generateQuiz();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, rows, selectedLevel, selectedQType]);
-
-  useEffect(() => {
-    if (!loading && rows.length > 0) {
-      generateQuiz();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [excludedWords]);
 
   const makeNewQuiz = () => {
     generateQuiz();
@@ -352,13 +363,12 @@ export default function KanjiPage() {
     setScore(nextScore);
     setExcludedWords(nextExcluded);
 
-    const ratio = questions.length > 0 ? nextScore / questions.length : 0;
-    if (ratio === 1) {
-      playResultSfx("reward");
-    } else if (ratio >= 0.7) {
-      playResultSfx("correct");
+    if (nextScore === questions.length) {
+      playResultSfx("perfect");
+    } else if (questions.length > 0 && nextScore / questions.length >= 0.7) {
+      playResultSfx("good");
     } else {
-      playResultSfx("wrong");
+      playResultSfx("fail");
     }
 
     setSubmitted(true);
@@ -431,7 +441,7 @@ export default function KanjiPage() {
       setTodayWordKanjiSets(used);
       if (userPlan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
         setLimitMessage(
-          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
         );
       }
 
@@ -515,22 +525,20 @@ export default function KanjiPage() {
           </div>
         </div>
 
-
-
         <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
           <p className="text-sm font-semibold text-gray-800">
             {userPlan === "PRO"
-              ? "PRO 이용 중 · 단어·한자를 제한 없이 이용할 수 있습니다."
+              ? "PRO 이용 중 · 단어와 한자를 제한 없이 이용할 수 있습니다."
               : `FREE 이용 중 · 오늘 단어+한자 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
           </p>
 
           {userPlan === "FREE" ? (
             <p className="mt-2 text-sm leading-6 text-gray-600">
               {isDailyLimitReached
-                ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요. talk는 별도로 계속 이용할 수 있습니다."
-                : todayWordKanjiSets === DAILY_FREE_SET_LIMIT - 1
-                ? "오늘은 1세트 더 이용할 수 있습니다. talk는 이 제한과 별도로 계속 이용할 수 있습니다."
-                : "talk는 이 제한과 별도로 계속 이용할 수 있습니다."}
+                ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 오늘 준비한 분량을 모두 완료했어요. FREE 플랜은 내일부터 다시 이어서 풀 수 있습니다. PRO에서는 제한 없이 계속 이용할 수 있습니다."
+                : remainingSets === 1
+                ? "오늘은 1세트 더 이용할 수 있습니다. 단어와 한자는 합산 하루 3세트까지 이용할 수 있어요."
+                : `오늘은 ${remainingSets}세트 더 이용할 수 있습니다. 단어와 한자는 합산 하루 3세트까지 이용할 수 있어요.`}
             </p>
           ) : null}
 
@@ -545,13 +553,9 @@ export default function KanjiPage() {
               type="button"
               onClick={makeNewQuiz}
               disabled={isDailyLimitReached}
-              className={
-                isDailyLimitReached
-                  ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-lg font-semibold text-gray-400"
-                  : "rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
-              }
+              className={isDailyLimitReached ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-lg font-semibold text-gray-400" : "rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"}
             >
-              🔄 새문제(랜덤 10문항)
+              {isDailyLimitReached ? "오늘 이용 완료" : "🔄 새문제(랜덤 10문항)"}
             </button>
             <button
               type="button"
@@ -604,7 +608,7 @@ export default function KanjiPage() {
                   <div key={`${q.jp_word}-${idx}`}>
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-2xl font-semibold">
-                        {circleNumber(idx)} {q.prompt}
+                        {circleNumber(idx)} <span lang="ja" style={JA_FONT_STYLE}>{q.prompt}</span>
                       </p>
 
                       {q.qtype === "meaning" ? (
@@ -650,7 +654,7 @@ export default function KanjiPage() {
                                   : ""
                               }
                             >
-                              {choice}
+                              <span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
                             </span>
                           </label>
                         );
@@ -671,10 +675,10 @@ export default function KanjiPage() {
                           {isRight ? "정답입니다." : "오답입니다."}
                         </p>
                         <p className="mt-2 text-sm text-gray-700">
-                          정답: {correct}
+                          정답: <span lang="ja" style={JA_FONT_STYLE}>{correct}</span>
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
-                          단어: {q.jp_word} / 읽기: {q.reading} / 뜻: {q.meaning}
+                          단어: <span lang="ja" style={JA_FONT_STYLE}>{q.jp_word}</span> / 읽기: <span lang="ja" style={JA_FONT_STYLE}>{q.reading}</span> / 뜻: {q.meaning}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
                           레벨: {q.level} / 유형: {qtypeLabel(q.qtype)}
@@ -756,7 +760,7 @@ export default function KanjiPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <p className="text-2xl font-bold">
-                                  Q{item.index + 1}. {item.question.jp_word}
+                                  Q{item.index + 1}. <span lang="ja" style={JA_FONT_STYLE}>{item.question.jp_word}</span>
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
                                   {item.question.prompt} · 레벨: {item.question.level} · 유형:{" "}
@@ -770,13 +774,13 @@ export default function KanjiPage() {
 
                             <div className="mt-4 space-y-1 text-lg">
                               <p>
-                                <span className="font-semibold">내 답</span>　{item.selected}
+                                <span className="font-semibold">내 답</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.selected}</span>
                               </p>
                               <p>
-                                <span className="font-semibold">정답</span>　{item.question.correct_text}
+                                <span className="font-semibold">정답</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.question.correct_text}</span>
                               </p>
                               <p>
-                                <span className="font-semibold">발음</span>　{item.question.reading}
+                                <span className="font-semibold">발음</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.question.reading}</span>
                               </p>
                               <p>
                                 <span className="font-semibold">뜻</span>　{item.question.meaning}
