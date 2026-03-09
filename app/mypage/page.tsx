@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -78,7 +77,6 @@ function parseDate(value?: string): Date | null {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 }
-
 
 function formatRelativeMessageTime(value?: string | null) {
   const d = parseDate(value ?? undefined);
@@ -226,8 +224,9 @@ function withFullIfMissing(posMode?: string): string {
   return label;
 }
 
-
 function prettyAttemptLabel(posMode?: string): string {
+  const raw = String(posMode || "").trim();
+
   return raw
     .replace(/\breading\b/g, "발음")
     .replace(/\bmeaning\b/g, "뜻")
@@ -690,7 +689,7 @@ export default function MyPage() {
           <img
             src="/icon-192.png"
             alt="하테나일본어"
-            className="h-10 w-10 rounded-xl"
+            className="h-10 w-10 rounded-xl shrink-0"
           />
           <div>
             <p className="text-3xl font-bold text-gray-900">하테나일본어</p>
@@ -700,20 +699,23 @@ export default function MyPage() {
           </div>
         </div>
 
-        {/* 여기 아래부터 기존 카드/탭/콘텐츠 유지 */}
-      </div>
-    </main>
-  );
+        <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
+          <div className="h-3 rounded-full bg-gray-100">
+            <div
+              className="h-3 rounded-full bg-blue-500"
+              style={{ width: `${stats.progressPercent}%` }}
+            />
+          </div>
 
-  <div className="mt-4 flex flex-wrap gap-3">
-    <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-      이번 달 {stats.thisMonthCount}/20회
-    </div>
-    <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-      {stats.progressPercent}% 진행
-    </div>
-  </div>
-        </div >
+          <div className="mt-4 flex flex-wrap gap-3">
+            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+              이번 달 {stats.thisMonthCount}/20회
+            </div>
+            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+              {stats.progressPercent}% 진행
+            </div>
+          </div>
+        </div>
 
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
           <div className="rounded-3xl border border-gray-200 bg-white p-5">
@@ -741,10 +743,10 @@ export default function MyPage() {
               {stats.totalAttempts === 0
                 ? "0%"
                 : `${Math.round(
-                  ((stats.totalAttempts * 10 - stats.totalWrong) /
-                    Math.max(stats.totalAttempts * 10, 1)) *
-                  100
-                )}%`}
+                    ((stats.totalAttempts * 10 - stats.totalWrong) /
+                      Math.max(stats.totalAttempts * 10, 1)) *
+                      100
+                  )}%`}
             </p>
             <p className="mt-2 text-lg font-semibold text-gray-700">평균 정답률</p>
           </div>
@@ -864,27 +866,99 @@ export default function MyPage() {
           </div>
         </div>
 
-  {
-    mainTab === "wrong" ? (
-      <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold">📚 오답</h2>
-            <p className="mt-2 text-sm text-gray-500">
-              반복해서 틀린 문제부터 가볍게 정리해 보세요.
-            </p>
-          </div>
-          <div className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600">
-            최근 오답 {filteredRecent.length}개
-          </div>
-        </div>
+        {mainTab === "wrong" ? (
+          <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-bold">📚 오답</h2>
+                <p className="mt-2 text-sm text-gray-500">
+                  반복해서 틀린 문제부터 가볍게 정리해 보세요.
+                </p>
+              </div>
+              <div className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600">
+                최근 오답 {filteredRecent.length}개
+              </div>
+            </div>
 
-        <div className="mt-6 rounded-3xl border border-gray-200 bg-gradient-to-b from-gray-50 to-white p-5">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
-            <div>
-              <p className="text-sm font-semibold text-gray-700">오답으로 시험보기</p>
-              <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-6 rounded-3xl border border-gray-200 bg-gradient-to-b from-gray-50 to-white p-5">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">오답으로 시험보기</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {[
+                      { key: "word", label: "단어" },
+                      { key: "kanji", label: "한자" },
+                      { key: "talk", label: "회화" },
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setWrongApp(item.key as WrongAppKey)}
+                        className={
+                          wrongApp === item.key
+                            ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
+                            : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                        }
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">문항 수</p>
+                  <div className="relative mt-2">
+                    <select
+                      value={wrongCount}
+                      onChange={(e) => setWrongCount(e.target.value)}
+                      className="w-full appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-10 text-base font-medium text-gray-900"
+                    >
+                      <option value="10">10문제</option>
+                      <option value="20">20문제</option>
+                      <option value="30">30문제</option>
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
+                      ⌄
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleWrongExamStart}
+                className="mt-5 w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
+              >
+                📝 오답으로 시험보기
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">검색</label>
+                  <input
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3"
+                    placeholder="유형, 레벨, 점수로 검색하세요."
+                  />
+                </div>
+
+                <label className="inline-flex items-center gap-3 rounded-2xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={repeatOnly}
+                    onChange={(e) => setRepeatOnly(e.target.checked)}
+                  />
+                  🔥 반복 오답만 보기 (3회+)
+                </label>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
                 {[
+                  { key: "all", label: "전체" },
                   { key: "word", label: "단어" },
                   { key: "kanji", label: "한자" },
                   { key: "talk", label: "회화" },
@@ -892,11 +966,11 @@ export default function MyPage() {
                   <button
                     key={item.key}
                     type="button"
-                    onClick={() => setWrongApp(item.key as WrongAppKey)}
+                    onClick={() => setWrongFilter(item.key as WrongFilterKey)}
                     className={
-                      wrongApp === item.key
-                        ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
-                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                      wrongFilter === item.key
+                        ? "rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
+                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800"
                     }
                   >
                     {item.label}
@@ -905,424 +979,344 @@ export default function MyPage() {
               </div>
             </div>
 
-            <div>
-              <p className="text-sm font-semibold text-gray-700">문항 수</p>
-              <div className="relative mt-2">
-                <select
-                  value={wrongCount}
-                  onChange={(e) => setWrongCount(e.target.value)}
-                  className="w-full appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-10 text-base font-medium text-gray-900"
-                >
-                  <option value="10">10문제</option>
-                  <option value="20">20문제</option>
-                  <option value="30">30문제</option>
-                </select>
-                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
-                  ⌄
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleWrongExamStart}
-            className="mt-5 w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
-          >
-            📝 오답으로 시험보기
-          </button>
-        </div>
-
-        <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-            <div>
-              <label className="text-sm font-semibold text-gray-700">검색</label>
-              <input
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3"
-                placeholder="유형, 레벨, 점수로 검색하세요."
-              />
-            </div>
-
-            <label className="inline-flex items-center gap-3 rounded-2xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700">
-              <input
-                type="checkbox"
-                checked={repeatOnly}
-                onChange={(e) => setRepeatOnly(e.target.checked)}
-              />
-              🔥 반복 오답만 보기 (3회+)
-            </label>
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            {[
-              { key: "all", label: "전체" },
-              { key: "word", label: "단어" },
-              { key: "kanji", label: "한자" },
-              { key: "talk", label: "회화" },
-            ].map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setWrongFilter(item.key as WrongFilterKey)}
-                className={
-                  wrongFilter === item.key
-                    ? "rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
-                    : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800"
-                }
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-6 space-y-3">
-          {filteredRecent.length === 0 ? (
-            <div className="rounded-2xl border border-gray-200 p-5 text-sm text-gray-500">
-              표시할 기록이 없습니다.
-            </div>
-          ) : (
-            filteredRecent.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                      {getAppLabelFromPosMode(item.pos_mode)}
-                    </div>
-                    <p className="mt-3 text-lg font-bold text-gray-900">
-                      {prettyAttemptLabel(item.pos_mode)}
-                    </p>
-                    <p className="mt-2 text-sm text-gray-600">
-                      {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
-                    </p>
-                  </div>
-
-                  <div className="text-right text-sm text-gray-500">
-                    <p>
-                      {item.created_at
-                        ? new Date(item.created_at).toLocaleDateString("ko-KR")
-                        : "-"}
-                    </p>
-                    <p className="mt-1">
-                      {item.created_at
-                        ? new Date(item.created_at).toLocaleTimeString("ko-KR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                        : "-"}
-                    </p>
-                  </div>
+            <div className="mt-6 space-y-3">
+              {filteredRecent.length === 0 ? (
+                <div className="rounded-2xl border border-gray-200 p-5 text-sm text-gray-500">
+                  표시할 기록이 없습니다.
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    ) : null
-  }
-
-  {
-    mainTab === "history" ? (
-      <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
-        <h2 className="text-2xl font-bold">📈 기록</h2>
-        <p className="mt-3 text-sm text-gray-500">
-          최근 학습 흐름을 한눈에 확인해 보세요. 가장 최근에 저장된 결과부터 보여드립니다.
-        </p>
-
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <p className="text-xs text-gray-500">최근 기록</p>
-            <p className="mt-2 text-2xl font-bold">{recentAttempts.length}개</p>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <p className="text-xs text-gray-500">평균 점수</p>
-            <p className="mt-2 text-2xl font-bold">{calcAveragePercent(recentAttempts)}%</p>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <p className="text-xs text-gray-500">가장 많이 한 학습</p>
-            <p className="mt-2 text-2xl font-bold">
-              {getTopWrongType(recentAttempts) === "-" ? "-" : getTopWrongType(recentAttempts)}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6 space-y-3">
-          {recentAttempts.length === 0 ? (
-            <div className="rounded-2xl border border-gray-200 p-5 text-sm text-gray-500">
-              표시할 기록이 없습니다.
-            </div>
-          ) : (
-            recentAttempts.map((item) => {
-              const kind = detectAppKind(item.pos_mode);
-              const tone =
-                kind === "talk"
-                  ? "border-purple-200 bg-purple-50 text-purple-700"
-                  : kind === "word"
-                    ? "border-blue-200 bg-blue-50 text-blue-700"
-                    : kind === "kanji"
-                      ? "border-green-200 bg-green-50 text-green-700"
-                      : "border-gray-200 bg-gray-50 text-gray-700";
-
-              return (
-                <div
-                  key={item.id}
-                  className="rounded-2xl border border-gray-200 bg-white p-5"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${tone}`}>
-                        {getAppLabelFromPosMode(item.pos_mode)}
+              ) : (
+                filteredRecent.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                          {getAppLabelFromPosMode(item.pos_mode)}
+                        </div>
+                        <p className="mt-3 text-lg font-bold text-gray-900">
+                          {prettyAttemptLabel(withFullIfMissing(item.pos_mode))}
+                        </p>
+                        <p className="mt-2 text-sm text-gray-600">
+                          {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
+                        </p>
                       </div>
-                      <p className="mt-3 text-base font-semibold text-gray-900">
-                        {prettyAttemptLabel(item.pos_mode)}
-                      </p>
-                      <p className="mt-2 text-sm text-gray-600">
-                        {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
-                      </p>
-                    </div>
 
-                    <div className="shrink-0 text-right text-xs text-gray-500">
-                      {item.created_at ? new Date(item.created_at).toLocaleString("ko-KR") : "-"}
+                      <div className="text-right text-sm text-gray-500">
+                        <p>
+                          {item.created_at
+                            ? new Date(item.created_at).toLocaleDateString("ko-KR")
+                            : "-"}
+                        </p>
+                        <p className="mt-1">
+                          {item.created_at
+                            ? new Date(item.created_at).toLocaleTimeString("ko-KR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "-"}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-    ) : null
-  }
+                ))
+              )}
+            </div>
+          </div>
+        ) : null}
 
-  {
-    mainTab === "message" ? (
-      <div className="mt-6 space-y-4">
-        <div className="rounded-3xl border border-gray-200 bg-white p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-2xl font-bold">💌 메시지</h2>
-              <p className="mt-3 text-sm text-gray-500">
-                관리자가 직접 보낸 메시지가 아니라, 오늘의 학습 흐름을 바탕으로 자동 생성된 피드백 메시지입니다.
+        {mainTab === "history" ? (
+          <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
+            <h2 className="text-2xl font-bold">📈 기록</h2>
+            <p className="mt-3 text-sm text-gray-500">
+              최근 학습 흐름을 한눈에 확인해 보세요. 가장 최근에 저장된 결과부터 보여드립니다.
+            </p>
+
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">최근 기록</p>
+                <p className="mt-2 text-2xl font-bold">{recentAttempts.length}개</p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">평균 점수</p>
+                <p className="mt-2 text-2xl font-bold">{calcAveragePercent(recentAttempts)}%</p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">가장 많이 한 학습</p>
+                <p className="mt-2 text-2xl font-bold">
+                  {getTopWrongType(recentAttempts) === "-" ? "-" : getTopWrongType(recentAttempts)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {recentAttempts.length === 0 ? (
+                <div className="rounded-2xl border border-gray-200 p-5 text-sm text-gray-500">
+                  표시할 기록이 없습니다.
+                </div>
+              ) : (
+                recentAttempts.map((item) => {
+                  const kind = detectAppKind(item.pos_mode);
+                  const tone =
+                    kind === "talk"
+                      ? "border-purple-200 bg-purple-50 text-purple-700"
+                      : kind === "word"
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : kind === "kanji"
+                          ? "border-green-200 bg-green-50 text-green-700"
+                          : "border-gray-200 bg-gray-50 text-gray-700";
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-gray-200 bg-white p-5"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${tone}`}>
+                            {getAppLabelFromPosMode(item.pos_mode)}
+                          </div>
+                          <p className="mt-3 text-base font-semibold text-gray-900">
+                            {prettyAttemptLabel(withFullIfMissing(item.pos_mode))}
+                          </p>
+                          <p className="mt-2 text-sm text-gray-600">
+                            {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-right text-xs text-gray-500">
+                          {item.created_at ? new Date(item.created_at).toLocaleString("ko-KR") : "-"}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        {mainTab === "message" ? (
+          <div className="mt-6 space-y-4">
+            <div className="rounded-3xl border border-gray-200 bg-white p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-bold">💌 메시지</h2>
+                  <p className="mt-3 text-sm text-gray-500">
+                    관리자가 직접 보낸 메시지가 아니라, 오늘의 학습 흐름을 바탕으로 자동 생성된 피드백 메시지입니다.
+                  </p>
+                </div>
+                <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                  최신 업데이트 · {formatRelativeMessageTime(latestAttemptAt)}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-semibold text-blue-700">오늘의 한마디</p>
+                <div className="rounded-full border border-blue-200 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700">
+                  {formatRelativeMessageTime(latestAttemptAt)}
+                </div>
+              </div>
+              <p className="mt-3 text-2xl font-bold text-gray-900">{todayMessageTitle}</p>
+              <p className="mt-3 text-base leading-7 text-gray-700">{todayMessageBody}</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-3xl border border-gray-200 bg-white p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-semibold text-gray-500">현재 학습 코멘트</p>
+                  <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(secondAttemptAt)}</p>
+                </div>
+                <p className="mt-3 text-lg font-semibold text-gray-900">{warmMessage}</p>
+                <div className="mt-5 rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
+                  최근 7일 학습 {stats.last7.reduce((sum, day) => sum + (day.total > 0 ? 1 : 0), 0)}일 · 연속 학습 {stats.streak}일 · 이번 주 풀이 {stats.thisWeekCount}회
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-gray-200 bg-white p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-semibold text-gray-500">{coachTipTitle}</p>
+                  <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(thirdAttemptAt)}</p>
+                </div>
+                <p className="mt-3 text-lg font-semibold text-gray-900">오늘은 너무 넓게 말고, 하나만 정확히</p>
+                <p className="mt-3 text-base leading-7 text-gray-700">{coachTipBody}</p>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-gray-200 bg-white p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">메시지 기록</p>
+                  <p className="mt-2 text-sm text-gray-500">언제 받은 메시지인지 한눈에 구분할 수 있게 최근 흐름으로 정리했습니다.</p>
+                </div>
+                <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                  총 {messageHistory.length}개
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-5">
+                {Object.entries(groupedMessageHistory).map(([section, items]) => (
+                  <div key={section}>
+                    <div className="mb-3 flex items-center gap-2">
+                      <div className="h-px flex-1 bg-gray-200" />
+                      <p className="shrink-0 text-xs font-semibold tracking-wide text-gray-400">{section}</p>
+                      <div className="h-px flex-1 bg-gray-200" />
+                    </div>
+
+                    <div className="space-y-3">
+                      {items.map((item) => (
+                        <div key={item.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-gray-900">{item.title}</p>
+                              {item.badge ? (
+                                <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-500">
+                                  {item.badge}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(item.time)}</p>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-gray-600">{item.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-gray-200 bg-white p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">지금 추천하는 루틴</p>
+                  <p className="mt-2 text-sm text-gray-500">부담 없이 이어가기 좋은 루틴부터 시작해 보세요.</p>
+                </div>
+                <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                  {profile?.full_name ? `${profile.full_name}님 맞춤` : "오늘의 추천"}
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <a
+                  href={
+                    stats.topWrongType === "회화"
+                      ? "/mypage/wrong-talk"
+                      : stats.topWrongType === "한자"
+                        ? "/mypage/wrong-kanji"
+                        : "/mypage/wrong-word"
+                  }
+                  className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
+                >
+                  🔁 가장 많이 틀린 유형 복습
+                </a>
+                <a
+                  href="/talk"
+                  className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
+                >
+                  🗣️ 회화 1세트 이어가기
+                </a>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {mainTab === "notice" ? (
+          <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
+            <h2 className="text-2xl font-bold">🔔 알림</h2>
+            <p className="mt-3 text-sm text-gray-500">
+              지금 이 브라우저에서 푸시 알림이 켜져 있는지 바로 확인할 수 있습니다.
+            </p>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">브라우저 권한</p>
+                <p className="mt-2 text-xl font-bold">{noticePermissionLabel}</p>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">푸시 연결 상태</p>
+                <p className="mt-2 text-xl font-bold">
+                  {noticeStatus.subscribed ? "켜짐" : "꺼짐"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">서비스워커</p>
+                <p className="mt-2 text-xl font-bold">
+                  {noticeStatus.serviceWorkerReady ? "준비됨" : "미확인"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+              <p className="text-base font-semibold text-blue-900">{noticeSummary}</p>
+              <p className="mt-2 text-sm text-blue-800">
+                {noticeStatus.permission === "denied"
+                  ? "브라우저 설정에서 알림 권한을 다시 허용해야 합니다."
+                  : "권한과 푸시 연결 상태를 함께 기준으로 보여줍니다."}
               </p>
             </div>
-            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-              최신 업데이트 · {formatRelativeMessageTime(latestAttemptAt)}
+
+            {noticeError ? (
+              <p className="mt-4 text-sm text-red-500">{noticeError}</p>
+            ) : null}
+
+            {noticeMessage ? (
+              <p className="mt-4 text-sm text-green-600">{noticeMessage}</p>
+            ) : null}
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={handleEnableNotice}
+                disabled={noticeEnabling}
+                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
+              >
+                {noticeEnabling ? "알림 연결 중..." : "알림 켜기"}
+              </button>
+
+              <button
+                type="button"
+                onClick={refreshNoticeStatus}
+                disabled={noticeRefreshing}
+                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
+              >
+                {noticeRefreshing ? "상태 확인 중..." : "상태 새로고침"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDisableNotice}
+                disabled={noticeDisabling}
+                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
+              >
+                {noticeDisabling ? "해제 중..." : "알림 끄기"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSendTestPush}
+                disabled={noticeTesting}
+                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
+              >
+                {noticeTesting ? "테스트 발송 중..." : "테스트 알림 보내기"}
+              </button>
             </div>
           </div>
-        </div>
-
-        <div className="rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-6">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm font-semibold text-blue-700">오늘의 한마디</p>
-            <div className="rounded-full border border-blue-200 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700">
-              {formatRelativeMessageTime(latestAttemptAt)}
-            </div>
-          </div>
-          <p className="mt-3 text-2xl font-bold text-gray-900">{todayMessageTitle}</p>
-          <p className="mt-3 text-base leading-7 text-gray-700">{todayMessageBody}</p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-gray-200 bg-white p-6">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm font-semibold text-gray-500">현재 학습 코멘트</p>
-              <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(secondAttemptAt)}</p>
-            </div>
-            <p className="mt-3 text-lg font-semibold text-gray-900">{warmMessage}</p>
-            <div className="mt-5 rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
-              최근 7일 학습 {stats.last7.reduce((sum, day) => sum + (day.total > 0 ? 1 : 0), 0)}일 · 연속 학습 {stats.streak}일 · 이번 주 풀이 {stats.thisWeekCount}회
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-gray-200 bg-white p-6">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm font-semibold text-gray-500">{coachTipTitle}</p>
-              <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(thirdAttemptAt)}</p>
-            </div>
-            <p className="mt-3 text-lg font-semibold text-gray-900">오늘은 너무 넓게 말고, 하나만 정확히</p>
-            <p className="mt-3 text-base leading-7 text-gray-700">{coachTipBody}</p>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-gray-200 bg-white p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-lg font-semibold text-gray-900">메시지 기록</p>
-              <p className="mt-2 text-sm text-gray-500">언제 받은 메시지인지 한눈에 구분할 수 있게 최근 흐름으로 정리했습니다.</p>
-            </div>
-            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-              총 {messageHistory.length}개
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-5">
-            {Object.entries(groupedMessageHistory).map(([section, items]) => (
-              <div key={section}>
-                <div className="mb-3 flex items-center gap-2">
-                  <div className="h-px flex-1 bg-gray-200" />
-                  <p className="shrink-0 text-xs font-semibold tracking-wide text-gray-400">{section}</p>
-                  <div className="h-px flex-1 bg-gray-200" />
-                </div>
-
-                <div className="space-y-3">
-                  {items.map((item) => (
-                    <div key={item.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-gray-900">{item.title}</p>
-                          {item.badge ? (
-                            <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-500">
-                              {item.badge}
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(item.time)}</p>
-                      </div>
-                      <p className="mt-2 text-sm leading-6 text-gray-600">{item.body}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-gray-200 bg-white p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-lg font-semibold text-gray-900">지금 추천하는 루틴</p>
-              <p className="mt-2 text-sm text-gray-500">부담 없이 이어가기 좋은 루틴부터 시작해 보세요.</p>
-            </div>
-            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-              {profile?.full_name ? `${profile.full_name}님 맞춤` : "오늘의 추천"}
-            </div>
-          </div>
-
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <a
-              href={
-                stats.topWrongType === "회화"
-                  ? "/mypage/wrong-talk"
-                  : stats.topWrongType === "한자"
-                    ? "/mypage/wrong-kanji"
-                    : "/mypage/wrong-word"
-              }
-              className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
-            >
-              🔁 가장 많이 틀린 유형 복습
-            </a>
-            <a
-              href="/talk"
-              className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
-            >
-              🗣️ 회화 1세트 이어가기
-            </a>
-          </div>
-        </div>
-      </div>
-    ) : null
-  }
-
-  {
-    mainTab === "notice" ? (
-      <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
-        <h2 className="text-2xl font-bold">🔔 알림</h2>
-        <p className="mt-3 text-sm text-gray-500">
-          지금 이 브라우저에서 푸시 알림이 켜져 있는지 바로 확인할 수 있습니다.
-        </p>
-
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <p className="text-xs text-gray-500">브라우저 권한</p>
-            <p className="mt-2 text-xl font-bold">{noticePermissionLabel}</p>
-          </div>
-
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <p className="text-xs text-gray-500">푸시 연결 상태</p>
-            <p className="mt-2 text-xl font-bold">
-              {noticeStatus.subscribed ? "켜짐" : "꺼짐"}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <p className="text-xs text-gray-500">서비스워커</p>
-            <p className="mt-2 text-xl font-bold">
-              {noticeStatus.serviceWorkerReady ? "준비됨" : "미확인"}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <p className="text-base font-semibold text-blue-900">{noticeSummary}</p>
-          <p className="mt-2 text-sm text-blue-800">
-            {noticeStatus.permission === "denied"
-              ? "브라우저 설정에서 알림 권한을 다시 허용해야 합니다."
-              : "권한과 푸시 연결 상태를 함께 기준으로 보여줍니다."}
-          </p>
-        </div>
-
-        {noticeError ? (
-          <p className="mt-4 text-sm text-red-500">{noticeError}</p>
         ) : null}
 
-        {noticeMessage ? (
-          <p className="mt-4 text-sm text-green-600">{noticeMessage}</p>
-        ) : null}
-
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={handleEnableNotice}
-            disabled={noticeEnabling}
-            className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
-          >
-            {noticeEnabling ? "알림 연결 중..." : "알림 켜기"}
-          </button>
-
-          <button
-            type="button"
-            onClick={refreshNoticeStatus}
-            disabled={noticeRefreshing}
-            className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
-          >
-            {noticeRefreshing ? "상태 확인 중..." : "상태 새로고침"}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDisableNotice}
-            disabled={noticeDisabling}
-            className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
-          >
-            {noticeDisabling ? "해제 중..." : "알림 끄기"}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSendTestPush}
-            disabled={noticeTesting}
-            className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
-          >
-            {noticeTesting ? "테스트 발송 중..." : "테스트 알림 보내기"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="mt-8 w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
+        >
+          로그아웃
+        </button>
       </div>
-    ) : null
-  }
-
-  <button
-    type="button"
-    onClick={handleLogout}
-    className="mt-8 w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
-  >
-    로그아웃
-  </button>
-      </div >
-    </main >
+    </main>
   );
 }
