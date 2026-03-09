@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabase";
 import { fetchAllAttempts, type QuizAttemptRow } from "@/lib/attempts";
 import {
   isKanjiAttempt,
-  isKatsuyouAttempt,
   isTalkAttempt,
   isWordAttempt,
 } from "@/lib/labels";
@@ -238,12 +237,10 @@ export default function HomePage() {
 
     const wordCount = calcCount(attempts, isWordAttempt);
     const kanjiCount = calcCount(attempts, isKanjiAttempt);
-    const katsuyouCount = calcCount(attempts, isKatsuyouAttempt);
     const talkCount = calcCount(attempts, isTalkAttempt);
 
     const wordAvg = calcAvg(attempts, isWordAttempt);
     const kanjiAvg = calcAvg(attempts, isKanjiAttempt);
-    const katsuyouAvg = calcAvg(attempts, isKatsuyouAttempt);
     const talkAvg = calcAvg(attempts, isTalkAttempt);
 
     const recent7Days = buildLast7Days(attempts);
@@ -257,11 +254,9 @@ export default function HomePage() {
       totalWrong,
       wordCount,
       kanjiCount,
-      katsuyouCount,
       talkCount,
       wordAvg,
       kanjiAvg,
-      katsuyouAvg,
       talkAvg,
       recent7Days,
       streak,
@@ -449,34 +444,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-rose-200 bg-gradient-to-r from-rose-50 to-white p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-2xl font-bold">🔄 활용</p>
-                <p className="mt-2 text-sm text-gray-600">
-                  い형용사·な형용사·동사의 기본형을 문제로 익혀보세요.
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-bold">{stats.katsuyouCount}</p>
-                <p className="text-xs text-gray-500">학습 횟수</p>
-              </div>
-            </div>
-
-            <div className="mt-5 flex items-end justify-between">
-              <div>
-                <p className="text-sm text-gray-500">평균 점수</p>
-                <p className="mt-1 text-2xl font-bold">{stats.katsuyouAvg}%</p>
-              </div>
-              <a
-                href="/katsuyou"
-                className="rounded-2xl border border-rose-200 bg-white px-4 py-2 text-sm text-gray-800"
-              >
-                활용 시작
-              </a>
-            </div>
-          </div>
-
           <div className="rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-50 to-white p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -563,9 +530,9 @@ export default function HomePage() {
               <p className="mt-2 text-2xl font-bold">{stats.totalWrong}</p>
             </div>
             <div className="rounded-2xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500">단어 + 한자 + 활용</p>
+              <p className="text-xs text-gray-500">단어 + 한자</p>
               <p className="mt-2 text-2xl font-bold">
-                {stats.wordCount + stats.kanjiCount + stats.katsuyouCount}
+                {stats.wordCount + stats.kanjiCount}
               </p>
             </div>
             <div className="rounded-2xl border border-gray-200 p-4">

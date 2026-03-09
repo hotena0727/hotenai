@@ -1,161 +1,112 @@
-export type AppKind = "talk" | "word" | "kanji" | "unknown";
+import type { QuizAttemptRow } from "@/lib/attempts";
 
-const TALK_CODE_LABELS: Record<string, string> = {
-  aisatsu: "인사말",
-  jikoshoukai: "자기소개",
-  shumi: "취미",
-  riyuu: "이유",
-  language_exchange: "언어교환(모임)",
-  meetup: "언어교환(모임)",
-};
+export type AppKind = "word" | "kanji" | "katsuyou" | "talk" | "unknown";
 
-const NORMALIZED_CODE_LABELS: Record<string, string> = {
-  ...TALK_CODE_LABELS,
-};
-
-function normalizeToken(value?: string): string {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_");
+function normalize(value: unknown): string {
+  return String(value || "").trim();
 }
 
-export function detectAppKind(posMode?: string): AppKind {
-  const raw = String(posMode || "").trim().toLowerCase();
+function lower(value: unknown): string {
+  return normalize(value).toLowerCase();
+}
 
-  if (!raw) return "unknown";
-
-  if (raw.startsWith("회화") || raw.startsWith("talk:") || raw === "talk") {
-    return "talk";
-  }
-  if (raw.startsWith("단어") || raw.startsWith("word:") || raw === "word") {
-    return "word";
-  }
-  if (raw.startsWith("한자") || raw.startsWith("kanji:") || raw === "kanji") {
-    return "kanji";
+function extractValues(rowOrPosMode?: QuizAttemptRow | string) {
+  if (typeof rowOrPosMode === "string" || rowOrPosMode == null) {
+    const posMode = normalize(rowOrPosMode);
+    return {
+      appKind: "",
+      quizType: "",
+      posMode,
+      appKindLower: "",
+      quizTypeLower: "",
+      posModeLower: posMode.toLowerCase(),
+    };
   }
 
-  return "unknown";
-}
-
-export function getAppLabel(appKind: AppKind): string {
-  switch (appKind) {
-    case "talk":
-      return "회화";
-    case "word":
-      return "단어";
-    case "kanji":
-      return "한자";
-    default:
-      return "기타";
-  }
-}
-
-export function getAppShortLabel(appKind: AppKind): string {
-  switch (appKind) {
-    case "talk":
-      return "회화";
-    case "word":
-      return "단어";
-    case "kanji":
-      return "한자";
-    default:
-      return "-";
-  }
-}
-
-export function getAppLabelFromPosMode(posMode?: string): string {
-  return getAppLabel(detectAppKind(posMode));
-}
-
-export function isTalkAttempt(posMode?: string): boolean {
-  return detectAppKind(posMode) === "talk";
-}
-
-export function isWordAttempt(posMode?: string): boolean {
-  return detectAppKind(posMode) === "word";
-}
-
-export function isKanjiAttempt(posMode?: string): boolean {
-  return detectAppKind(posMode) === "kanji";
-}
-
-export function splitPosMode(posMode?: string): {
-  appKind: AppKind;
-  appLabel: string;
-  parts: string[];
-} {
-  const raw = String(posMode || "").trim();
-
-  const parts = raw
-    .split("·")
-    .map((x) => x.trim())
-    .filter(Boolean);
-
-  const appKind = detectAppKind(raw);
-  const appLabel = getAppLabel(appKind);
+  const appKind = normalize((rowOrPosMode as QuizAttemptRow).app_kind);
+  const quizType = normalize((rowOrPosMode as QuizAttemptRow).quiz_type);
+  const posMode = normalize((rowOrPosMode as QuizAttemptRow).pos_mode);
 
   return {
     appKind,
-    appLabel,
-    parts,
+    quizType,
+    posMode,
+    appKindLower: lower(appKind),
+    quizTypeLower: lower(quizType),
+    posModeLower: lower(posMode),
   };
 }
 
-export function getPrettySubLabel(posMode?: string): string {
-  const raw = String(posMode || "").trim();
-  if (!raw) return "-";
+export function isWordAttempt(rowOrPosMode?: QuizAttemptRow | string): boolean {
+  const v = extractValues(rowOrPosMode);
 
-  if (raw.includes("·")) {
-    const parts = raw
-      .split("·")
-      .map((x) => x.trim())
-      .filter(Boolean);
+  return (
+    v.appKindLower.includes("word") ||
+    v.quizTypeLower.includes("word") ||
+    v.posMode.includes("단어")
+  );
+}
 
-    if (parts.length >= 2) {
-      return parts[1];
-    }
-  }
+export function isKanjiAttempt(rowOrPosMode?: QuizAttemptRow | string): boolean {
+  const v = extractValues(rowOrPosMode);
 
-  const lower = raw.toLowerCase();
+  return (
+    v.appKindLower.includes("kanji") ||
+    v.quizTypeLower.includes("kanji") ||
+    v.posMode.includes("한자")
+  );
+}
 
-  if (lower.includes(":")) {
-    const token = normalizeToken(lower.split(":").pop());
-    return NORMALIZED_CODE_LABELS[token] || token || raw;
-  }
+export function isKatsuyouAttempt(rowOrPosMode?: QuizAttemptRow | string): boolean {
+  const v = extractValues(rowOrPosMode);
 
-  const token = normalizeToken(lower);
-  return NORMALIZED_CODE_LABELS[token] || raw;
+  return (
+    v.appKindLower.includes("katsuyou") ||
+    v.quizTypeLower.includes("katsuyou") ||
+    v.posMode.includes("활용")
+  );
+}
+
+export function isTalkAttempt(rowOrPosMode?: QuizAttemptRow | string): boolean {
+  const v = extractValues(rowOrPosMode);
+
+  return (
+    v.appKindLower.includes("talk") ||
+    v.quizTypeLower.includes("talk") ||
+    v.posMode.includes("회화")
+  );
+}
+
+export function detectAppKind(row: QuizAttemptRow): AppKind {
+  if (isKatsuyouAttempt(row)) return "katsuyou";
+  if (isWordAttempt(row)) return "word";
+  if (isKanjiAttempt(row)) return "kanji";
+  if (isTalkAttempt(row)) return "talk";
+  return "unknown";
+}
+
+export function getAppLabelFromPosMode(posMode?: string): string {
+  const value = normalize(posMode);
+
+  if (value.includes("활용")) return "활용";
+  if (value.includes("단어")) return "단어";
+  if (value.includes("한자")) return "한자";
+  if (value.includes("회화")) return "회화";
+
+  return "학습";
 }
 
 export function getPrettyPosModeLabel(posMode?: string): string {
-  const raw = String(posMode || "").trim();
-  if (!raw) return "-";
+  const value = normalize(posMode);
+  if (!value) return "학습";
 
-  if (raw.includes("·")) {
-    return raw;
-  }
+  let pretty = value;
 
-  const appKind = detectAppKind(raw);
-  const appLabel = getAppLabel(appKind);
+  pretty = pretty.replace(/\bi_adj\b/g, "い형용사");
+  pretty = pretty.replace(/\bna_adj\b/g, "な형용사");
+  pretty = pretty.replace(/\bverb\b/g, "동사");
+  pretty = pretty.replace(/\bkr2jp\b/g, "한→일");
+  pretty = pretty.replace(/\bjp2kr\b/g, "일→한");
 
-  if (raw.toLowerCase().includes(":")) {
-    const token = normalizeToken(raw.split(":").pop());
-    const subLabel = NORMALIZED_CODE_LABELS[token] || token;
-    if (appKind !== "unknown") {
-      return `${appLabel} · ${subLabel}`;
-    }
-    return subLabel || raw;
-  }
-
-  const token = normalizeToken(raw);
-  const subLabel = NORMALIZED_CODE_LABELS[token];
-  if (subLabel && appKind !== "unknown") {
-    return `${appLabel} · ${subLabel}`;
-  }
-  if (subLabel) {
-    return subLabel;
-  }
-
-  return raw;
+  return pretty;
 }
