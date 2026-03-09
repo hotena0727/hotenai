@@ -11,23 +11,28 @@ export default function LoginPage() {
     setLoading(true);
     setMessage("");
 
+    const redirectTo =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/mypage`
+        : undefined;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: "http://localhost:3000/mypage",
+        redirectTo,
       },
     });
 
     if (error) {
       setMessage("로그인 중 오류가 발생했습니다.");
       console.error(error);
+      setLoading(false);
+      return;
     }
-
-    setLoading(false);
   };
 
   return (
-    <main className="min-h-screen bg-white px-6 pt-34 pb-10 text-gray-900">
+    <main className="min-h-screen bg-white px-6 pt-30 pb-10 text-gray-900">
       <div className="mx-auto w-full max-w-5xl">
         <div className="mx-auto max-w-3xl rounded-[30px] border border-gray-200 bg-gradient-to-r from-blue-50/80 via-white to-gray-50 p-4 shadow-sm sm:p-5">
           <div className="rounded-[26px] border border-gray-200 bg-white/95 p-5 shadow-sm sm:p-6">
@@ -68,7 +73,10 @@ export default function LoginPage() {
         <div className="mx-auto mt-5 max-w-3xl">
           <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             <p className="text-sm font-semibold text-gray-700">
-              Google 계정으로 간편하게 시작할 수 있어요.
+              Google 계정으로 안전하게 로그인할 수 있어요.
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              Google 인증 후 자동으로 하테나일본어로 돌아옵니다.
             </p>
 
             <button
@@ -77,7 +85,7 @@ export default function LoginPage() {
               disabled={loading}
               className="mt-4 w-full rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {loading ? "로그인 중..." : "Google로 로그인"}
+              {loading ? "로그인 중..." : "Google 계정으로 로그인"}
             </button>
 
             {message ? (
