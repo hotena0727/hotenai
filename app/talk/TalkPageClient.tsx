@@ -37,6 +37,7 @@ const BASE_AUDIO_URL = "https://hotena.com/hotena/app/mp3/";
 const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx/";
 const DAILY_TALK_LISTEN_LIMIT = 3;
 const DAILY_TALK_RECORD_LIMIT = 3;
+const UPGRADE_URL = "/pricing";
 let activeSfxAudio: HTMLAudioElement | null = null;
 
 type ReviewModeType = "wrong" | "random" | "old" | "mixed";
@@ -213,6 +214,26 @@ function TitleImage({
   );
 }
 
+function UpgradeHint({
+  title,
+  body,
+}: {
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="mt-3 rounded-2xl border border-gray-200 bg-white px-4 py-4">
+      <p className="text-sm font-semibold text-gray-800">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-gray-600">{body}</p>
+      <a
+        href={UPGRADE_URL}
+        className="mt-3 inline-flex rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800"
+      >
+        ✨ PRO 안내 보기
+      </a>
+    </div>
+  );
+}
 
 function playSfx(kind: "correct" | "wrong" | "reward") {
   const pathCandidates = {
@@ -508,10 +529,10 @@ export default function TalkPage() {
         } else {
           setRecordUsed(Number(usage.used || DAILY_TALK_RECORD_LIMIT));
           setQuotaMessage(
-            "오늘 FREE 녹음 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있어요."
+            "오늘 FREE 녹음 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 제한 없이 이용할 수 있습니다."
           );
           setPronError(
-            "오늘 FREE 녹음 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있어요."
+            "오늘 FREE 녹음 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 제한 없이 이용할 수 있습니다."
           );
           return;
         }
@@ -1067,7 +1088,7 @@ setAudioError("");
         } else {
           setListenUsed(Number(usage.used || DAILY_TALK_LISTEN_LIMIT));
           setQuotaMessage(
-            "오늘 FREE 발음듣기 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있어요."
+            "오늘 FREE 발음듣기 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 제한 없이 이용할 수 있습니다."
           );
           setAudioLoadingKey("");
           return;
@@ -1629,6 +1650,15 @@ setAudioError("");
                   "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 PRO에서 이용할 수 있습니다."}
               </p>
             ) : null}
+
+            {!isPro && (listenLimitReached || recordLimitReached) ? (
+              <UpgradeHint
+                title={listenLimitReached ? "오늘 FREE 발음듣기 사용이 모두 끝났어요." : "오늘 FREE 녹음 사용이 모두 끝났어요."}
+                body={listenLimitReached
+                  ? "오늘 준비된 FREE 발음듣기 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 발음듣기를 제한 없이 들을 수 있습니다."
+                  : "오늘 준비된 FREE 녹음 3회를 모두 사용했습니다. 내일 다시 다시 연습할 수 있고, PRO에서는 녹음을 제한 없이 이용할 수 있습니다."}
+              />
+            ) : null}
           </div>
 
           <div className="mt-6 space-y-4 rounded-3xl border border-gray-200 bg-gradient-to-b from-white to-gray-50/70 p-6 shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
@@ -2145,6 +2175,12 @@ setAudioError("");
                       ) : (
                         <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
                           AI 스마트코치는 PRO에서 이용할 수 있습니다.
+                          <a
+                            href={UPGRADE_URL}
+                            className="mt-3 inline-flex rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800"
+                          >
+                            ✨ PRO 안내 보기
+                          </a>
                         </div>
                       )}
                     </div>
@@ -2169,6 +2205,15 @@ setAudioError("");
                 <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm leading-6 text-gray-700">
                   {quotaMessage ||
                     "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다."}
+
+                  <UpgradeHint
+                    title={listenLimitReached ? "오늘 FREE 발음듣기 사용이 모두 끝났어요." : recordLimitReached ? "오늘 FREE 녹음 사용이 모두 끝났어요." : "PRO에서는 더 편하게 이어갈 수 있어요."}
+                    body={listenLimitReached
+                      ? "오늘은 준비된 발음듣기 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 발음듣기를 제한 없이 이용할 수 있습니다."
+                      : recordLimitReached
+                        ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 녹음을 제한 없이 이용할 수 있습니다."
+                        : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. PRO에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."}
+                  />
                 </div>
               ) : null}
 
