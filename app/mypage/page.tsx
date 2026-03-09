@@ -14,7 +14,6 @@ import {
   fetchRecentAttempts,
   type QuizAttemptRow,
 } from "@/lib/attempts";
-import InstallButton from "@/components/install-button";
 import {
   isKanjiAttempt,
   isTalkAttempt,
@@ -749,15 +748,28 @@ export default function MyPage() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-3xl border border-gray-200 bg-white p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4 rounded-3xl border border-sky-200 bg-sky-50/70 p-5">
+          <div className="flex flex-col gap-3">
             <div>
-              <p className="text-base font-bold text-gray-900">앱처럼 설치하기</p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="text-base font-bold text-slate-900">앱처럼 설치하기</p>
+              <p className="mt-1 text-sm text-slate-600">
                 홈 화면에 추가하면 더 빠르고 편하게 사용할 수 있어요.
               </p>
             </div>
-            <InstallButton />
+
+            <div className="rounded-2xl bg-white/70 px-4 py-3 text-sm leading-6 text-slate-700">
+              <div className="font-semibold text-slate-900">브라우저별 안내</div>
+              <div className="mt-2">
+                • <span className="font-semibold">iPhone / Safari</span>:
+                아래 공유 버튼 → 더 보기 → 홈 화면에 추가
+                <br />
+                • <span className="font-semibold">삼성 인터넷</span>:
+                브라우저 메뉴 → 추가 → 홈 화면
+                <br />
+                • <span className="font-semibold">Android / Chrome</span>:
+                브라우저 메뉴 → 앱 설치 또는 홈 화면               
+              </div>
+            </div>
           </div>
         </div>
 
