@@ -81,6 +81,7 @@ const JA_FONT_STYLE = {
 } as const;
 
 const DAILY_FREE_SET_LIMIT = 3;
+const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx/";
 
 export default function WordPage() {
   const [rows, setRows] = useState<WordRow[]>([]);
@@ -110,49 +111,7 @@ export default function WordPage() {
 
   const didAutoCreateRef = useRef(false);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  const resultSfxAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  const playResultSfx = (kind: "perfect" | "good" | "fail") => {
-    try {
-      if (typeof window === "undefined") return;
-
-      if (resultSfxAudioRef.current) {
-        resultSfxAudioRef.current.pause();
-        resultSfxAudioRef.current.currentTime = 0;
-        resultSfxAudioRef.current = null;
-      }
-
-      const src =
-        kind === "perfect"
-          ? "https://hotena.com/hotena/app/mp3/sfx/perfect.mp3"
-          : kind === "good"
-          ? "https://hotena.com/hotena/app/mp3/sfx/correct.mp3"
-          : "https://hotena.com/hotena/app/mp3/sfx/wrong.mp3";
-
-      const audio = new Audio(src);
-      audio.preload = "auto";
-      audio.volume = 1;
-      audio.onended = () => {
-        if (resultSfxAudioRef.current === audio) {
-          resultSfxAudioRef.current = null;
-        }
-      };
-      audio.onerror = () => {
-        if (resultSfxAudioRef.current === audio) {
-          resultSfxAudioRef.current = null;
-        }
-      };
-
-      resultSfxAudioRef.current = audio;
-      void audio.play().catch((error) => {
-        console.error("[sfx] play failed:", error);
-      });
-    } catch (error) {
-      console.error("[sfx] unexpected error:", error);
-    }
-  };
-
+  const activeSfxAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
@@ -272,22 +231,13 @@ export default function WordPage() {
   useEffect(() => {
     return () => {
       try {
-        if (resultSfxAudioRef.current) {
-          resultSfxAudioRef.current.pause();
-          resultSfxAudioRef.current.currentTime = 0;
-          resultSfxAudioRef.current = null;
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      try {
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           window.speechSynthesis.cancel();
+        }
+        if (activeSfxAudioRef.current) {
+          activeSfxAudioRef.current.pause();
+          activeSfxAudioRef.current.currentTime = 0;
+          activeSfxAudioRef.current = null;
         }
       } catch (error) {
         console.error(error);
@@ -338,6 +288,35 @@ export default function WordPage() {
         ? prev.filter((item) => item !== value)
         : [...prev, value]
     );
+  };
+
+  const playResultSfx = (kind: "perfect" | "correct" | "wrong") => {
+    try {
+      if (typeof window === "undefined") return;
+
+      if (activeSfxAudioRef.current) {
+        activeSfxAudioRef.current.pause();
+        activeSfxAudioRef.current.currentTime = 0;
+        activeSfxAudioRef.current = null;
+      }
+
+      const audio = new Audio(`${BASE_SFX_URL}${kind}.mp3`);
+      audio.preload = "auto";
+      audio.volume = 1;
+      audio.onended = () => {
+        if (activeSfxAudioRef.current === audio) activeSfxAudioRef.current = null;
+      };
+      audio.onerror = () => {
+        if (activeSfxAudioRef.current === audio) activeSfxAudioRef.current = null;
+      };
+
+      activeSfxAudioRef.current = audio;
+      void audio.play().catch((error) => {
+        console.error("[sfx] play failed:", error);
+      });
+    } catch (error) {
+      console.error("[sfx] unexpected error:", error);
+    }
   };
 
   const generateQuiz = () => {
@@ -457,12 +436,13 @@ export default function WordPage() {
     setScore(nextScore);
     setExcludedWords(nextExcluded);
 
+    const accuracy = questions.length > 0 ? nextScore / questions.length : 0;
     if (nextScore === questions.length) {
       playResultSfx("perfect");
-    } else if (questions.length > 0 && nextScore / questions.length >= 0.7) {
-      playResultSfx("good");
+    } else if (accuracy >= 0.7) {
+      playResultSfx("correct");
     } else {
-      playResultSfx("fail");
+      playResultSfx("wrong");
     }
 
     setSubmitted(true);
