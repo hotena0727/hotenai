@@ -272,6 +272,8 @@ export default function MyPage() {
   const [repeatOnly, setRepeatOnly] = useState(false);
   const [wrongFilter, setWrongFilter] = useState<WrongFilterKey>("all");
 
+  const [installGuideOpen, setInstallGuideOpen] = useState(false);
+
   const [noticeRefreshing, setNoticeRefreshing] = useState(false);
   const [noticeEnabling, setNoticeEnabling] = useState(false);
   const [noticeDisabling, setNoticeDisabling] = useState(false);
@@ -709,6 +711,40 @@ export default function MyPage() {
           <p className="mt-1 text-sm text-gray-500">
             학습 기록과 오답, 메시지를 한눈에 확인하세요.
           </p>
+        </div>
+
+        <div className="mt-6 overflow-hidden rounded-3xl border border-sky-200 bg-sky-50/70">
+          <button
+            type="button"
+            onClick={() => setInstallGuideOpen((prev) => !prev)}
+            className="flex w-full items-center justify-between px-5 py-4 text-left"
+          >
+            <div>
+              <p className="text-base font-bold text-slate-900">앱처럼 설치하기</p>
+              <p className="mt-1 text-sm text-slate-600">
+                홈 화면에 추가하면 더 빠르고 편하게 사용할 수 있어요.
+              </p>
+            </div>
+            <span className="ml-4 text-xl font-bold text-slate-500">
+              {installGuideOpen ? "−" : "+"}
+            </span>
+          </button>
+
+          {installGuideOpen ? (
+            <div className="border-t border-sky-200 bg-white/70 px-5 py-4 text-sm leading-6 text-slate-700">
+              <div className="font-semibold text-slate-900">브라우저별 안내</div>
+              <div className="mt-2">
+                • <span className="font-semibold">iPhone / Safari</span>:
+                아래 공유 버튼 → 홈 화면에 추가
+                <br />
+                • <span className="font-semibold">Android / Chrome</span>:
+                브라우저 메뉴 → 홈 화면에 추가 또는 앱 설치
+                <br />
+                • <span className="font-semibold">삼성 인터넷</span>:
+                브라우저 메뉴 → 홈 화면에 추가
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
