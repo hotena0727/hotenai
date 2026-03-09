@@ -6,75 +6,31 @@ function normalize(value: unknown): string {
   return String(value || "").trim();
 }
 
-function lower(value: unknown): string {
-  return normalize(value).toLowerCase();
-}
-
-function extractValues(rowOrPosMode?: QuizAttemptRow | string) {
+function getPosMode(rowOrPosMode?: QuizAttemptRow | string): string {
   if (typeof rowOrPosMode === "string" || rowOrPosMode == null) {
-    const posMode = normalize(rowOrPosMode);
-    return {
-      appKind: "",
-      quizType: "",
-      posMode,
-      appKindLower: "",
-      quizTypeLower: "",
-      posModeLower: posMode.toLowerCase(),
-    };
+    return normalize(rowOrPosMode);
   }
-
-  const appKind = normalize((rowOrPosMode as QuizAttemptRow).app_kind);
-  const quizType = normalize((rowOrPosMode as QuizAttemptRow).quiz_type);
-  const posMode = normalize((rowOrPosMode as QuizAttemptRow).pos_mode);
-
-  return {
-    appKind,
-    quizType,
-    posMode,
-    appKindLower: lower(appKind),
-    quizTypeLower: lower(quizType),
-    posModeLower: lower(posMode),
-  };
+  return normalize(rowOrPosMode.pos_mode);
 }
 
 export function isWordAttempt(rowOrPosMode?: QuizAttemptRow | string): boolean {
-  const v = extractValues(rowOrPosMode);
-
-  return (
-    v.appKindLower.includes("word") ||
-    v.quizTypeLower.includes("word") ||
-    v.posMode.includes("단어")
-  );
+  const posMode = getPosMode(rowOrPosMode);
+  return posMode.includes("단어");
 }
 
 export function isKanjiAttempt(rowOrPosMode?: QuizAttemptRow | string): boolean {
-  const v = extractValues(rowOrPosMode);
-
-  return (
-    v.appKindLower.includes("kanji") ||
-    v.quizTypeLower.includes("kanji") ||
-    v.posMode.includes("한자")
-  );
+  const posMode = getPosMode(rowOrPosMode);
+  return posMode.includes("한자");
 }
 
 export function isKatsuyouAttempt(rowOrPosMode?: QuizAttemptRow | string): boolean {
-  const v = extractValues(rowOrPosMode);
-
-  return (
-    v.appKindLower.includes("katsuyou") ||
-    v.quizTypeLower.includes("katsuyou") ||
-    v.posMode.includes("활용")
-  );
+  const posMode = getPosMode(rowOrPosMode);
+  return posMode.includes("활용");
 }
 
 export function isTalkAttempt(rowOrPosMode?: QuizAttemptRow | string): boolean {
-  const v = extractValues(rowOrPosMode);
-
-  return (
-    v.appKindLower.includes("talk") ||
-    v.quizTypeLower.includes("talk") ||
-    v.posMode.includes("회화")
-  );
+  const posMode = getPosMode(rowOrPosMode);
+  return posMode.includes("회화");
 }
 
 export function detectAppKind(row: QuizAttemptRow): AppKind {
@@ -101,7 +57,6 @@ export function getPrettyPosModeLabel(posMode?: string): string {
   if (!value) return "학습";
 
   let pretty = value;
-
   pretty = pretty.replace(/\bi_adj\b/g, "い형용사");
   pretty = pretty.replace(/\bna_adj\b/g, "な형용사");
   pretty = pretty.replace(/\bverb\b/g, "동사");
