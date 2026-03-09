@@ -1576,7 +1576,7 @@ setAudioError("");
     return (
       <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
         <div className="mx-auto max-w-3xl">
-          <h1 className="mt-4 text-3xl font-bold">일본어회화</h1>
+          <h1 className="mt-4 text-3xl font-bold">🗣️ 일본어회화</h1>
           <p className="mt-4 text-gray-600">불러오는 중...</p>
         </div>
       </main>
