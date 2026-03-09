@@ -10,6 +10,7 @@ type LogFilter = "all" | "word" | "kanji" | "talk";
 type AdminProfile = {
   id: string;
   email: string;
+  full_name?: string;
   plan: string;
   is_admin: boolean;
   created_at?: string | null;
@@ -64,6 +65,14 @@ function isTalkAttempt(item: QuizAttemptRow) {
 
 function countWhere<T>(items: T[], predicate: (item: T) => boolean) {
   return items.filter(predicate).length;
+}
+
+function getAdminDisplayName(item: AdminProfile) {
+  return item.full_name?.trim() || item.email || "(이름 없음)";
+}
+
+function getAdminSubLabel(item: AdminProfile) {
+  return item.full_name?.trim() ? item.email || "-" : item.id;
 }
 
 function buildRecentLogs(attempts: QuizAttemptRow[]) {
@@ -204,7 +213,7 @@ export default function AdminPage() {
 
         const { data: myProfile, error: myProfileError } = await supabase
           .from("profiles")
-          .select("id, email, plan, is_admin, created_at, updated_at")
+          .select("id, email, full_name, plan, is_admin, created_at, updated_at")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -223,7 +232,7 @@ export default function AdminPage() {
 
         const { data: profileRows, error: profileRowsError } = await supabase
           .from("profiles")
-          .select("id, email, plan, is_admin, created_at, updated_at")
+          .select("id, email, full_name, plan, is_admin, created_at, updated_at")
           .order("created_at", { ascending: false });
 
         if (profileRowsError) {
@@ -236,6 +245,7 @@ export default function AdminPage() {
         const normalizedProfiles: AdminProfile[] = (profileRows || []).map((row: any) => ({
           id: String(row.id || ""),
           email: String(row.email || ""),
+          full_name: String(row.full_name || "").trim(),
           plan: String(row.plan || "FREE").toUpperCase(),
           is_admin: Boolean(row.is_admin),
           created_at: row.created_at ?? null,
@@ -270,6 +280,7 @@ export default function AdminPage() {
       return (
         item.email.toLowerCase().includes(q) ||
         item.id.toLowerCase().includes(q) ||
+        String(item.full_name || "").toLowerCase().includes(q) ||
         item.plan.toLowerCase().includes(q)
       );
     });
@@ -284,6 +295,7 @@ export default function AdminPage() {
         return (
           item.email.toLowerCase().includes(q) ||
           item.id.toLowerCase().includes(q) ||
+          String(item.full_name || "").toLowerCase().includes(q) ||
           item.plan.toLowerCase().includes(q)
         );
       })
@@ -869,17 +881,17 @@ export default function AdminPage() {
           <p className="mt-3 text-base text-gray-600">회원/구독 관리 · 통계 · 기록</p>
         </section>
 
-        <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <section className="mt-8 grid grid-cols-2 gap-4">
           {[
             ["총 회원", stats.totalMembers, "현재 등록된 회원 수"],
             ["PRO 회원", stats.proMembers, `전체의 ${stats.totalMembers ? Math.round((stats.proMembers / stats.totalMembers) * 100) : 0}%`],
             ["관리자", stats.adminMembers, "권한 보유 계정"],
             ["오늘 퀴즈", stats.todayQuiz, "오늘 기록된 시도 수"],
           ].map(([label, value, desc]) => (
-            <div key={String(label)} className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-base font-semibold text-gray-500">{label}</p>
-              <p className="mt-4 text-3xl font-bold">{value}</p>
-              <p className="mt-3 text-sm text-gray-600">{desc}</p>
+            <div key={String(label)} className="rounded-3xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm">
+              <p className="text-sm sm:text-base font-semibold text-gray-500">{label}</p>
+              <p className="mt-3 sm:mt-4 text-2xl sm:text-3xl font-bold">{value}</p>
+              <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-600">{desc}</p>
             </div>
           ))}
         </section>
@@ -909,7 +921,7 @@ export default function AdminPage() {
                   setMemberSearch(e.target.value);
                   setMemberMessage("");
                 }}
-                placeholder="이메일/ID/플랜으로 검색"
+                placeholder="이름/이메일/ID/플랜으로 검색"
                 className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
               />
             </div>
@@ -937,9 +949,12 @@ export default function AdminPage() {
                         onClick={() => setSelectedMemberId(item.id)}
                         className="text-left"
                       >
-                        <p className="text-xl font-bold">{item.email || "(이메일 없음)"}</p>
+                        <p className="text-xl font-bold">{getAdminDisplayName(item)}</p>
                         <p className="mt-2 text-sm text-gray-600">
-                          가입: {formatDateTime(item.created_at)} · 최근 학습: {memberRecentMap.get(item.id) || "-"} · ID: {item.id}
+                          {item.full_name?.trim() ? `이메일: ${getAdminSubLabel(item)}` : `ID: ${getAdminSubLabel(item)}`}
+                        </p>
+                        <p className="mt-2 text-sm text-gray-600">
+                          가입: {formatDateTime(item.created_at)} · 최근 학습: {memberRecentMap.get(item.id) || "-"}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <span className={item.plan === "PRO" ? "rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-gray-700" : "rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700"}>
@@ -1002,7 +1017,7 @@ export default function AdminPage() {
                         setCleanupPreview(null);
                         setCleanupReadyToRun(false);
                       }}
-                      label={item.email}
+                      label={getAdminDisplayName(item)}
                     />
                   ))}
                 </div>
@@ -1027,7 +1042,7 @@ export default function AdminPage() {
                 </div>
                 {selectedMember ? (
                   <p className="mt-3 text-sm text-gray-600">
-                    선택됨: {selectedMember.email} · 최근 학습: {memberRecentMap.get(selectedMember.id) || "-"}
+                    선택됨: {getAdminDisplayName(selectedMember)} · 최근 학습: {memberRecentMap.get(selectedMember.id) || "-"}
                   </p>
                 ) : null}
               </div>
@@ -1221,7 +1236,7 @@ export default function AdminPage() {
                     />
                   </div>
                   {memberMsgTarget === "selected" && selectedMember ? (
-                    <p className="mt-3 text-sm text-gray-600">현재 선택: {selectedMember.email}</p>
+                    <p className="mt-3 text-sm text-gray-600">현재 선택: {getAdminDisplayName(selectedMember)}</p>
                   ) : null}
                 </div>
 
@@ -1363,7 +1378,7 @@ export default function AdminPage() {
                 <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
                   <div>
                     <label className="text-base font-semibold text-gray-800">회원 검색</label>
-                    <input value={pushMemberQuery} onChange={(e) => { setPushMemberQuery(e.target.value); setPushMessage(""); setPushDebugInfo(null); }} placeholder="이메일/ID/플랜으로 검색" className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-base outline-none" />
+                    <input value={pushMemberQuery} onChange={(e) => { setPushMemberQuery(e.target.value); setPushMessage(""); setPushDebugInfo(null); }} placeholder="이름/이메일/ID/플랜으로 검색" className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-base outline-none" />
                   </div>
                   <div>
                     <label className="text-base font-semibold text-gray-800">발송할 회원</label>
