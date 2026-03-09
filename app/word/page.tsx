@@ -34,6 +34,9 @@ const QTYPE_OPTIONS: Array<{ value: WordQType; label: string }> = [
 type AnswerMap = Record<number, string>;
 type ExcludedWordMap = Record<string, boolean>;
 
+const DAILY_FREE_SET_LIMIT = 3;
+const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx/";
+
 function posLabel(pos: string): string {
   const raw = String(pos || "").trim().toLowerCase();
   switch (raw) {
@@ -76,12 +79,6 @@ function circleNumber(index: number): string {
   return nums[index] || `${index + 1}.`;
 }
 
-const JA_FONT_STYLE = {
-  fontFamily: `"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif`,
-} as const;
-
-const DAILY_FREE_SET_LIMIT = 3;
-
 export default function WordPage() {
   const [rows, setRows] = useState<WordRow[]>([]);
   const [patternRows, setPatternRows] = useState<PatternRow[]>([]);
@@ -110,6 +107,7 @@ export default function WordPage() {
 
   const didAutoCreateRef = useRef(false);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const activeSfxAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
@@ -144,10 +142,8 @@ export default function WordPage() {
 
   const isPerfect = submitted && questions.length > 0 && score === questions.length;
   const showWrongNote = submitted && wrongItems.length > 0;
-
   const isDailyLimitReached =
     userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
-  const remainingSets = Math.max(DAILY_FREE_SET_LIMIT - todayWordKanjiSets, 0);
 
   useEffect(() => {
     if (selectedPosGroup === "other" && selectedQType === "reading") {
@@ -178,6 +174,8 @@ export default function WordPage() {
 
     void init();
   }, []);
+
+
 
   useEffect(() => {
     const loadPlanAndUsage = async () => {
@@ -213,7 +211,7 @@ export default function WordPage() {
 
         if (plan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
           setLimitMessage(
-            "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+            "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
           );
         } else {
           setLimitMessage("");
@@ -231,6 +229,11 @@ export default function WordPage() {
       try {
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           window.speechSynthesis.cancel();
+        }
+        if (activeSfxAudioRef.current) {
+          activeSfxAudioRef.current.pause();
+          activeSfxAudioRef.current.currentTime = 0;
+          activeSfxAudioRef.current = null;
         }
       } catch (error) {
         console.error(error);
@@ -283,16 +286,51 @@ export default function WordPage() {
     );
   };
 
+  const playResultSfx = (kind: "correct" | "wrong" | "reward") => {
+    try {
+      if (typeof window === "undefined") return;
+
+      if (activeSfxAudioRef.current) {
+        activeSfxAudioRef.current.pause();
+        activeSfxAudioRef.current.currentTime = 0;
+        activeSfxAudioRef.current = null;
+      }
+
+      const filename =
+        kind === "reward" ? "perfect.mp3" : kind === "correct" ? "correct.mp3" : "wrong.mp3";
+
+      const audio = new Audio(`${BASE_SFX_URL}${filename}`);
+      audio.preload = "auto";
+      audio.volume = 1;
+      audio.onended = () => {
+        if (activeSfxAudioRef.current === audio) {
+          activeSfxAudioRef.current = null;
+        }
+      };
+      audio.onerror = () => {
+        if (activeSfxAudioRef.current === audio) {
+          activeSfxAudioRef.current = null;
+        }
+      };
+
+      activeSfxAudioRef.current = audio;
+      void audio.play().catch((error) => {
+        console.error("[sfx] play failed:", error);
+      });
+    } catch (error) {
+      console.error("[sfx] unexpected error:", error);
+    }
+  };
+
   const generateQuiz = () => {
     try {
-      if (isDailyLimitReached) {
+      if (userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT) {
         setLimitMessage(
-          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
         );
         setQuestions([]);
         return;
       }
-
       const blockedWords = Object.keys(excludedWords).filter(
         (k) => excludedWords[k]
       );
@@ -358,6 +396,13 @@ export default function WordPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, rows, selectedPosGroup, selectedQType, selectedOtherPos.join("|")]);
 
+  useEffect(() => {
+    if (!loading && rows.length > 0) {
+      generateQuiz();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [excludedWords]);
+
   const makeNewQuiz = () => {
     generateQuiz();
   };
@@ -399,6 +444,16 @@ export default function WordPage() {
 
     setScore(nextScore);
     setExcludedWords(nextExcluded);
+
+    const ratio = questions.length > 0 ? nextScore / questions.length : 0;
+    if (ratio === 1) {
+      playResultSfx("reward");
+    } else if (ratio >= 0.7) {
+      playResultSfx("correct");
+    } else {
+      playResultSfx("wrong");
+    }
+
     setSubmitted(true);
   };
 
@@ -472,7 +527,7 @@ export default function WordPage() {
       setTodayWordKanjiSets(used);
       if (userPlan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
         setLimitMessage(
-          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
         );
       }
 
@@ -572,10 +627,9 @@ export default function WordPage() {
                 <button
                   type="button"
                   onClick={makeNewQuiz}
-                  disabled={isDailyLimitReached}
-                  className={isDailyLimitReached ? "mt-5 w-full rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-lg font-semibold text-gray-400" : "mt-5 w-full rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"}
+                  className="mt-5 w-full rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
                 >
-                  {isDailyLimitReached ? "오늘 이용 완료" : "🔄 기타 선택 적용(새 문제)"}
+                  🔄 기타 선택 적용(새 문제)
                 </button>
               </div>
             ) : null}
@@ -611,28 +665,6 @@ export default function WordPage() {
           </div>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
-          <p className="text-sm font-semibold text-gray-800">
-            {userPlan === "PRO"
-              ? "PRO 이용 중 · 단어와 한자를 제한 없이 이용할 수 있습니다."
-              : `FREE 이용 중 · 오늘 단어+한자 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
-          </p>
-
-          {userPlan === "FREE" ? (
-            <p className="mt-2 text-sm leading-6 text-gray-600">
-              {isDailyLimitReached
-                ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 오늘 준비한 분량을 모두 완료했어요. FREE 플랜은 내일부터 다시 이어서 풀 수 있습니다. PRO에서는 제한 없이 계속 이용할 수 있습니다."
-                : remainingSets === 1
-                ? "오늘은 1세트 더 이용할 수 있습니다. 단어와 한자는 합산 하루 3세트까지 이용할 수 있어요."
-                : `오늘은 ${remainingSets}세트 더 이용할 수 있습니다. 단어와 한자는 합산 하루 3세트까지 이용할 수 있어요.`}
-            </p>
-          ) : null}
-
-          {limitMessage ? (
-            <p className="mt-2 text-sm leading-6 text-gray-600">{limitMessage}</p>
-          ) : null}
-        </div>
-
         <div className="mt-6 rounded-2xl border border-gray-300 bg-white">
           <button
             type="button"
@@ -655,16 +687,16 @@ export default function WordPage() {
                       className="rounded-3xl border border-gray-200 p-5"
                     >
                       <p className="text-3xl font-bold">{item.title}</p>
-                      <p className="mt-4 text-2xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{item.jp}</span></p>
+                      <p className="mt-4 text-2xl font-semibold">{item.jp}</p>
                       <p className="mt-2 text-xl text-gray-700">{item.kr}</p>
 
                       <div className="mt-6">
-                        <p className="text-xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{item.ex1_jp}</span></p>
+                        <p className="text-xl font-semibold">{item.ex1_jp}</p>
                         <p className="mt-1 text-lg text-gray-700">{item.ex1_kr}</p>
                       </div>
 
                       <div className="mt-5">
-                        <p className="text-xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{item.ex2_jp}</span></p>
+                        <p className="text-xl font-semibold">{item.ex2_jp}</p>
                         <p className="mt-1 text-lg text-gray-700">{item.ex2_kr}</p>
                       </div>
                     </div>
@@ -675,15 +707,43 @@ export default function WordPage() {
           ) : null}
         </div>
 
+
+
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+          <p className="text-sm font-semibold text-gray-800">
+            {userPlan === "PRO"
+              ? "PRO 이용 중 · 단어·한자를 제한 없이 이용할 수 있습니다."
+              : `FREE 이용 중 · 오늘 단어+한자 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
+          </p>
+
+          {userPlan === "FREE" ? (
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              {isDailyLimitReached
+                ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요. talk는 별도로 계속 이용할 수 있습니다."
+                : todayWordKanjiSets === DAILY_FREE_SET_LIMIT - 1
+                ? "오늘은 1세트 더 이용할 수 있습니다. talk는 이 제한과 별도로 계속 이용할 수 있습니다."
+                : "talk는 이 제한과 별도로 계속 이용할 수 있습니다."}
+            </p>
+          ) : null}
+
+          {limitMessage ? (
+            <p className="mt-2 text-sm leading-6 text-gray-600">{limitMessage}</p>
+          ) : null}
+        </div>
+
         <div className="mt-8 border-t border-gray-200 pt-8">
           <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
               onClick={makeNewQuiz}
               disabled={isDailyLimitReached}
-              className={isDailyLimitReached ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-lg font-semibold text-gray-400" : "rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"}
+              className={
+                isDailyLimitReached
+                  ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-lg font-semibold text-gray-400"
+                  : "rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
+              }
             >
-              {isDailyLimitReached ? "오늘 이용 완료" : "🔄 새문제(랜덤 10문항)"}
+              🔄 새문제(랜덤 10문항)
             </button>
             <button
               type="button"
@@ -712,7 +772,7 @@ export default function WordPage() {
                   <div key={`${q.jp_word}-${idx}`}>
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-2xl font-semibold">
-                        {circleNumber(idx)} <span lang="ja" style={JA_FONT_STYLE}>{q.prompt}</span>
+                        {circleNumber(idx)} {q.prompt}
                       </p>
 
                       {q.qtype === "meaning" ? (
@@ -758,7 +818,7 @@ export default function WordPage() {
                                   : ""
                               }
                             >
-                              <span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
+                              {choice}
                             </span>
                           </label>
                         );
@@ -779,10 +839,10 @@ export default function WordPage() {
                           {isRight ? "정답입니다." : "오답입니다."}
                         </p>
                         <p className="mt-2 text-sm text-gray-700">
-                          정답: <span lang="ja" style={JA_FONT_STYLE}>{correct}</span>
+                          정답: {correct}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
-                          단어: <span lang="ja" style={JA_FONT_STYLE}>{q.jp_word}</span> / 읽기: <span lang="ja" style={JA_FONT_STYLE}>{q.reading}</span> / 뜻: {q.meaning}
+                          단어: {q.jp_word} / 읽기: {q.reading} / 뜻: {q.meaning}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
                           품사: {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)}
@@ -871,7 +931,7 @@ export default function WordPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <p className="text-2xl font-bold">
-                                  Q{item.index + 1}. <span lang="ja" style={JA_FONT_STYLE}>{item.question.jp_word}</span>
+                                  Q{item.index + 1}. {item.question.jp_word}
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
                                   {item.question.prompt} · 품사: {posLabel(item.question.pos)} ·
@@ -885,13 +945,13 @@ export default function WordPage() {
 
                             <div className="mt-4 space-y-1 text-lg">
                               <p>
-                                <span className="font-semibold">내 답</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.selected}</span>
+                                <span className="font-semibold">내 답</span>　{item.selected}
                               </p>
                               <p>
-                                <span className="font-semibold">정답</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.question.correct_text}</span>
+                                <span className="font-semibold">정답</span>　{item.question.correct_text}
                               </p>
                               <p>
-                                <span className="font-semibold">발음</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.question.reading}</span>
+                                <span className="font-semibold">발음</span>　{item.question.reading}
                               </p>
                               <p>
                                 <span className="font-semibold">뜻</span>　{item.question.meaning}
