@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-type ActiveKey = "home" | "word" | "kanji" | "talk" | "mypage" | "none";
+type ActiveKey =
+  | "home"
+  | "word"
+  | "kanji"
+  | "katsuyou"
+  | "talk"
+  | "mypage"
+  | "none";
 
 type ProfileLite = {
   plan: string;
@@ -15,6 +22,7 @@ function getActiveKey(pathname: string): ActiveKey {
   if (pathname === "/") return "home";
   if (pathname.startsWith("/word")) return "word";
   if (pathname.startsWith("/kanji")) return "kanji";
+  if (pathname.startsWith("/katsuyou")) return "katsuyou";
   if (pathname.startsWith("/talk")) return "talk";
   if (pathname.startsWith("/mypage")) return "mypage";
   return "none";
@@ -80,8 +88,8 @@ export default function AppTopNav() {
 
   const linkClass = (key: ActiveKey) =>
     active === key
-      ? "border-b-2 border-blue-500 py-5 text-center text-base font-semibold text-gray-900"
-      : "py-5 text-center text-base font-semibold text-gray-500";
+      ? "border-b-2 border-blue-500 py-5 text-center text-sm sm:text-base font-semibold text-gray-900"
+      : "py-5 text-center text-sm sm:text-base font-semibold text-gray-500";
 
   return (
     <div
@@ -92,7 +100,7 @@ export default function AppTopNav() {
       }
     >
       <div className="mx-auto max-w-3xl px-4">
-        <nav className="grid grid-cols-6 items-center">
+        <nav className="grid grid-cols-7 items-center">
           <a href="/" className={linkClass("home")}>
             홈
           </a>
@@ -101,6 +109,9 @@ export default function AppTopNav() {
           </a>
           <a href="/kanji" className={linkClass("kanji")}>
             한자
+          </a>
+          <a href="/katsuyou" className={linkClass("katsuyou")}>
+            활용
           </a>
           <a href="/talk" className={linkClass("talk")}>
             회화
