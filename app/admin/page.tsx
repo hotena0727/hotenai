@@ -949,8 +949,11 @@ export default function AdminPage() {
                         onClick={() => setSelectedMemberId(item.id)}
                         className="text-left"
                       >
-                        <p className="text-xl font-bold">{item.full_name?.trim() || "-"}</p>
+                        <p className="text-xl font-bold">{item.email || "-"}</p>
                         <p className="mt-2 text-sm text-gray-600">
+                          이름: {item.full_name?.trim() || "-"}
+                        </p>
+                        <p className="mt-1 text-sm text-gray-600">
                           가입: {formatDateTime(item.created_at)}
                         </p>
                         <p className="mt-1 text-sm text-gray-600">
