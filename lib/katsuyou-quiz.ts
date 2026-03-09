@@ -63,7 +63,7 @@ function haForms(root: string) {
   const stem = root.slice(0, -1);
   return {
     past: `${stem}했다`,
-    polite: `${root}다`.replace(/다$/, "습니다"),
+    polite: `${stem}합니다`,
     te: `${stem}해`,
   };
 }
