@@ -513,7 +513,7 @@ export default function WordPage() {
       const payload = buildWordAttemptPayload({
         user_id: user.id,
         user_email: user.email ?? "",
-        level: selectedLevel,
+        level: "",
         pos_mode: `단어 · ${selectedPosGroup} · ${selectedQType}`,
         quiz_len: questions.length,
         score,
