@@ -224,7 +224,6 @@ export default function KanjiPage() {
       }
     };
   }, []);
-  const speakJapanese = (text: string, key: string) => {
 
   useEffect(() => {
     if (isDailyLimitReached) {
