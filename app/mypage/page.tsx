@@ -29,6 +29,8 @@ type MyProfile = {
   full_name: string;
   plan: string;
   is_admin: boolean;
+  plan_started_at?: string | null;
+  plan_expires_at?: string | null;
 };
 
 type MainTabKey = "wrong" | "history" | "message" | "notice";
@@ -121,6 +123,16 @@ function formatRelativeMessageTime(value?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   })}`;
+}
+
+function formatDateOnly(value?: string | null) {
+  const d = parseDate(value ?? undefined);
+  if (!d) return "-";
+  return d.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 }
 
 function buildLast7Days(attempts: QuizAttemptRow[]): DayStat[] {
@@ -300,7 +312,7 @@ export default function MyPage() {
 
         const { data: profileRow, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, plan, is_admin")
+          .select("full_name, plan, is_admin, plan_started_at, plan_expires_at")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -323,6 +335,8 @@ export default function MyPage() {
           full_name: profileRow?.full_name || googleName || "",
           plan: String(profileRow?.plan || "FREE").toUpperCase(),
           is_admin: Boolean(profileRow?.is_admin),
+          plan_started_at: profileRow?.plan_started_at ?? null,
+          plan_expires_at: profileRow?.plan_expires_at ?? null,
         });
 
         const recent = await fetchRecentAttempts(user.id, 12);
@@ -698,7 +712,26 @@ export default function MyPage() {
         </div>
 
         <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
-          <div className="h-3 rounded-full bg-gray-100">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-500">현재 플랜</p>
+              <p className="mt-2 text-lg font-bold text-gray-900">
+                {profile?.plan === "PRO"
+                  ? `PRO 이용 중 · ${formatDateOnly(profile?.plan_expires_at)}까지`
+                  : "FREE 이용 중"}
+              </p>
+              <p className="mt-2 text-sm text-gray-600">
+                {profile?.plan === "PRO"
+                  ? `시작일 ${formatDateOnly(profile?.plan_started_at)} · 만료일 ${formatDateOnly(profile?.plan_expires_at)}`
+                  : "현재는 FREE 플랜으로 이용 중입니다."}
+              </p>
+            </div>
+            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+              {profile?.full_name ? `${profile.full_name}님` : "학습 중"}
+            </div>
+          </div>
+
+          <div className="mt-5 h-3 rounded-full bg-gray-100">
             <div
               className="h-3 rounded-full bg-blue-500"
               style={{ width: `${stats.progressPercent}%` }}
@@ -715,29 +748,29 @@ export default function MyPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
-          <div className="rounded-3xl border border-gray-200 bg-white p-5">
-            <p className="text-4xl font-bold">{stats.streak}</p>
-            <p className="mt-2 text-lg font-semibold text-gray-700">연속 학습일</p>
+        <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
+          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
+            <p className="text-2xl sm:text-4xl font-bold">{stats.streak}</p>
+            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">연속 학습일</p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-5">
-            <p className="text-4xl font-bold">{stats.thisWeekCount}</p>
-            <p className="mt-2 text-lg font-semibold text-gray-700">이번 주 풀이수</p>
+          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
+            <p className="text-2xl sm:text-4xl font-bold">{stats.thisWeekCount}</p>
+            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">이번 주 풀이수</p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-5">
-            <p className="text-4xl font-bold">{stats.topWrongType}</p>
-            <p className="mt-2 text-lg font-semibold text-gray-700">최다 오답 유형</p>
+          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
+            <p className="text-2xl sm:text-4xl font-bold">{stats.topWrongType}</p>
+            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">최다 오답 유형</p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-5">
-            <p className="text-4xl font-bold">{stats.totalWrong}</p>
-            <p className="mt-2 text-lg font-semibold text-gray-700">오답</p>
+          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
+            <p className="text-2xl sm:text-4xl font-bold">{stats.totalWrong}</p>
+            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">오답</p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-5">
-            <p className="text-4xl font-bold">
+          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
+            <p className="text-2xl sm:text-4xl font-bold">
               {stats.totalAttempts === 0
                 ? "0%"
                 : `${Math.round(
@@ -746,14 +779,14 @@ export default function MyPage() {
                   100
                 )}%`}
             </p>
-            <p className="mt-2 text-lg font-semibold text-gray-700">평균 정답률</p>
+            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">평균 정답률</p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-5">
-            <p className="text-4xl font-bold">
+          <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
+            <p className="text-2xl sm:text-4xl font-bold">
               {stats.last7.reduce((sum, day) => sum + (day.total > 0 ? 1 : 0), 0)}
             </p>
-            <p className="mt-2 text-lg font-semibold text-gray-700">최근 7일 학습</p>
+            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">최근 7일 학습</p>
           </div>
         </div>
 
@@ -779,16 +812,16 @@ export default function MyPage() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-7">
+          <div className="mt-5 grid grid-cols-7 gap-2">
             {stats.last7.map((day, idx) => (
               <div
                 key={`${day.label}-${idx}`}
-                className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-center"
+                className="rounded-2xl border border-blue-200 bg-blue-50 p-2 sm:p-4 text-center"
               >
-                <p className="text-lg font-bold">{day.label}</p>
-                <p className="mt-3 text-3xl font-bold">{idx + 1}</p>
-                <p className="mt-2 text-sm font-semibold text-gray-700">{day.total}회</p>
-                <div className="mt-3 text-sm text-gray-600">
+                <p className="text-xs sm:text-lg font-bold">{day.label}</p>
+                <p className="mt-2 sm:mt-3 text-lg sm:text-3xl font-bold">{idx + 1}</p>
+                <p className="mt-1 sm:mt-2 text-[10px] sm:text-sm font-semibold text-gray-700">{day.total}회</p>
+                <div className="mt-2 sm:mt-3 text-[10px] sm:text-sm text-gray-600">
                   <p>단어 {day.word}</p>
                   <p>한자 {day.kanji}</p>
                   <p>회화 {day.talk}</p>
