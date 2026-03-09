@@ -42,6 +42,7 @@ const JA_FONT_STYLE = {
 } as const;
 
 const DAILY_FREE_SET_LIMIT = 3;
+const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 
 export default function KanjiPage() {
   const [rows, setRows] = useState<KanjiRow[]>([]);
@@ -63,6 +64,7 @@ export default function KanjiPage() {
 
   const didAutoCreateRef = useRef(false);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const activeSfxAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
@@ -85,6 +87,42 @@ export default function KanjiPage() {
   const isDailyLimitReached =
     userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
   const remainingSets = Math.max(DAILY_FREE_SET_LIMIT - todayWordKanjiSets, 0);
+
+  const playResultSfx = (kind: "perfect" | "correct" | "wrong") => {
+    try {
+      if (typeof window === "undefined") return;
+
+      if (activeSfxAudioRef.current) {
+        activeSfxAudioRef.current.pause();
+        activeSfxAudioRef.current.currentTime = 0;
+        activeSfxAudioRef.current = null;
+      }
+
+      const src =
+        kind === "perfect"
+          ? `${BASE_SFX_URL}/perfect.mp3`
+          : kind === "correct"
+          ? `${BASE_SFX_URL}/correct.mp3`
+          : `${BASE_SFX_URL}/wrong.mp3`;
+
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.volume = 1;
+      audio.onended = () => {
+        if (activeSfxAudioRef.current === audio) activeSfxAudioRef.current = null;
+      };
+      audio.onerror = () => {
+        if (activeSfxAudioRef.current === audio) activeSfxAudioRef.current = null;
+      };
+
+      activeSfxAudioRef.current = audio;
+      void audio.play().catch((error) => {
+        console.error("[kanji sfx] play failed:", error);
+      });
+    } catch (error) {
+      console.error("[kanji sfx] unexpected error:", error);
+    }
+  };
 
   const levelCounts = useMemo(() => {
     const map: Record<string, number> = {
@@ -173,6 +211,11 @@ export default function KanjiPage() {
       try {
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           window.speechSynthesis.cancel();
+        }
+        if (activeSfxAudioRef.current) {
+          activeSfxAudioRef.current.pause();
+          activeSfxAudioRef.current.currentTime = 0;
+          activeSfxAudioRef.current = null;
         }
       } catch (error) {
         console.error(error);
@@ -306,6 +349,16 @@ export default function KanjiPage() {
 
     setScore(nextScore);
     setExcludedWords(nextExcluded);
+
+    const accuracy = questions.length > 0 ? nextScore / questions.length : 0;
+    if (accuracy === 1) {
+      playResultSfx("perfect");
+    } else if (accuracy >= 0.7) {
+      playResultSfx("correct");
+    } else {
+      playResultSfx("wrong");
+    }
+
     setSubmitted(true);
   };
 
@@ -489,19 +542,13 @@ export default function KanjiPage() {
 
           {planInfoOpen ? (
             <div className="mt-3 border-t border-gray-200 pt-3 text-xs sm:text-sm leading-6 text-gray-600">
-              {userPlan === "PRO" ? (
-                <p>PRO는 단어와 한자를 제한 없이 이용할 수 있습니다.</p>
-              ) : isDailyLimitReached ? (
-                <p>
-                  오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일부터 다시 이어서 풀 수 있습니다. PRO에서는 제한 없이 계속 이용할 수 있습니다.
-                </p>
-              ) : (
-                <p>
-                  단어와 한자는 합산 하루 3세트까지 이용할 수 있습니다. {remainingSets === 1 ? "오늘은 1세트 더" : `오늘은 ${remainingSets}세트 더`} 이용할 수 있습니다.
-                </p>
-              )}
-
-              {limitMessage ? <p className="mt-2">{limitMessage}</p> : null}
+              <p>
+                {userPlan === "PRO"
+                  ? "PRO는 단어와 한자를 제한 없이 이용할 수 있습니다."
+                  : isDailyLimitReached
+                  ? "FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘 분량은 모두 완료했고, 내일 다시 이어서 풀 수 있습니다."
+                  : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+              </p>
             </div>
           ) : null}
         </div>
