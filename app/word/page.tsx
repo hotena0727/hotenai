@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { saveQuizAttempt } from "@/lib/attempts";
+import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { WordQType, WordQuestion, WordRow } from "@/app/types/word";
 import { loadWordRows } from "@/lib/word-loader";
 import { buildWordQuiz } from "@/lib/word-quiz";
@@ -33,10 +33,6 @@ const QTYPE_OPTIONS: Array<{ value: WordQType; label: string }> = [
 
 type AnswerMap = Record<number, string>;
 type ExcludedWordMap = Record<string, boolean>;
-
-const JA_FONT_STYLE = {
-  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
-} as const;
 
 function posLabel(pos: string): string {
   const raw = String(pos || "").trim().toLowerCase();
@@ -80,6 +76,12 @@ function circleNumber(index: number): string {
   return nums[index] || `${index + 1}.`;
 }
 
+const JA_FONT_STYLE = {
+  fontFamily: `"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif`,
+} as const;
+
+const DAILY_FREE_SET_LIMIT = 3;
+
 export default function WordPage() {
   const [rows, setRows] = useState<WordRow[]>([]);
   const [patternRows, setPatternRows] = useState<PatternRow[]>([]);
@@ -112,6 +114,10 @@ export default function WordPage() {
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
 
+  const [userPlan, setUserPlan] = useState<"FREE" | "PRO">("FREE");
+  const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
+  const [limitMessage, setLimitMessage] = useState("");
+
   const visiblePatterns = useMemo(
     () =>
       filterPatternRows(
@@ -138,6 +144,10 @@ export default function WordPage() {
 
   const isPerfect = submitted && questions.length > 0 && score === questions.length;
   const showWrongNote = submitted && wrongItems.length > 0;
+
+  const isDailyLimitReached =
+    userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
+  const remainingSets = Math.max(DAILY_FREE_SET_LIMIT - todayWordKanjiSets, 0);
 
   useEffect(() => {
     if (selectedPosGroup === "other" && selectedQType === "reading") {
@@ -167,6 +177,53 @@ export default function WordPage() {
     };
 
     void init();
+  }, []);
+
+  useEffect(() => {
+    const loadPlanAndUsage = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const user = session?.user;
+        if (!user) {
+          setUserPlan("FREE");
+          setTodayWordKanjiSets(0);
+          setLimitMessage("");
+          return;
+        }
+
+        const { data: profileRow, error: profileError } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error(profileError);
+        }
+
+        const plan =
+          String(profileRow?.plan || "FREE").toUpperCase() === "PRO" ? "PRO" : "FREE";
+        setUserPlan(plan);
+
+        const used = await fetchTodayWordKanjiSetCount(user.id);
+        setTodayWordKanjiSets(used);
+
+        if (plan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
+          setLimitMessage(
+            "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+          );
+        } else {
+          setLimitMessage("");
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void loadPlanAndUsage();
   }, []);
 
   useEffect(() => {
@@ -228,6 +285,14 @@ export default function WordPage() {
 
   const generateQuiz = () => {
     try {
+      if (isDailyLimitReached) {
+        setLimitMessage(
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+        );
+        setQuestions([]);
+        return;
+      }
+
       const blockedWords = Object.keys(excludedWords).filter(
         (k) => excludedWords[k]
       );
@@ -403,6 +468,14 @@ export default function WordPage() {
         return;
       }
 
+      const used = await fetchTodayWordKanjiSetCount(user.id);
+      setTodayWordKanjiSets(used);
+      if (userPlan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
+        setLimitMessage(
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+        );
+      }
+
       alert("결과가 저장되었습니다.");
     } catch (error) {
       console.error(error);
@@ -499,9 +572,10 @@ export default function WordPage() {
                 <button
                   type="button"
                   onClick={makeNewQuiz}
-                  className="mt-5 w-full rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
+                  disabled={isDailyLimitReached}
+                  className={isDailyLimitReached ? "mt-5 w-full rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-lg font-semibold text-gray-400" : "mt-5 w-full rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"}
                 >
-                  🔄 기타 선택 적용(새 문제)
+                  {isDailyLimitReached ? "오늘 이용 완료" : "🔄 기타 선택 적용(새 문제)"}
                 </button>
               </div>
             ) : null}
@@ -537,6 +611,28 @@ export default function WordPage() {
           </div>
         </div>
 
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+          <p className="text-sm font-semibold text-gray-800">
+            {userPlan === "PRO"
+              ? "PRO 이용 중 · 단어와 한자를 제한 없이 이용할 수 있습니다."
+              : `FREE 이용 중 · 오늘 단어+한자 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
+          </p>
+
+          {userPlan === "FREE" ? (
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              {isDailyLimitReached
+                ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 오늘 준비한 분량을 모두 완료했어요. FREE 플랜은 내일부터 다시 이어서 풀 수 있습니다. PRO에서는 제한 없이 계속 이용할 수 있습니다."
+                : remainingSets === 1
+                ? "오늘은 1세트 더 이용할 수 있습니다. 단어와 한자는 합산 하루 3세트까지 이용할 수 있어요."
+                : `오늘은 ${remainingSets}세트 더 이용할 수 있습니다. 단어와 한자는 합산 하루 3세트까지 이용할 수 있어요.`}
+            </p>
+          ) : null}
+
+          {limitMessage ? (
+            <p className="mt-2 text-sm leading-6 text-gray-600">{limitMessage}</p>
+          ) : null}
+        </div>
+
         <div className="mt-6 rounded-2xl border border-gray-300 bg-white">
           <button
             type="button"
@@ -559,16 +655,16 @@ export default function WordPage() {
                       className="rounded-3xl border border-gray-200 p-5"
                     >
                       <p className="text-3xl font-bold">{item.title}</p>
-                      <p className="mt-4 text-2xl font-semibold">{item.jp}</p>
+                      <p className="mt-4 text-2xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{item.jp}</span></p>
                       <p className="mt-2 text-xl text-gray-700">{item.kr}</p>
 
                       <div className="mt-6">
-                        <p className="text-xl font-semibold">{item.ex1_jp}</p>
+                        <p className="text-xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{item.ex1_jp}</span></p>
                         <p className="mt-1 text-lg text-gray-700">{item.ex1_kr}</p>
                       </div>
 
                       <div className="mt-5">
-                        <p className="text-xl font-semibold">{item.ex2_jp}</p>
+                        <p className="text-xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{item.ex2_jp}</span></p>
                         <p className="mt-1 text-lg text-gray-700">{item.ex2_kr}</p>
                       </div>
                     </div>
@@ -584,9 +680,10 @@ export default function WordPage() {
             <button
               type="button"
               onClick={makeNewQuiz}
-              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
+              disabled={isDailyLimitReached}
+              className={isDailyLimitReached ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-lg font-semibold text-gray-400" : "rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"}
             >
-              🔄 새문제(랜덤 10문항)
+              {isDailyLimitReached ? "오늘 이용 완료" : "🔄 새문제(랜덤 10문항)"}
             </button>
             <button
               type="button"
@@ -641,7 +738,7 @@ export default function WordPage() {
 
                         return (
                           <label
-                            key={choice}
+                            key=<span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
                             className="flex items-center gap-3 text-lg text-gray-900"
                           >
                             <input
@@ -710,7 +807,7 @@ export default function WordPage() {
 
                         {q.example_jp || q.example_kr ? (
                           <div className="mt-3 rounded-xl bg-blue-50 p-3">
-                            <p className="text-sm text-blue-900"><span lang="ja" style={JA_FONT_STYLE}>{q.example_jp}</span></p>
+                            <p className="text-sm text-blue-900">{q.example_jp}</p>
                             <p className="mt-1 text-sm text-blue-900">{q.example_kr}</p>
                           </div>
                         ) : null}
@@ -777,7 +874,7 @@ export default function WordPage() {
                                   Q{item.index + 1}. <span lang="ja" style={JA_FONT_STYLE}>{item.question.jp_word}</span>
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
-                                  <span lang="ja" style={JA_FONT_STYLE}>{item.question.prompt}</span> · 품사: {posLabel(item.question.pos)} ·
+                                  {item.question.prompt} · 품사: {posLabel(item.question.pos)} ·
                                   유형: {qtypeLabel(item.question.qtype)}
                                 </p>
                               </div>

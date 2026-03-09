@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { saveQuizAttempt } from "@/lib/attempts";
+import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/app/types/kanji";
 import { loadKanjiRows } from "@/lib/kanji-loader";
 import { buildKanjiQuiz } from "@/lib/kanji-quiz";
@@ -18,10 +18,6 @@ const QTYPE_OPTIONS: Array<{ value: KanjiQType; label: string }> = [
 
 type AnswerMap = Record<number, string>;
 type ExcludedWordMap = Record<string, boolean>;
-
-const JA_FONT_STYLE = {
-  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
-} as const;
 
 function qtypeLabel(qtype: KanjiQType): string {
   switch (qtype) {
@@ -40,6 +36,12 @@ function circleNumber(index: number): string {
   const nums = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
   return nums[index] || `${index + 1}.`;
 }
+
+const JA_FONT_STYLE = {
+  fontFamily: `"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif`,
+} as const;
+
+const DAILY_FREE_SET_LIMIT = 3;
 
 export default function KanjiPage() {
   const [rows, setRows] = useState<KanjiRow[]>([]);
@@ -65,6 +67,10 @@ export default function KanjiPage() {
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
 
+  const [userPlan, setUserPlan] = useState<"FREE" | "PRO">("FREE");
+  const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
+  const [limitMessage, setLimitMessage] = useState("");
+
   const wrongItems = questions
     .map((q, idx) => ({
       question: q,
@@ -74,6 +80,10 @@ export default function KanjiPage() {
     .filter((item) => submitted && item.selected !== item.question.correct_text);
 
   const isPerfect = submitted && questions.length > 0 && score === questions.length;
+
+  const isDailyLimitReached =
+    userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
+  const remainingSets = Math.max(DAILY_FREE_SET_LIMIT - todayWordKanjiSets, 0);
 
   const levelCounts = useMemo(() => {
     const map: Record<string, number> = {
@@ -108,6 +118,53 @@ export default function KanjiPage() {
     };
 
     void init();
+  }, []);
+
+  useEffect(() => {
+    const loadPlanAndUsage = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const user = session?.user;
+        if (!user) {
+          setUserPlan("FREE");
+          setTodayWordKanjiSets(0);
+          setLimitMessage("");
+          return;
+        }
+
+        const { data: profileRow, error: profileError } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error(profileError);
+        }
+
+        const plan =
+          String(profileRow?.plan || "FREE").toUpperCase() === "PRO" ? "PRO" : "FREE";
+        setUserPlan(plan);
+
+        const used = await fetchTodayWordKanjiSetCount(user.id);
+        setTodayWordKanjiSets(used);
+
+        if (plan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
+          setLimitMessage(
+            "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+          );
+        } else {
+          setLimitMessage("");
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void loadPlanAndUsage();
   }, []);
 
   useEffect(() => {
@@ -161,6 +218,14 @@ export default function KanjiPage() {
 
   const generateQuiz = () => {
     try {
+      if (isDailyLimitReached) {
+        setLimitMessage(
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+        );
+        setQuestions([]);
+        return;
+      }
+
       const blockedWords = Object.keys(excludedWords).filter((k) => excludedWords[k]);
 
       const quiz = buildKanjiQuiz({
@@ -306,6 +371,14 @@ export default function KanjiPage() {
         return;
       }
 
+      const used = await fetchTodayWordKanjiSetCount(user.id);
+      setTodayWordKanjiSets(used);
+      if (userPlan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
+        setLimitMessage(
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+        );
+      }
+
       alert("결과가 저장되었습니다.");
     } catch (error) {
       console.error(error);
@@ -386,14 +459,37 @@ export default function KanjiPage() {
           </div>
         </div>
 
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+          <p className="text-sm font-semibold text-gray-800">
+            {userPlan === "PRO"
+              ? "PRO 이용 중 · 단어와 한자를 제한 없이 이용할 수 있습니다."
+              : `FREE 이용 중 · 오늘 단어+한자 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
+          </p>
+
+          {userPlan === "FREE" ? (
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              {isDailyLimitReached
+                ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 오늘 준비한 분량을 모두 완료했어요. FREE 플랜은 내일부터 다시 이어서 풀 수 있습니다. PRO에서는 제한 없이 계속 이용할 수 있습니다."
+                : remainingSets === 1
+                ? "오늘은 1세트 더 이용할 수 있습니다. 단어와 한자는 합산 하루 3세트까지 이용할 수 있어요."
+                : `오늘은 ${remainingSets}세트 더 이용할 수 있습니다. 단어와 한자는 합산 하루 3세트까지 이용할 수 있어요.`}
+            </p>
+          ) : null}
+
+          {limitMessage ? (
+            <p className="mt-2 text-sm leading-6 text-gray-600">{limitMessage}</p>
+          ) : null}
+        </div>
+
         <div className="mt-8 border-t border-gray-200 pt-8">
           <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
               onClick={makeNewQuiz}
-              className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"
+              disabled={isDailyLimitReached}
+              className={isDailyLimitReached ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-lg font-semibold text-gray-400" : "rounded-2xl border border-gray-300 bg-white px-4 py-4 text-lg font-semibold text-gray-800"}
             >
-              🔄 새문제(랜덤 10문항)
+              {isDailyLimitReached ? "오늘 이용 완료" : "🔄 새문제(랜덤 10문항)"}
             </button>
             <button
               type="button"
@@ -472,7 +568,7 @@ export default function KanjiPage() {
 
                         return (
                           <label
-                            key={choice}
+                            key=<span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
                             className="flex items-center gap-3 text-lg text-gray-900"
                           >
                             <input
@@ -601,7 +697,7 @@ export default function KanjiPage() {
                                   Q{item.index + 1}. <span lang="ja" style={JA_FONT_STYLE}>{item.question.jp_word}</span>
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
-                                  <span lang="ja" style={JA_FONT_STYLE}>{item.question.prompt}</span> · 레벨: {item.question.level} · 유형:{" "}
+                                  {item.question.prompt} · 레벨: {item.question.level} · 유형:{" "}
                                   {qtypeLabel(item.question.qtype)}
                                 </p>
                               </div>
