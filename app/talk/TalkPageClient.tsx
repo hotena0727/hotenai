@@ -375,6 +375,7 @@ export default function TalkPage() {
   const [listenUsed, setListenUsed] = useState(0);
   const [recordUsed, setRecordUsed] = useState(0);
   const [quotaMessage, setQuotaMessage] = useState("");
+  const [planInfoOpen, setPlanInfoOpen] = useState(false);
 
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
@@ -941,6 +942,9 @@ export default function TalkPage() {
     !isPro && listenUsed >= DAILY_TALK_LISTEN_LIMIT;
   const recordLimitReached =
     !isPro && recordUsed >= DAILY_TALK_RECORD_LIMIT;
+  const quotaLimitReached = listenLimitReached || recordLimitReached;
+  const remainingListen = Math.max(DAILY_TALK_LISTEN_LIMIT - listenUsed, 0);
+  const remainingRecord = Math.max(DAILY_TALK_RECORD_LIMIT - recordUsed, 0);
   const isPronPerfect = pronChecked && (pronScore ?? 0) >= 100;
   const showRewardCard = isPronPerfect && isCorrect;
   const showPronOnlyNotice = rewardNoticeRequested && isPronPerfect && !isCorrect;
@@ -1637,27 +1641,81 @@ setAudioError("");
             1문제씩: 상황 → 상대 발화 → 보기 선택 → 제출 → 정답/설명
           </p>
 
-          <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
-            <p className="text-sm font-semibold text-gray-800">
-              {isPro
-                ? "PRO 이용 중 · 발음듣기와 녹음을 제한 없이 이용할 수 있습니다."
-                : `FREE 이용 중 · 발음듣기 ${listenUsed}/${DAILY_TALK_LISTEN_LIMIT}회 · 녹음 ${recordUsed}/${DAILY_TALK_RECORD_LIMIT}회`}
-            </p>
+          <div
+            className={
+              quotaLimitReached
+                ? "mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-4"
+                : "mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4"
+            }
+          >
+            <button
+              type="button"
+              onClick={() => setPlanInfoOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="min-w-0">
+                <p
+                  className={
+                    quotaLimitReached
+                      ? "text-sm font-semibold text-red-700"
+                      : "text-sm font-semibold text-gray-800"
+                  }
+                >
+                  {isPro
+                    ? "PRO · 발음듣기·녹음 무제한"
+                    : `FREE · 발음듣기 ${listenUsed}/${DAILY_TALK_LISTEN_LIMIT} · 녹음 ${recordUsed}/${DAILY_TALK_RECORD_LIMIT}`}
+                </p>
+                <p
+                  className={
+                    quotaLimitReached
+                      ? "mt-1 text-xs text-red-600"
+                      : "mt-1 text-xs text-gray-500"
+                  }
+                >
+                  {isPro
+                    ? "자세한 이용 안내 보기"
+                    : quotaLimitReached
+                    ? "오늘 이용 한도 도달"
+                    : `발음 ${remainingListen}회 · 녹음 ${remainingRecord}회 남음`}
+                </p>
+              </div>
+              <span
+                className={
+                  quotaLimitReached
+                    ? "shrink-0 text-base text-red-500"
+                    : "shrink-0 text-base text-gray-500"
+                }
+              >
+                {planInfoOpen ? "⌄" : "›"}
+              </span>
+            </button>
 
-            {!isPro ? (
-              <p className="mt-2 text-sm leading-6 text-gray-600">
-                {quotaMessage ||
-                  "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 PRO에서 이용할 수 있습니다."}
-              </p>
+            {planInfoOpen ? (
+              <div
+                className={
+                  quotaLimitReached
+                    ? "mt-3 border-t border-red-200 pt-3 text-sm leading-6 text-red-700"
+                    : "mt-3 border-t border-gray-200 pt-3 text-sm leading-6 text-gray-600"
+                }
+              >
+                <p>
+                  {isPro
+                    ? "PRO는 발음듣기와 녹음을 제한 없이 이용할 수 있고, AI 스마트코치도 사용할 수 있습니다."
+                    : quotaMessage ||
+                      "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 PRO에서 이용할 수 있습니다."}
+                </p>
+              </div>
             ) : null}
 
-            {!isPro && (listenLimitReached || recordLimitReached) ? (
-              <UpgradeHint
-                title={listenLimitReached ? "오늘 FREE 발음듣기 사용이 모두 끝났어요." : "오늘 FREE 녹음 사용이 모두 끝났어요."}
-                body={listenLimitReached
-                  ? "오늘 준비된 FREE 발음듣기 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 발음듣기를 제한 없이 들을 수 있습니다."
-                  : "오늘 준비된 FREE 녹음 3회를 모두 사용했습니다. 내일 다시 다시 연습할 수 있고, PRO에서는 녹음을 제한 없이 이용할 수 있습니다."}
-              />
+            {!isPro && quotaLimitReached ? (
+              <div className="mt-3">
+                <a
+                  href={UPGRADE_URL}
+                  className="inline-flex rounded-2xl bg-red-500 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Pro 업그레이드
+                </a>
+              </div>
             ) : null}
           </div>
 
