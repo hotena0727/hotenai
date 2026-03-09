@@ -951,7 +951,7 @@ export default function AdminPage() {
                       >
                         <p className="text-xl font-bold">{item.email || "-"}</p>
                         <p className="mt-2 text-sm text-gray-600">
-                          이름: {item.full_name?.trim() || item.email || "-"}
+                          이름: {item.full_name?.trim() || "-"}
                         </p>
                         <p className="mt-1 text-sm text-gray-600">
                           가입: {formatDateTime(item.created_at)}
@@ -961,7 +961,7 @@ export default function AdminPage() {
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <span className={item.plan === "PRO" ? "rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-gray-700" : "rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700"}>
-                            현재 {item.plan.toLowerCase()}
+                            {item.plan.toLowerCase()}
                           </span>
                           {item.is_admin ? (
                             <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">관리자</span>
