@@ -42,6 +42,7 @@ const JA_FONT_STYLE = {
 } as const;
 
 const DAILY_FREE_SET_LIMIT = 3;
+const PRO_UPGRADE_URL = "/pro";
 const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 
 export default function KanjiPage() {
@@ -55,6 +56,7 @@ export default function KanjiPage() {
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   const [excludedWords, setExcludedWords] = useState<ExcludedWordMap>({});
   const [errorMsg, setErrorMsg] = useState("");
@@ -289,6 +291,7 @@ export default function KanjiPage() {
       setAnswers({});
       setSubmitted(false);
       setScore(0);
+      setSaveMessage("");
       setAudioError("");
       setAudioLoadingKey("");
     } catch (error) {
@@ -310,6 +313,10 @@ export default function KanjiPage() {
 
   const makeNewQuiz = () => {
     generateQuiz();
+    setSaveMessage("");
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 0);
   };
 
   const resetExcludedWords = () => {
@@ -360,6 +367,8 @@ export default function KanjiPage() {
     }
 
     setSubmitted(true);
+
+    void autoSaveResult();
   };
 
   const handleRetryWrongOnly = () => {
@@ -378,11 +387,11 @@ export default function KanjiPage() {
     setAudioLoadingKey("");
   };
 
-  const handleSaveResult = async () => {
+  const autoSaveResult = async () => {
     if (!submitted || questions.length === 0) return;
-
     try {
       setSaving(true);
+      setSaveMessage("결과 저장 중...");
 
       const {
         data: { user },
@@ -391,7 +400,7 @@ export default function KanjiPage() {
 
       if (userError || !user) {
         console.error(userError);
-        alert("로그인 정보가 없어 결과를 저장하지 못했습니다.");
+        setSaveMessage("로그인 정보가 없어 결과를 저장하지 못했습니다.");
         return;
       }
 
@@ -421,22 +430,23 @@ export default function KanjiPage() {
       const result = await saveQuizAttempt(payload);
 
       if (!result.ok) {
-        alert("결과 저장 중 오류가 발생했습니다.");
+        setSaveMessage("결과 저장 중 오류가 발생했습니다.");
         return;
       }
 
       const used = await fetchTodayWordKanjiSetCount(user.id);
       setTodayWordKanjiSets(used);
+
       if (userPlan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
         setLimitMessage(
-          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
         );
       }
 
-      alert("결과가 저장되었습니다.");
+      setSaveMessage("결과가 저장되었습니다.");
     } catch (error) {
       console.error(error);
-      alert("결과 저장 중 오류가 발생했습니다.");
+      setSaveMessage("결과 저장 중 오류가 발생했습니다.");
     } finally {
       setSaving(false);
     }
@@ -821,15 +831,9 @@ export default function KanjiPage() {
                       ❌ 틀린 문제만 다시 풀기
                     </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={handleSaveResult}
-                    disabled={saving}
-                    className="rounded-2xl bg-black px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-white disabled:opacity-50"
-                  >
-                    {saving ? "저장 중..." : "결과 저장"}
-                  </button>
+                  {saveMessage ? (
+                    <p className="text-sm text-gray-500">{saveMessage}</p>
+                  ) : null}
                 </>
               )}
             </div>
