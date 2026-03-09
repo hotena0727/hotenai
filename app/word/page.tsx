@@ -738,7 +738,7 @@ export default function WordPage() {
 
                         return (
                           <label
-                            key=<span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
+                            key={choice}
                             className="flex items-center gap-3 text-lg text-gray-900"
                           >
                             <input
