@@ -9,6 +9,12 @@ function getEnv(name: string) {
   return value;
 }
 
+function addDays(base: Date, days: number) {
+  const next = new Date(base);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
 async function requireAdmin(req: NextRequest) {
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.startsWith("Bearer ")
@@ -63,6 +69,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const userId = String(body?.userId || "").trim();
     const plan = String(body?.plan || "").trim().toLowerCase();
+    const durationDays = Number(body?.durationDays || 0);
 
     if (!userId) {
       return NextResponse.json({ error: "회원 ID가 필요합니다." }, { status: 400 });
@@ -75,11 +82,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (plan === "pro") {
+      if (!Number.isFinite(durationDays) || durationDays <= 0) {
+        return NextResponse.json(
+          { error: "PRO 플랜은 유효한 기간이 필요합니다." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const now = new Date();
+
+    const updatePayload =
+      plan === "pro"
+        ? {
+            plan,
+            plan_started_at: now.toISOString(),
+            plan_expires_at: addDays(now, durationDays).toISOString(),
+          }
+        : {
+            plan,
+            plan_started_at: null,
+            plan_expires_at: null,
+          };
+
     const { error } = await admin.adminClient
       .from("profiles")
-      .update({
-        plan,
-      })
+      .update(updatePayload)
       .eq("id", userId);
 
     if (error) {
@@ -93,6 +122,9 @@ export async function POST(req: NextRequest) {
       ok: true,
       userId,
       plan,
+      durationDays: plan === "pro" ? durationDays : 0,
+      plan_started_at: updatePayload.plan_started_at,
+      plan_expires_at: updatePayload.plan_expires_at,
     });
   } catch (error) {
     console.error("[admin-member-plan] failed:", error);
