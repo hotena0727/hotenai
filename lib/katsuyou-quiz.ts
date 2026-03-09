@@ -50,6 +50,15 @@ function woForms(root: string) {
     새롭: { past: "새로웠다", polite: "새롭습니다", te: "새로워" },
     외롭: { past: "외로웠다", polite: "외롭습니다", te: "외로워" },
     드물: { past: "드물었다", polite: "드뭅니다", te: "드물어" },
+    맵: { past: "매웠다", polite: "맵습니다", te: "매워" },
+    차갑: { past: "차가웠다", polite: "차갑습니다", te: "차가워" },
+    무섭: { past: "무서웠다", polite: "무섭습니다", te: "무서워" },
+    어둡: { past: "어두웠다", polite: "어둡습니다", te: "어두워" },
+    뜨겁: { past: "뜨거웠다", polite: "뜨겁습니다", te: "뜨거워" },
+    춥: { past: "추웠다", polite: "춥습니다", te: "추워" },
+    무겁: { past: "무거웠다", polite: "무겁습니다", te: "무거워" },
+    가볍: { past: "가벼웠다", polite: "가볍습니다", te: "가벼워" },
+    가깝: { past: "가까웠다", polite: "가깝습니다", te: "가까워" },
   };
 
   return map[root] ?? {
@@ -81,6 +90,30 @@ function reuForms(root: string) {
   };
 }
 
+const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
+  졸리: {
+    polite_present: "졸립니다",
+    plain_past: "졸렸다",
+    polite_past: "졸렸습니다",
+    te_form_a: "졸리고",
+    te_form_b: "졸려서",
+  },
+  싸: {
+    polite_present: "쌉니다",
+    plain_past: "쌌다",
+    polite_past: "쌌습니다",
+    te_form_a: "싸고",
+    te_form_b: "싸서",
+  },
+  비싸: {
+    polite_present: "비쌉니다",
+    plain_past: "비쌌다",
+    polite_past: "비쌌습니다",
+    te_form_a: "비싸고",
+    te_form_b: "비싸서",
+  },
+};
+
 function buildKrFormsByPattern(
   baseKr: string,
   root: string,
@@ -95,8 +128,10 @@ function buildKrFormsByPattern(
     adverbial: `${root}게`,
   };
 
+  let forms: KrForms;
+
   if (pattern === "it") {
-    return {
+    forms = {
       ...common,
       polite_present: `${root}습니다`,
       plain_past: `${root}었다`,
@@ -104,11 +139,9 @@ function buildKrFormsByPattern(
       te_form_a: `${root}고`,
       te_form_b: `${root}어서`,
     };
-  }
-
-  if (pattern === "eu") {
+  } else if (pattern === "eu") {
     const f = euForms(root);
-    return {
+    forms = {
       ...common,
       polite_present: f.polite,
       plain_past: f.past,
@@ -116,11 +149,9 @@ function buildKrFormsByPattern(
       te_form_a: `${root}고`,
       te_form_b: `${f.te}서`,
     };
-  }
-
-  if (pattern === "wo") {
+  } else if (pattern === "wo") {
     const f = woForms(root);
-    return {
+    forms = {
       ...common,
       polite_present: f.polite,
       plain_past: f.past,
@@ -128,11 +159,19 @@ function buildKrFormsByPattern(
       te_form_a: `${root}고`,
       te_form_b: `${f.te}서`,
     };
-  }
-
-  if (pattern === "ha") {
+  } else if (pattern === "ha") {
     const f = haForms(root);
-    return {
+    forms = {
+      ...common,
+      polite_present: f.polite,
+      plain_past: f.past,
+      polite_past: f.past.replace(/다$/, "습니다"),
+      te_form_a: `${root}고`,
+      te_form_b: `${f.te}서`,
+    };
+  } else {
+    const f = reuForms(root);
+    forms = {
       ...common,
       polite_present: f.polite,
       plain_past: f.past,
@@ -142,15 +181,15 @@ function buildKrFormsByPattern(
     };
   }
 
-  const f = reuForms(root);
-  return {
-    ...common,
-    polite_present: f.polite,
-    plain_past: f.past,
-    polite_past: f.past.replace(/다$/, "습니다"),
-    te_form_a: `${root}고`,
-    te_form_b: `${f.te}서`,
-  };
+  const override = KR_OVERRIDE_FORMS[root];
+  if (override) {
+    forms = {
+      ...forms,
+      ...override,
+    };
+  }
+
+  return forms;
 }
 
 function buildIAdjForms(row: KatsuyouRow): GeneratedForm[] {
