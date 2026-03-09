@@ -226,6 +226,14 @@ function withFullIfMissing(posMode?: string): string {
   return label;
 }
 
+
+function prettyAttemptLabel(posMode?: string): string {
+  return withFullIfMissing(posMode)
+    .replace(/\breading\b/g, "발음")
+    .replace(/\bmeaning\b/g, "뜻")
+    .replace(/\bkr2jp\b/g, "한→일");
+}
+
 export default function MyPage() {
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [recentAttempts, setRecentAttempts] = useState<QuizAttemptRow[]>([]);
@@ -670,6 +678,11 @@ export default function MyPage() {
   return (
     <main className="min-h-screen bg-white text-gray-900">
       <div className="mx-auto max-w-3xl px-4 py-6">
+        <div className="mt-2">
+          <p className="text-3xl font-bold text-gray-900">하테나일본어</p>
+          <p className="mt-2 text-sm text-gray-500">학습 기록과 오답, 알림을 한눈에 확인하세요.</p>
+        </div>
+
         <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
           <div className="h-3 rounded-full bg-gray-100">
             <div
@@ -967,7 +980,7 @@ export default function MyPage() {
                           {getAppLabelFromPosMode(item.pos_mode)}
                         </div>
                         <p className="mt-3 text-lg font-bold text-gray-900">
-                          {getPrettyPosModeLabel(item.pos_mode)}
+                          {prettyAttemptLabel(item.pos_mode)}
                         </p>
                         <p className="mt-2 text-sm text-gray-600">
                           {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
@@ -1049,7 +1062,7 @@ export default function MyPage() {
                             {getAppLabelFromPosMode(item.pos_mode)}
                           </div>
                           <p className="mt-3 text-base font-semibold text-gray-900">
-                            {withFullIfMissing(item.pos_mode)}
+                            {prettyAttemptLabel(item.pos_mode)}
                           </p>
                           <p className="mt-2 text-sm text-gray-600">
                             {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
@@ -1075,7 +1088,7 @@ export default function MyPage() {
                 <div>
                   <h2 className="text-2xl font-bold">💌 메시지</h2>
                   <p className="mt-3 text-sm text-gray-500">
-                    오늘의 학습 흐름을 바탕으로, 짧고 따뜻한 메시지를 모아보았습니다.
+                    관리자가 직접 보낸 메시지가 아니라, 오늘의 학습 흐름을 바탕으로 자동 생성된 피드백 메시지입니다.
                   </p>
                 </div>
                 <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
