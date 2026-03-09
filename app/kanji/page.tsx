@@ -224,6 +224,17 @@ export default function KanjiPage() {
       }
     };
   }, []);
+  const speakJapanese = (text: string, key: string) => {
+
+  useEffect(() => {
+    if (isDailyLimitReached) {
+      setQuestions([]);
+      setAnswers({});
+      setSubmitted(false);
+      setScore(0);
+      setSaveMessage("");
+    }
+  }, [isDailyLimitReached]);
 
   const speakJapanese = (text: string, key: string) => {
     try {
@@ -523,42 +534,77 @@ export default function KanjiPage() {
           </div>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 sm:px-4 sm:py-4">
+        <div
+          className={
+            isDailyLimitReached
+              ? "mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 sm:px-4 sm:py-4"
+              : "mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 sm:px-4 sm:py-4"
+          }
+        >
           <button
             type="button"
             onClick={() => setPlanInfoOpen((prev) => !prev)}
             className="flex w-full items-center justify-between gap-3 text-left"
           >
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-semibold text-gray-800">
+              <p
+                className={
+                  isDailyLimitReached
+                    ? "text-xs sm:text-sm font-semibold text-red-700"
+                    : "text-xs sm:text-sm font-semibold text-gray-800"
+                }
+              >
                 {userPlan === "PRO"
                   ? "PRO · 단어·한자 무제한"
                   : `FREE · 오늘 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
               </p>
-              <p className="mt-1 text-xs text-gray-500">
+              <p
+                className={
+                  isDailyLimitReached
+                    ? "mt-1 text-xs text-red-600"
+                    : "mt-1 text-xs text-gray-500"
+                }
+              >
                 {userPlan === "PRO"
                   ? "자세한 이용 안내 보기"
                   : isDailyLimitReached
-                  ? "오늘 분량 완료"
+                  ? "오늘 이용 완료"
                   : remainingSets === 1
                   ? "오늘 1세트 남음"
                   : `오늘 ${remainingSets}세트 남음`}
               </p>
             </div>
-            <span className="shrink-0 text-sm sm:text-base text-gray-500">
+            <span className={isDailyLimitReached ? "shrink-0 text-sm sm:text-base text-red-500" : "shrink-0 text-sm sm:text-base text-gray-500"}>
               {planInfoOpen ? "⌄" : "›"}
             </span>
           </button>
 
           {planInfoOpen ? (
-            <div className="mt-3 border-t border-gray-200 pt-3 text-xs sm:text-sm leading-6 text-gray-600">
+            <div
+              className={
+                isDailyLimitReached
+                  ? "mt-3 border-t border-red-200 pt-3 text-xs sm:text-sm leading-6 text-red-700"
+                  : "mt-3 border-t border-gray-200 pt-3 text-xs sm:text-sm leading-6 text-gray-600"
+              }
+            >
               <p>
                 {userPlan === "PRO"
                   ? "PRO는 단어와 한자를 제한 없이 이용할 수 있습니다."
                   : isDailyLimitReached
-                  ? "FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘 분량은 모두 완료했고, 내일 다시 이어서 풀 수 있습니다."
+                  ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
                   : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
+            </div>
+          ) : null}
+
+          {isDailyLimitReached ? (
+            <div className="mt-3">
+              <a
+                href={PRO_UPGRADE_URL}
+                className="inline-flex rounded-2xl bg-red-500 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Pro 업그레이드
+              </a>
             </div>
           ) : null}
         </div>
@@ -569,7 +615,7 @@ export default function KanjiPage() {
               type="button"
               onClick={makeNewQuiz}
               disabled={isDailyLimitReached}
-              className={isDailyLimitReached ? "rounded-2xl border border-gray-200 bg-gray-100 px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-400" : "rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"}
+              className={isDailyLimitReached ? "rounded-2xl border border-red-200 bg-red-50 px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-red-600" : "rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"}
             >
               {isDailyLimitReached ? "오늘 이용 완료" : "🔄 새문제(랜덤 10문항)"}
             </button>
@@ -607,7 +653,7 @@ export default function KanjiPage() {
           ) : null}
         </div>
 
-        {questions.length > 0 ? (
+        {!isDailyLimitReached && questions.length > 0 ? (
           <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
             {audioError ? (
               <p className="mb-4 text-sm text-red-500">{audioError}</p>
@@ -839,9 +885,11 @@ export default function KanjiPage() {
             </div>
           </div>
         ) : (
-          <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
-            <p className="text-sm text-gray-500">
-              선택한 조건에 맞는 문제가 없습니다.
+          <div className={`mt-6 rounded-2xl border p-5 ${isDailyLimitReached ? "border-red-200 bg-red-50" : "border-gray-300 bg-white"}`}>
+            <p className={`text-sm ${isDailyLimitReached ? "text-red-700" : "text-gray-500"}`}>
+              {isDailyLimitReached
+                ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
+                : "선택한 조건에 맞는 문제가 없습니다."}
             </p>
           </div>
         )}
