@@ -1587,7 +1587,7 @@ setAudioError("");
     return (
       <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
         <div className="mx-auto max-w-3xl">
-          <h1 className="mt-4 text-3xl font-bold">일본어회화</h1>
+          <h1 className="mt-4 text-3xl font-bold">🗣️ 일본어회화</h1>
           <p className="mt-4 text-red-500">{errorMsg}</p>
         </div>
       </main>
@@ -1632,7 +1632,7 @@ setAudioError("");
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto w-full max-w-3xl">
         <section className="mt-4">
-          <h1 className="text-3xl font-bold">일본어회화</h1>
+          <h1 className="text-3xl font-bold">🗣️ 일본어회화</h1>
           <p className="mt-3 text-base text-gray-600">
             1문제씩: 상황 → 상대 발화 → 보기 선택 → 제출 → 정답/설명
           </p>
