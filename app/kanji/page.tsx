@@ -224,6 +224,7 @@ export default function KanjiPage() {
       }
     };
   }, []);
+  const speakJapanese = (text: string, key: string) => {
 
   useEffect(() => {
     if (isDailyLimitReached) {
@@ -378,7 +379,11 @@ export default function KanjiPage() {
 
     setSubmitted(true);
 
-    void autoSaveResult();
+    void autoSaveResult({
+      currentQuestions: questions,
+      currentAnswers: answers,
+      nextScore,
+    });
   };
 
   const handleRetryWrongOnly = () => {
@@ -397,8 +402,16 @@ export default function KanjiPage() {
     setAudioLoadingKey("");
   };
 
-  const autoSaveResult = async () => {
-    if (!submitted || questions.length === 0) return;
+  const autoSaveResult = async ({
+    currentQuestions,
+    currentAnswers,
+    nextScore,
+  }: {
+    currentQuestions: KanjiQuestion[];
+    currentAnswers: AnswerMap;
+    nextScore: number;
+  }) => {
+    if (currentQuestions.length === 0) return;
     try {
       setSaving(true);
       setSaveMessage("결과 저장 중...");
@@ -414,10 +427,10 @@ export default function KanjiPage() {
         return;
       }
 
-      const wrongList = questions
+      const wrongList = currentQuestions
         .map((q, idx) => ({
           question: q,
-          selected: answers[idx] || "",
+          selected: currentAnswers[idx] || "",
         }))
         .filter((item) => item.selected !== item.question.correct_text)
         .map((item) => ({
@@ -431,10 +444,10 @@ export default function KanjiPage() {
         user_email: user.email ?? "",
         level: selectedLevel,
         pos_mode: `한자 · ${selectedLevel} · ${selectedQType}`,
-        quiz_len: questions.length,
-        score,
+        quiz_len: currentQuestions.length,
+        score: nextScore,
         wrongList,
-        questions,
+        questions: currentQuestions,
       });
 
       const result = await saveQuizAttempt(payload);

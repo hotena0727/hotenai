@@ -478,7 +478,11 @@ export default function WordPage() {
 
     setSubmitted(true);
 
-    void autoSaveResult();
+    void autoSaveResult({
+      currentQuestions: questions,
+      currentAnswers: answers,
+      nextScore,
+    });
   };
 
   const handleRetryWrongOnly = () => {
@@ -497,8 +501,16 @@ export default function WordPage() {
     setAudioLoadingKey("");
   };
 
-  const autoSaveResult = async () => {
-    if (!submitted || questions.length === 0) return;
+  const autoSaveResult = async ({
+    currentQuestions,
+    currentAnswers,
+    nextScore,
+  }: {
+    currentQuestions: WordQuestion[];
+    currentAnswers: AnswerMap;
+    nextScore: number;
+  }) => {
+    if (currentQuestions.length === 0) return;
     try {
       setSaving(true);
       setSaveMessage("결과 저장 중...");
@@ -514,10 +526,10 @@ export default function WordPage() {
         return;
       }
 
-      const wrongList = questions
+      const wrongList = currentQuestions
         .map((q, idx) => ({
           question: q,
-          selected: answers[idx] || "",
+          selected: currentAnswers[idx] || "",
         }))
         .filter((item) => item.selected !== item.question.correct_text)
         .map((item) => ({
@@ -531,10 +543,10 @@ export default function WordPage() {
         user_email: user.email ?? "",
         level: "",
         pos_mode: `단어 · ${selectedPosGroup} · ${selectedQType}`,
-        quiz_len: questions.length,
-        score,
+        quiz_len: currentQuestions.length,
+        score: nextScore,
         wrongList,
-        questions,
+        questions: currentQuestions,
       });
 
       const result = await saveQuizAttempt(payload);
