@@ -185,16 +185,14 @@ function getTopWrongType(attempts: QuizAttemptRow[]) {
   const counts = {
     word: 0,
     kanji: 0,
-    katsuyou: 0,
     talk: 0,
   };
 
   attempts.forEach((item) => {
     const wrong = Number(item.wrong_count || 0);
-    const kind = detectAppKind(item);
+    const kind = detectAppKind(item.pos_mode);
     if (kind === "word") counts.word += wrong;
     if (kind === "kanji") counts.kanji += wrong;
-    if (kind === "katsuyou") counts.katsuyou += wrong;
     if (kind === "talk") counts.talk += wrong;
   });
 
