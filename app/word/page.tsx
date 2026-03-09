@@ -508,10 +508,10 @@ export default function WordPage() {
   return (
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto max-w-3xl">
-        <h1 className="mt-4 text-4xl font-bold">✨ 단어</h1>
+        <h1 className="mt-4 text-4xl font-bold">📝 단어</h1>
 
         <div className="mt-8">
-          <p className="text-lg font-semibold text-gray-700">✨ 품사를 선택하세요</p>
+          <p className="text-lg font-semibold text-gray-700">✅ 품사를 선택하세요</p>
           <div className="mt-3 grid grid-cols-5 gap-3">
             {POS_GROUP_OPTIONS.map((item) => {
               const active = selectedPosGroup === item.value;
@@ -583,7 +583,7 @@ export default function WordPage() {
         ) : null}
 
         <div className="mt-6">
-          <p className="text-lg font-semibold text-gray-700">✨ 유형을 선택하세요</p>
+          <p className="text-lg font-semibold text-gray-700">✅ 유형을 선택하세요</p>
           <div
             className={
               selectedPosGroup === "other"
