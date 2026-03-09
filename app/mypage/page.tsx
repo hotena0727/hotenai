@@ -221,6 +221,11 @@ function withFullIfMissing(posMode?: string): string {
     return `${parts[0]} · ${parts[1]} · 전체`;
   }
 
+
+  if (parts.length >= 3 && parts[0] === "회화" && !parts[2]) {
+    return `${parts[0]} · ${parts[1]} · 전체`;
+  }
+
   return label;
 }
 
@@ -685,18 +690,11 @@ export default function MyPage() {
   return (
     <main className="min-h-screen bg-white text-gray-900">
       <div className="mx-auto max-w-3xl px-4 py-6">
-        <div className="mt-2 flex items-center gap-3">
-          <img
-            src="/icon-192.png"
-            alt="하테나일본어"
-            className="h-10 w-10 rounded-xl shrink-0"
-          />
-          <div>
-            <p className="text-3xl font-bold text-gray-900">하테나일본어</p>
-            <p className="mt-1 text-sm text-gray-500">
-              학습 기록과 오답, 메시지를 한눈에 확인하세요.
-            </p>
-          </div>
+        <div className="mt-2">
+          <p className="text-3xl font-bold text-gray-900">마이페이지</p>
+          <p className="mt-1 text-sm text-gray-500">
+            학습 기록과 오답, 메시지를 한눈에 확인하세요.
+          </p>
         </div>
 
         <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
@@ -743,10 +741,10 @@ export default function MyPage() {
               {stats.totalAttempts === 0
                 ? "0%"
                 : `${Math.round(
-                    ((stats.totalAttempts * 10 - stats.totalWrong) /
-                      Math.max(stats.totalAttempts * 10, 1)) *
-                      100
-                  )}%`}
+                  ((stats.totalAttempts * 10 - stats.totalWrong) /
+                    Math.max(stats.totalAttempts * 10, 1)) *
+                  100
+                )}%`}
             </p>
             <p className="mt-2 text-lg font-semibold text-gray-700">평균 정답률</p>
           </div>
@@ -1012,9 +1010,9 @@ export default function MyPage() {
                         <p className="mt-1">
                           {item.created_at
                             ? new Date(item.created_at).toLocaleTimeString("ko-KR", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
                             : "-"}
                         </p>
                       </div>
