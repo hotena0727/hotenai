@@ -1,9 +1,6 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type {
@@ -68,18 +65,11 @@ const PRO_UPGRADE_URL = "/pro";
 const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 
 export default function KatsuyouPage() {
-  const searchParams = useSearchParams();
-
-  const reviewMode = searchParams.get("review") === "1";
-  const reviewQids = useMemo(() => {
-    const raw = searchParams.get("qids") || "";
-    return raw
-      .split(",")
-      .map((v) => v.trim())
-      .filter(Boolean);
-  }, [searchParams]);
-  const reviewPos = searchParams.get("pos") || "";
-  const reviewQType = searchParams.get("qtype") || "";
+  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewQids, setReviewQids] = useState<string[]>([]);
+  const [reviewPos, setReviewPos] = useState("");
+  const [reviewQType, setReviewQType] = useState("");
+  const [reviewReady, setReviewReady] = useState(false);
 
   const [rows, setRows] = useState<KatsuyouRow[]>([]);
   const [questions, setQuestions] = useState<KatsuyouQuestion[]>([]);
@@ -177,6 +167,25 @@ export default function KatsuyouPage() {
 
     return map;
   }, [rows]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const review = params.get("review") === "1";
+    const qids = (params.get("qids") || "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    const pos = params.get("pos") || "";
+    const qtype = params.get("qtype") || "";
+
+    setReviewMode(review);
+    setReviewQids(qids);
+    setReviewPos(pos);
+    setReviewQType(qtype);
+    setReviewReady(true);
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -375,12 +384,12 @@ export default function KatsuyouPage() {
 
       const targetPos =
         reviewPos === "i_adj" || reviewPos === "na_adj" || reviewPos === "verb"
-          ? reviewPos
+          ? (reviewPos as KatsuyouPos)
           : filteredRows[0]?.pos || selectedPos;
 
       const targetQType =
         reviewQType === "kr2jp" || reviewQType === "jp2kr"
-          ? reviewQType
+          ? (reviewQType as KatsuyouQType)
           : selectedQType;
 
       const quiz = buildKatsuyouQuiz({
@@ -399,12 +408,8 @@ export default function KatsuyouPage() {
       setAudioError("");
       setAudioLoadingKey("");
 
-      if (targetPos === "i_adj" || targetPos === "na_adj" || targetPos === "verb") {
-        setSelectedPos(targetPos);
-      }
-      if (targetQType === "kr2jp" || targetQType === "jp2kr") {
-        setSelectedQType(targetQType);
-      }
+      setSelectedPos(targetPos);
+      setSelectedQType(targetQType);
     } catch (error) {
       console.error(error);
       setQuestions([]);
@@ -412,6 +417,7 @@ export default function KatsuyouPage() {
   };
 
   useEffect(() => {
+    if (!reviewReady) return;
     if (loading || rows.length === 0) return;
 
     if (!didAutoCreateRef.current) {
@@ -426,6 +432,7 @@ export default function KatsuyouPage() {
     generateQuiz();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    reviewReady,
     loading,
     rows,
     selectedPos,
@@ -590,7 +597,7 @@ export default function KatsuyouPage() {
     }
   };
 
-  if (loading) {
+  if (loading || !reviewReady) {
     return (
       <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
         <div className="mx-auto max-w-3xl">
