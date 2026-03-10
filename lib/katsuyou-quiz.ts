@@ -704,7 +704,7 @@ function buildVerbJpForms(row: KatsuyouRow): VerbFormSet | null {
     す: { i: "し", a: "さ", e: "せ", o: "そ", te: "して", ta: "した" },
     つ: { i: "ち", a: "た", e: "て", o: "と", te: "って", ta: "った" },
     ぬ: { i: "に", a: "な", e: "ね", o: "の", te: "んで", ta: "んだ" },
-    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "んだ" },
+    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "ん다" },
     ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "んだ" },
     る: { i: "り", a: "ら", e: "れ", o: "ろ", te: "って", ta: "った" },
   } as const;
@@ -794,12 +794,16 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   노래하다: {
     passive: "노래하다(수동형)",
   },
+  필요하다: {
+    causative_passive: "",
+  },
   입다: {
     imperative: "입어라",
     causative_passive: "(억지로) 입게 되다",
   },
   버리다: {
     plain_past: "버렸다",
+    passive: "버려지다",
     causative_passive: "(억지로) 버리게 되다",
   },
   헤엄치다: {
@@ -811,12 +815,14 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   },
   일어나다: {
     passive: "일어나게 되다",
+    potential: "일어날 수 있다",
   },
   나가다: {
     polite_present: "나갑니다",
     potential: "나갈 수 있다",
   },
   쓰다: {
+    plain_past: "썼다",
     passive: "쓰이다",
   },
   자다: {
@@ -836,6 +842,7 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
     passive: "",
   },
   만나다: {
+    plain_past: "만났다",
     passive: "",
   },
   닫다: {
@@ -846,6 +853,18 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   },
   알다: {
     passive: "알려지다",
+  },
+  사다: {
+    polite_present: "삽니다",
+  },
+  서두르다: {
+    passive: "서두르다(수동형)",
+  },
+  달리다: {
+    potential: "달릴 수 있다",
+  },
+  듣다: {
+    passive: "듣다(수동형)",
   },
 };
 
