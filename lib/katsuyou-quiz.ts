@@ -742,7 +742,7 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
     volitional: "가자",
     passive: "가게 되다",
     causative: "가게 하다",
-    causative_passive: "가게 하게 하다",
+    causative_passive: "(억지로) 가게 되다",
   },
   오다: {
     polite_present: "옵니다",
@@ -754,7 +754,7 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
     volitional: "오자",
     passive: "오게 되다",
     causative: "오게 하다",
-    causative_passive: "오게 하게 하다",
+    causative_passive: "(억지로) 오게 되다",
   },
   하다: {
     polite_present: "합니다",
@@ -765,22 +765,36 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
     volitional: "하자",
     passive: "되다",
     causative: "하게 하다",
-    causative_passive: "하게 하다",
+    causative_passive: "(억지로) 하게 되다",
   },
   들어가다: {
     passive: "들어가게 되다",
+    causative_passive: "(억지로) 들어가게 되다",
   },
   빌리다: {
     plain_past: "빌렸다",
+    causative_passive: "(억지로) 빌리게 되다",
   },
   가지다: {
     passive: "가지게 되다",
+    causative_passive: "(억지로) 가지게 되다",
   },
   샤워하다: {
     potential: "샤워할 수 있다",
+    passive: "샤워하게 되다",
+    causative_passive: "(억지로) 샤워하게 되다",
   },
   조사하다: {
     passive: "조사되다",
+    causative_passive: "(억지로) 조사하게 되다",
+  },
+  입다: {
+    imperative: "입어라",
+    causative_passive: "(억지로) 입게 되다",
+  },
+  버리다: {
+    plain_past: "버렸다",
+    causative_passive: "(억지로) 버리게 되다",
   },
 };
 
@@ -804,7 +818,7 @@ function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
         volitional: `${stem}하자`,
         passive: `${stem}되다`,
         causative: `${stem}하게 하다`,
-        causative_passive: `${stem}하게 하다`,
+        causative_passive: `(억지로) ${stem}하게 되다`,
       }
     : {
         plain_present: baseKr,
@@ -818,7 +832,7 @@ function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
         volitional: `${root}자`,
         passive: `${root}되다`,
         causative: `${root}게 하다`,
-        causative_passive: `${root}게 하다`,
+        causative_passive: `(억지로) ${root}게 되다`,
       };
 
   return {
