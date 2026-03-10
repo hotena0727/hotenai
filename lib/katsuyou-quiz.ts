@@ -1,12 +1,12 @@
 import type {
   GeneratedForm,
+  KatsuyouFormKey,
   KatsuyouPos,
   KatsuyouQType,
   KatsuyouQuestion,
   KatsuyouRow,
   KrForms,
   KrPattern,
-  KatsuyouFormKey,
 } from "@/app/types/katsuyou";
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -29,6 +29,10 @@ function pickOne<T>(arr: readonly T[]): T {
 function getIAdjStem(baseJp: string): string {
   return baseJp.endsWith("い") ? baseJp.slice(0, -1) : baseJp;
 }
+
+/* =========================
+ * い형용사 한국어 생성 보조
+ * ========================= */
 
 function euForms(root: string) {
   const map: Record<string, { past: string; polite: string; te: string }> = {
@@ -207,6 +211,10 @@ function buildKrFormsByPattern(
   return forms;
 }
 
+/* =========================
+ * い형용사 문제 생성
+ * ========================= */
+
 function buildIAdjForms(row: KatsuyouRow): GeneratedForm[] {
   if (row.pos !== "i_adj") return [];
   if (!row.kr_root || !row.kr_pattern) return [];
@@ -334,6 +342,69 @@ function buildIAdjForms(row: KatsuyouRow): GeneratedForm[] {
   ];
 }
 
+/* =========================
+ * な형용사 문제 생성
+ * ========================= */
+
+type NaKrOverride = {
+  plain_present: string;
+  polite_present: string;
+  plain_negative: string;
+  polite_negative: string;
+  plain_past: string;
+  polite_past: string;
+  plain_negative_past: string;
+  polite_negative_past: string;
+  te_form: string;
+};
+
+const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
+  苦手: {
+    plain_present: "서툴다",
+    polite_present: "서툽니다",
+    plain_negative: "서툴지 않다",
+    polite_negative: "서툴지 않습니다",
+    plain_past: "서툴렀다",
+    polite_past: "서툴렀습니다",
+    plain_negative_past: "서툴지 않았다",
+    polite_negative_past: "서툴지 않았습니다",
+    te_form: "서툴고",
+  },
+  下手: {
+    plain_present: "서투르다",
+    polite_present: "서투릅니다",
+    plain_negative: "서투르지 않다",
+    polite_negative: "서투르지 않습니다",
+    plain_past: "서투렀다",
+    polite_past: "서투렀습니다",
+    plain_negative_past: "서투르지 않았다",
+    polite_negative_past: "서투르지 않았습니다",
+    te_form: "서투르고",
+  },
+  得意: {
+    plain_present: "능숙하다",
+    polite_present: "능숙합니다",
+    plain_negative: "능숙하지 않다",
+    polite_negative: "능숙하지 않습니다",
+    plain_past: "능숙했다",
+    polite_past: "능숙했습니다",
+    plain_negative_past: "능숙하지 않았다",
+    polite_negative_past: "능숙하지 않았습니다",
+    te_form: "능숙하고",
+  },
+  快適: {
+    plain_present: "쾌적하다",
+    polite_present: "쾌적합니다",
+    plain_negative: "쾌적하지 않다",
+    polite_negative: "쾌적하지 않습니다",
+    plain_past: "쾌적했다",
+    polite_past: "쾌적했습니다",
+    plain_negative_past: "쾌적하지 않았다",
+    polite_negative_past: "쾌적하지 않았습니다",
+    te_form: "쾌적하고",
+  },
+};
+
 function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
   if (row.pos !== "na_adj") return [];
 
@@ -341,14 +412,34 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
   const baseKr = row.kr;
   const reading = row.reading;
 
-  const krRoot = baseKr.endsWith("다") ? baseKr.slice(0, -1) : baseKr;
+  const override = NA_KR_OVERRIDE[baseJp];
+
+  const isHada = baseKr.endsWith("하다");
+  const stem = isHada
+    ? baseKr.slice(0, -2)
+    : baseKr.endsWith("다")
+    ? baseKr.slice(0, -1)
+    : baseKr;
+
+  const plain_present = override?.plain_present ?? baseKr;
+  const polite_present = override?.polite_present ?? (isHada ? `${stem}합니다` : `${stem}습니다`);
+  const plain_negative = override?.plain_negative ?? (isHada ? `${stem}하지 않다` : `${stem}지 않다`);
+  const polite_negative =
+    override?.polite_negative ?? (isHada ? `${stem}하지 않습니다` : `${stem}지 않습니다`);
+  const plain_past = override?.plain_past ?? (isHada ? `${stem}했다` : `${stem}였다`);
+  const polite_past = override?.polite_past ?? (isHada ? `${stem}했습니다` : `${stem}였습니다`);
+  const plain_negative_past =
+    override?.plain_negative_past ?? (isHada ? `${stem}하지 않았다` : `${stem}지 않았다`);
+  const polite_negative_past =
+    override?.polite_negative_past ?? (isHada ? `${stem}하지 않았습니다` : `${stem}지 않았습니다`);
+  const te_form = override?.te_form ?? (isHada ? `${stem}하고` : `${stem}고`);
 
   return [
     {
       pos: "na_adj",
       qtype: "kr2jp",
       formKey: "plain_present",
-      promptKr: baseKr,
+      promptKr: plain_present,
       answerJp: `${baseJp}だ`,
       baseJp,
       baseKr,
@@ -358,7 +449,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
       pos: "na_adj",
       qtype: "kr2jp",
       formKey: "polite_present",
-      promptKr: `${krRoot}습니다`,
+      promptKr: polite_present,
       answerJp: `${baseJp}です`,
       baseJp,
       baseKr,
@@ -368,7 +459,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
       pos: "na_adj",
       qtype: "kr2jp",
       formKey: "plain_negative",
-      promptKr: `${krRoot}지 않다`,
+      promptKr: plain_negative,
       answerJp: `${baseJp}ではない`,
       baseJp,
       baseKr,
@@ -378,7 +469,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
       pos: "na_adj",
       qtype: "kr2jp",
       formKey: "polite_negative",
-      promptKr: `${krRoot}지 않습니다`,
+      promptKr: polite_negative,
       answerJp: `${baseJp}ではありません`,
       baseJp,
       baseKr,
@@ -388,7 +479,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
       pos: "na_adj",
       qtype: "kr2jp",
       formKey: "plain_past",
-      promptKr: `${krRoot}했다`,
+      promptKr: plain_past,
       answerJp: `${baseJp}だった`,
       baseJp,
       baseKr,
@@ -398,7 +489,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
       pos: "na_adj",
       qtype: "kr2jp",
       formKey: "polite_past",
-      promptKr: `${krRoot}했습니다`,
+      promptKr: polite_past,
       answerJp: `${baseJp}でした`,
       baseJp,
       baseKr,
@@ -408,7 +499,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
       pos: "na_adj",
       qtype: "kr2jp",
       formKey: "plain_negative_past",
-      promptKr: `${krRoot}지 않았다`,
+      promptKr: plain_negative_past,
       answerJp: `${baseJp}ではなかった`,
       baseJp,
       baseKr,
@@ -418,7 +509,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
       pos: "na_adj",
       qtype: "kr2jp",
       formKey: "polite_negative_past",
-      promptKr: `${krRoot}지 않았습니다`,
+      promptKr: polite_negative_past,
       answerJp: `${baseJp}ではありませんでした`,
       baseJp,
       baseKr,
@@ -428,7 +519,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
       pos: "na_adj",
       qtype: "kr2jp",
       formKey: "te_form",
-      promptKr: `${krRoot}하고`,
+      promptKr: te_form,
       answerJp: `${baseJp}で`,
       baseJp,
       baseKr,
@@ -436,6 +527,10 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
     },
   ];
 }
+
+/* =========================
+ * 공통 선택지 생성
+ * ========================= */
 
 function getAltEquivalentAnswers(form: GeneratedForm): string[] {
   if (form.pos === "i_adj") {
@@ -482,6 +577,10 @@ function buildChoicesForKrAnswer(form: GeneratedForm, siblings: GeneratedForm[])
   return shuffleArray(merged).slice(0, 4);
 }
 
+/* =========================
+ * 레거시 (동사용)
+ * ========================= */
+
 function buildLegacyQuiz({
   rows,
   qtype,
@@ -522,9 +621,10 @@ function buildLegacyQuiz({
     const safeChoices =
       choices.length === 4
         ? choices
-        : shuffleArray(
-            uniqueStrings([correctText, ...pool.filter((v) => v !== correctText)])
-          ).slice(0, 4);
+        : shuffleArray(uniqueStrings([correctText, ...pool.filter((v) => v !== correctText)])).slice(
+            0,
+            4
+          );
 
     const prompt = qtype === "kr2jp" ? row.kr : row.jp;
 
@@ -541,6 +641,10 @@ function buildLegacyQuiz({
     };
   });
 }
+
+/* =========================
+ * 최종 퀴즈 생성
+ * ========================= */
 
 function buildFormsForRow(row: KatsuyouRow): GeneratedForm[] {
   if (row.pos === "i_adj") return buildIAdjForms(row);
