@@ -113,5 +113,12 @@ export async function loadKatsuyouRows(): Promise<KatsuyouRow[]> {
       .filter((row): row is KatsuyouRow => row !== null)
   );
 
+  const naAdjRows = await loadCsvFile("/csv/katsuyou_na_adj.csv");
+  all.push(
+    ...naAdjRows
+      .map((row, idx) => toKatsuyouRow(row, 10000 + idx))
+      .filter((row): row is KatsuyouRow => row !== null)
+  );
+
   return all;
 }
