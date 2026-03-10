@@ -105,6 +105,9 @@ function makeEoAStem(root: string): string {
     자르: "잘라",
     서두르: "서둘러",
     돌려주: "돌려줘",
+    꺼내: "꺼내",
+    넣: "넣어",
+    돌아가: "돌아가",
   };
   if (direct[root]) return direct[root];
 
@@ -149,11 +152,13 @@ function makePolitePresent(baseKr: string): string {
     깨우: "깨웁니다",
     가지: "가집니다",
     돌려주: "돌려줍니다",
+    꺼내: "꺼냅니다",
+    넣: "넣습니다",
   };
   if (special[root]) return special[root];
 
   const last = lastChar(root);
-  if (hasBatchim(last)) return `${root}습니다`;
+  if (hasBatchim(last)) return `${root}습니다}`;
 
   return `${addBieupBatchim(root)}니다`;
 }
@@ -170,6 +175,7 @@ function makePast(baseKr: string): string {
     만나: "만났다",
     알: "알았다",
     들어가: "들어갔다",
+    돌아가: "돌아갔다",
     일어나: "일어났다",
     달리: "달렸다",
     쓰: "썼다",
@@ -187,7 +193,8 @@ function makePast(baseKr: string): string {
     주: "줬다",
     두: "뒀다",
     돌려주: "돌려줬다",
-    노래하: "노래했다",
+    넣: "넣었다",
+    꺼내: "꺼냈다",
   };
   if (special[root]) return special[root];
 
@@ -307,6 +314,8 @@ function makeImperative(baseKr: string): string {
     말하: "말해라",
     서두르: "서둘러라",
     돌려주: "돌려줘라",
+    꺼내: "꺼내라",
+    넣: "넣어라",
   };
   if (special[root]) return special[root];
 
@@ -350,6 +359,8 @@ function makePassive(baseKr: string): string {
     "열다": "열리다",
     "세우다": "세워지다",
     "조사하다": "조사되다",
+    "넣다": "넣어지다",
+    "꺼내다": "꺼내지다",
   };
   if (natural[baseKr]) return natural[baseKr];
 
@@ -447,6 +458,9 @@ function makeConnectiveB(baseKr: string): string {
     말하: "말해서",
     돌려주: "돌려줘서",
     노래하: "노래해서",
+    꺼내: "꺼내서",
+    넣: "넣어서",
+    돌아가: "돌아가서",
   };
   if (special[root]) return special[root];
 
