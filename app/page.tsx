@@ -24,6 +24,7 @@ type HomeProfile = {
   full_name: string;
   plan: PlanCode;
   is_admin: boolean;
+  daily_goal_sets: number;
 };
 
 type MenuSettings = {
@@ -49,8 +50,6 @@ type DayBucket = {
   label: string;
   count: number;
 };
-
-const DAILY_GOAL_SETS = 3;
 
 function canAccess(
   userPlan: string | null | undefined,
@@ -172,8 +171,9 @@ function buildLevelProgress(attempts: QuizAttemptRow[]) {
   }));
 }
 
-function calcGoalPercent(totalTodaySets: number) {
-  return Math.min(100, Math.round((totalTodaySets / DAILY_GOAL_SETS) * 100));
+function calcGoalPercent(totalTodaySets: number, goalSets: number) {
+  const safeGoal = Math.max(1, Number(goalSets || 1));
+  return Math.min(100, Math.round((totalTodaySets / safeGoal) * 100));
 }
 
 function getTodayAttemptCount(attempts: QuizAttemptRow[]) {
@@ -260,7 +260,7 @@ export default function HomePage() {
 
         const { data: profileRow, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, plan, is_admin")
+          .select("full_name, plan, is_admin, daily_goal_sets")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -277,6 +277,7 @@ export default function HomePage() {
           full_name: profileRow?.full_name || googleName || "",
           plan: normalizePlan(profileRow?.plan),
           is_admin: Boolean(profileRow?.is_admin),
+          daily_goal_sets: Math.max(1, Number(profileRow?.daily_goal_sets || 3)),
         });
 
         const { data: menuRow, error: menuError } = await supabase
@@ -341,6 +342,8 @@ export default function HomePage() {
     }
   }, [errorMsg, router]);
 
+  const goalSets = Math.max(1, Number(profile?.daily_goal_sets || 3));
+
   const stats = useMemo(() => {
     const totalAttempts = attempts.length;
     const totalWrong = attempts.reduce(
@@ -361,7 +364,7 @@ export default function HomePage() {
     const recent7Days = buildLast7Days(attempts);
     const streak = calcStreak(recent7Days);
     const todayCount = getTodayAttemptCount(attempts);
-    const goalPercent = calcGoalPercent(todayCount);
+    const goalPercent = calcGoalPercent(todayCount, goalSets);
     const levelProgress = buildLevelProgress(attempts);
 
     return {
@@ -381,7 +384,7 @@ export default function HomePage() {
       goalPercent,
       levelProgress,
     };
-  }, [attempts]);
+  }, [attempts, goalSets]);
 
   const todayMessage = useMemo(
     () => getTodayMessage(stats.totalAttempts, stats.totalWrong),
@@ -496,7 +499,9 @@ export default function HomePage() {
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <span className={getPlanBadge(userPlan) ? `inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}` : ""}>
+            <span
+              className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}
+            >
               {getPlanBadge(userPlan)}
             </span>
           </div>
@@ -523,6 +528,7 @@ export default function HomePage() {
               <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
                 <p className="text-3xl font-bold">{stats.goalPercent}%</p>
                 <p className="mt-1 text-sm text-gray-600">오늘 목표</p>
+                <p className="mt-1 text-xs text-gray-500">{goalSets}세트 기준</p>
               </div>
             </div>
 

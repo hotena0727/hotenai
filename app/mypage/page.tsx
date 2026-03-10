@@ -39,6 +39,7 @@ type MyProfile = {
   is_admin: boolean;
   plan_started_at?: string | null;
   plan_expires_at?: string | null;
+  daily_goal_sets?: number;
 };
 
 type MainTabKey = "wrong" | "history" | "message" | "notice";
@@ -315,6 +316,10 @@ export default function MyPage() {
   const [installGuideOpen, setInstallGuideOpen] = useState(false);
   const [showMyClassroomSection, setShowMyClassroomSection] = useState(false);
 
+  const [goalDraft, setGoalDraft] = useState("3");
+  const [goalSaving, setGoalSaving] = useState(false);
+  const [goalMessage, setGoalMessage] = useState("");
+
   const [noticeRefreshing, setNoticeRefreshing] = useState(false);
   const [noticeEnabling, setNoticeEnabling] = useState(false);
   const [noticeDisabling, setNoticeDisabling] = useState(false);
@@ -355,7 +360,9 @@ export default function MyPage() {
 
         const { data: profileRow, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, plan, is_admin, plan_started_at, plan_expires_at")
+          .select(
+            "full_name, plan, is_admin, plan_started_at, plan_expires_at, daily_goal_sets"
+          )
           .eq("id", user.id)
           .maybeSingle();
 
@@ -372,6 +379,8 @@ export default function MyPage() {
           user.user_metadata?.user_name ||
           "";
 
+        const nextGoal = Math.max(1, Number(profileRow?.daily_goal_sets || 3));
+
         setProfile({
           id: user.id,
           email: user.email ?? "",
@@ -380,7 +389,10 @@ export default function MyPage() {
           is_admin: Boolean(profileRow?.is_admin),
           plan_started_at: profileRow?.plan_started_at ?? null,
           plan_expires_at: profileRow?.plan_expires_at ?? null,
+          daily_goal_sets: nextGoal,
         });
+
+        setGoalDraft(String(nextGoal));
 
         const { data: sectionRow, error: sectionError } = await supabase
           .from("app_page_settings")
@@ -530,6 +542,44 @@ export default function MyPage() {
       return joined.includes(q);
     });
   }, [recentAttempts, wrongFilter, searchText, repeatOnly]);
+
+  const handleSaveDailyGoal = async () => {
+    try {
+      if (!profile?.id) return;
+
+      setGoalSaving(true);
+      setGoalMessage("");
+
+      const nextGoal = Math.max(1, Number(goalDraft || 3));
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          daily_goal_sets: nextGoal,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
+
+      if (error) throw error;
+
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              daily_goal_sets: nextGoal,
+            }
+          : prev
+      );
+
+      setGoalDraft(String(nextGoal));
+      setGoalMessage("오늘 목표를 저장했습니다.");
+    } catch (error) {
+      console.error(error);
+      setGoalMessage("오늘 목표 저장 중 오류가 발생했습니다.");
+    } finally {
+      setGoalSaving(false);
+    }
+  };
 
   const handleEnableNotice = async () => {
     try {
@@ -777,6 +827,7 @@ export default function MyPage() {
   const currentPlan = profile?.plan || "free";
   const planTheme = getPlanTheme(currentPlan);
   const progressBarClass = getPlanProgressClass(currentPlan);
+  const currentGoalSets = Math.max(1, Number(profile?.daily_goal_sets || 3));
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
@@ -831,11 +882,15 @@ export default function MyPage() {
               </p>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <span className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}>
+                <span
+                  className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}
+                >
                   {profile ? getPlanBadge(profile.plan) : "-"}
                 </span>
                 {profile ? (
-                  <span className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}>
+                  <span
+                    className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}
+                  >
                     {getPlanLabel(profile.plan)}
                   </span>
                 ) : null}
@@ -868,10 +923,67 @@ export default function MyPage() {
               {stats.progressPercent}% 진행
             </div>
             {profile ? (
-              <div className={`rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}>
+              <div
+                className={`rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}
+              >
                 {getPlanLabel(profile.plan)}
               </div>
             ) : null}
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-500">오늘 목표</p>
+              <p className="mt-2 text-lg font-bold text-gray-900">
+                하루 학습 목표 세트를 설정하세요
+              </p>
+              <p className="mt-2 text-sm text-gray-600">
+                홈 화면의 오늘 목표 진행률에 바로 반영됩니다.
+              </p>
+            </div>
+
+            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+              현재 {currentGoalSets}세트
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            {[1, 2, 3, 5, 10].map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setGoalDraft(String(value));
+                  setGoalMessage("");
+                }}
+                className={
+                  Number(goalDraft) === value
+                    ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
+                    : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                }
+              >
+                {value}세트
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSaveDailyGoal}
+              disabled={goalSaving}
+              className={
+                goalSaving
+                  ? "rounded-2xl border border-gray-200 bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-400"
+                  : "rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
+              }
+            >
+              {goalSaving ? "저장 중..." : "목표 저장"}
+            </button>
+
+            {goalMessage ? <p className="text-sm text-gray-600">{goalMessage}</p> : null}
           </div>
         </div>
 
@@ -1000,7 +1112,9 @@ export default function MyPage() {
               >
                 <p className="text-xs font-bold sm:text-lg">{day.label}</p>
                 <p className="mt-2 text-lg font-bold sm:mt-3 sm:text-3xl">{idx + 1}</p>
-                <p className="mt-1 text-[10px] font-semibold text-gray-700 sm:mt-2 sm:text-sm">{day.total}회</p>
+                <p className="mt-1 text-[10px] font-semibold text-gray-700 sm:mt-2 sm:text-sm">
+                  {day.total}회
+                </p>
                 <div className="mt-2 text-[10px] text-gray-600 sm:mt-3 sm:text-sm">
                   <p>단어 {day.word}</p>
                   <p>한자 {day.kanji}</p>
