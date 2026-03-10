@@ -403,6 +403,50 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_negative_past: "쾌적하지 않았습니다",
     te_form: "쾌적하고",
   },
+  最高: {
+    plain_present: "최고다",
+    polite_present: "최고입니다",
+    plain_negative: "최고이지 않다",
+    polite_negative: "최고이지 않습니다",
+    plain_past: "최고였다",
+    polite_past: "최고였습니다",
+    plain_negative_past: "최고이지 않았다",
+    polite_negative_past: "최고이지 않았습니다",
+    te_form: "최고이고",
+  },
+  最低: {
+    plain_present: "최악이다",
+    polite_present: "최악입니다",
+    plain_negative: "최악이 아니다",
+    polite_negative: "최악이 아닙니다",
+    plain_past: "최악이었다",
+    polite_past: "최악이었습니다",
+    plain_negative_past: "최악이 아니었다",
+    polite_negative_past: "최악이 아니었습니다",
+    te_form: "최악이고",
+  },
+  残念: {
+    plain_present: "유감이다",
+    polite_present: "유감입니다",
+    plain_negative: "유감이 아니다",
+    polite_negative: "유감이 아닙니다",
+    plain_past: "유감이었다",
+    polite_past: "유감이었습니다",
+    plain_negative_past: "유감이 아니었다",
+    polite_negative_past: "유감이 아니었습니다",
+    te_form: "유감이고",
+  },
+  不満: {
+    plain_present: "불만이다",
+    polite_present: "불만입니다",
+    plain_negative: "불만이 아니다",
+    polite_negative: "불만이 아닙니다",
+    plain_past: "불만이었다",
+    polite_past: "불만이었습니다",
+    plain_negative_past: "불만이 아니었다",
+    polite_negative_past: "불만이 아니었습니다",
+    te_form: "불만이고",
+  },
 };
 
 function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
@@ -418,8 +462,8 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
   const stem = isHada
     ? baseKr.slice(0, -2)
     : baseKr.endsWith("다")
-    ? baseKr.slice(0, -1)
-    : baseKr;
+      ? baseKr.slice(0, -1)
+      : baseKr;
 
   const plain_present = override?.plain_present ?? baseKr;
   const polite_present = override?.polite_present ?? (isHada ? `${stem}합니다` : `${stem}습니다`);
@@ -621,10 +665,9 @@ function buildLegacyQuiz({
     const safeChoices =
       choices.length === 4
         ? choices
-        : shuffleArray(uniqueStrings([correctText, ...pool.filter((v) => v !== correctText)])).slice(
-            0,
-            4
-          );
+        : shuffleArray(
+            uniqueStrings([correctText, ...pool.filter((v) => v !== correctText)])
+          ).slice(0, 4);
 
     const prompt = qtype === "kr2jp" ? row.kr : row.jp;
 
