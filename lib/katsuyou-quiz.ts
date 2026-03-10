@@ -6,6 +6,7 @@ import type {
   KatsuyouRow,
   KrForms,
   KrPattern,
+  KatsuyouFormKey,
 } from "@/app/types/katsuyou";
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -333,19 +334,124 @@ function buildIAdjForms(row: KatsuyouRow): GeneratedForm[] {
   ];
 }
 
+function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
+  if (row.pos !== "na_adj") return [];
+
+  const baseJp = row.jp;
+  const baseKr = row.kr;
+  const reading = row.reading;
+
+  const krRoot = baseKr.endsWith("다") ? baseKr.slice(0, -1) : baseKr;
+
+  return [
+    {
+      pos: "na_adj",
+      qtype: "kr2jp",
+      formKey: "plain_present",
+      promptKr: baseKr,
+      answerJp: `${baseJp}だ`,
+      baseJp,
+      baseKr,
+      reading,
+    },
+    {
+      pos: "na_adj",
+      qtype: "kr2jp",
+      formKey: "polite_present",
+      promptKr: `${krRoot}습니다`,
+      answerJp: `${baseJp}です`,
+      baseJp,
+      baseKr,
+      reading,
+    },
+    {
+      pos: "na_adj",
+      qtype: "kr2jp",
+      formKey: "plain_negative",
+      promptKr: `${krRoot}지 않다`,
+      answerJp: `${baseJp}ではない`,
+      baseJp,
+      baseKr,
+      reading,
+    },
+    {
+      pos: "na_adj",
+      qtype: "kr2jp",
+      formKey: "polite_negative",
+      promptKr: `${krRoot}지 않습니다`,
+      answerJp: `${baseJp}ではありません`,
+      baseJp,
+      baseKr,
+      reading,
+    },
+    {
+      pos: "na_adj",
+      qtype: "kr2jp",
+      formKey: "plain_past",
+      promptKr: `${krRoot}했다`,
+      answerJp: `${baseJp}だった`,
+      baseJp,
+      baseKr,
+      reading,
+    },
+    {
+      pos: "na_adj",
+      qtype: "kr2jp",
+      formKey: "polite_past",
+      promptKr: `${krRoot}했습니다`,
+      answerJp: `${baseJp}でした`,
+      baseJp,
+      baseKr,
+      reading,
+    },
+    {
+      pos: "na_adj",
+      qtype: "kr2jp",
+      formKey: "plain_negative_past",
+      promptKr: `${krRoot}지 않았다`,
+      answerJp: `${baseJp}ではなかった`,
+      baseJp,
+      baseKr,
+      reading,
+    },
+    {
+      pos: "na_adj",
+      qtype: "kr2jp",
+      formKey: "polite_negative_past",
+      promptKr: `${krRoot}지 않았습니다`,
+      answerJp: `${baseJp}ではありませんでした`,
+      baseJp,
+      baseKr,
+      reading,
+    },
+    {
+      pos: "na_adj",
+      qtype: "kr2jp",
+      formKey: "te_form",
+      promptKr: `${krRoot}하고`,
+      answerJp: `${baseJp}で`,
+      baseJp,
+      baseKr,
+      reading,
+    },
+  ];
+}
+
 function getAltEquivalentAnswers(form: GeneratedForm): string[] {
-  const base = getIAdjStem(form.baseJp);
+  if (form.pos === "i_adj") {
+    const base = getIAdjStem(form.baseJp);
 
-  if (form.formKey === "polite_negative") {
-    return [`${base}くないです`, `${base}くありません`].filter(
-      (v) => v !== form.answerJp
-    );
-  }
+    if (form.formKey === "polite_negative") {
+      return [`${base}くないです`, `${base}くありません`].filter(
+        (v) => v !== form.answerJp
+      );
+    }
 
-  if (form.formKey === "polite_negative_past") {
-    return [`${base}くなかったです`, `${base}くありませんでした`].filter(
-      (v) => v !== form.answerJp
-    );
+    if (form.formKey === "polite_negative_past") {
+      return [`${base}くなかったです`, `${base}くありませんでした`].filter(
+        (v) => v !== form.answerJp
+      );
+    }
   }
 
   return [];
@@ -425,7 +531,7 @@ function buildLegacyQuiz({
     return {
       pos: row.pos,
       qtype,
-      formKey: "plain_present",
+      formKey: "plain_present" as KatsuyouFormKey,
       prompt,
       choices: safeChoices,
       correct_text: correctText,
@@ -434,6 +540,12 @@ function buildLegacyQuiz({
       reading: row.reading,
     };
   });
+}
+
+function buildFormsForRow(row: KatsuyouRow): GeneratedForm[] {
+  if (row.pos === "i_adj") return buildIAdjForms(row);
+  if (row.pos === "na_adj") return buildNaAdjForms(row);
+  return [];
 }
 
 export function buildKatsuyouQuiz({
@@ -449,7 +561,7 @@ export function buildKatsuyouQuiz({
   excludedWords?: string[];
   size?: number;
 }): KatsuyouQuestion[] {
-  if (pos !== "i_adj") {
+  if (pos === "verb") {
     return buildLegacyQuiz({
       rows,
       qtype,
@@ -460,10 +572,8 @@ export function buildKatsuyouQuiz({
   }
 
   const excludedSet = new Set(excludedWords);
-  const filteredRows = rows.filter(
-    (row) => row.pos === "i_adj" && !excludedSet.has(row.jp)
-  );
-  const fallbackRows = rows.filter((row) => row.pos === "i_adj");
+  const filteredRows = rows.filter((row) => row.pos === pos && !excludedSet.has(row.jp));
+  const fallbackRows = rows.filter((row) => row.pos === pos);
   const sourceRows = filteredRows.length >= Math.min(size, 4) ? filteredRows : fallbackRows;
 
   if (sourceRows.length === 0) return [];
@@ -472,7 +582,7 @@ export function buildKatsuyouQuiz({
   const questions: KatsuyouQuestion[] = [];
 
   for (const row of pickedRows) {
-    const forms = buildIAdjForms(row);
+    const forms = buildFormsForRow(row);
     if (!forms.length) continue;
 
     const pickedForm = shuffleArray(forms)[0];
@@ -482,7 +592,7 @@ export function buildKatsuyouQuiz({
       if (choices.length < 4) continue;
 
       questions.push({
-        pos: "i_adj",
+        pos: row.pos,
         qtype: "kr2jp",
         formKey: pickedForm.formKey,
         prompt: pickedForm.promptKr,
@@ -497,7 +607,7 @@ export function buildKatsuyouQuiz({
       if (choices.length < 4) continue;
 
       questions.push({
-        pos: "i_adj",
+        pos: row.pos,
         qtype: "jp2kr",
         formKey: pickedForm.formKey,
         prompt: pickedForm.answerJp,
