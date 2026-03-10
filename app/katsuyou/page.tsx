@@ -949,7 +949,6 @@ export default function KatsuyouPage() {
                                         </button>
                                     </div>
 
-                                    {saveMessage ? <p className="text-sm text-gray-500">{saveMessage}</p> : null}
                                 </>
                             )}
                         </div>

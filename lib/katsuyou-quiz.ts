@@ -774,7 +774,11 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   },
   빌리다: {
     plain_past: "빌렸다",
+    polite_present: "빌립니다",
     causative_passive: "(억지로) 빌리게 되다",
+  },
+  기다리다: {
+    plain_past: "기다렸다",
   },
   가지다: {
     passive: "가지게 되다",
@@ -856,6 +860,7 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   자르다: {
     passive: "잘리다",
     potential: "자를 수 있다",
+    polite_present: "자릅니다",
   },
   알다: {
     plain_past: "알았다",
@@ -871,6 +876,7 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
     plain_past: "달렸다",
     potential: "달릴 수 있다",
     imperative: "달려라",
+    passive: "달리다(수동형)",
   },
   듣다: {
     passive: "듣다(수동형)",
