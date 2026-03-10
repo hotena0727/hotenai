@@ -191,7 +191,7 @@ export async function loadKatsuyouRows(): Promise<KatsuyouRow[]> {
       .filter((row): row is KatsuyouRow => row !== null)
   );
 
-  const verbRows = await loadCsvFile("/csv/katsuyou_verb");
+  const verbRows = await loadCsvFile("/csv/katsuyou_verb.csv");
   all.push(
     ...verbRows
       .map((row, idx) => toKatsuyouRow(row, 20000 + idx))
