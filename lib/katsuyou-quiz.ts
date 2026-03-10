@@ -796,6 +796,15 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
     plain_past: "버렸다",
     causative_passive: "(억지로) 버리게 되다",
   },
+  헤엄치다: {
+    imperative: "헤엄쳐라",
+  },
+  만들다: {
+    potential: "만들 수 있다",
+  },
+  일어나다: {
+    passive: "일어나게 되다",
+  },
 };
 
 function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
