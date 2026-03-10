@@ -781,12 +781,18 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   },
   샤워하다: {
     potential: "샤워할 수 있다",
-    passive: "샤워하게 되다",
+    passive: "샤워하다(수동형)",
     causative_passive: "(억지로) 샤워하게 되다",
   },
   조사하다: {
     passive: "조사되다",
     causative_passive: "(억지로) 조사하게 되다",
+  },
+  대답하다: {
+    passive: "대답하다(수동형)",
+  },
+  노래하다: {
+    passive: "노래하다(수동형)",
   },
   입다: {
     imperative: "입어라",
@@ -804,6 +810,28 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   },
   일어나다: {
     passive: "일어나게 되다",
+  },
+  나가다: {
+    polite_present: "나갑니다",
+    potential: "나갈 수 있다",
+  },
+  쓰다: {
+    passive: "쓰이다",
+  },
+  자다: {
+    potential: "잘 수 있다",
+  },
+  가르치다: {
+    imperative: "가르쳐라",
+  },
+  건너다: {
+    polite_present: "건넙니다",
+  },
+  놀다: {
+    potential: "놀 수 있다",
+  },
+  마시다: {
+    imperative: "마셔라",
   },
 };
 
