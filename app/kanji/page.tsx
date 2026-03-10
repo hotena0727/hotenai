@@ -67,6 +67,7 @@ export default function KanjiPage() {
   const didAutoCreateRef = useRef(false);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
   const activeSfxAudioRef = useRef<HTMLAudioElement | null>(null);
+  const resultRef = useRef<HTMLDivElement | null>(null);
 
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
@@ -104,8 +105,8 @@ export default function KanjiPage() {
         kind === "perfect"
           ? `${BASE_SFX_URL}/perfect.mp3`
           : kind === "correct"
-          ? `${BASE_SFX_URL}/correct.mp3`
-          : `${BASE_SFX_URL}/wrong.mp3`;
+            ? `${BASE_SFX_URL}/correct.mp3`
+            : `${BASE_SFX_URL}/wrong.mp3`;
 
       const audio = new Audio(src);
       audio.preload = "auto";
@@ -234,6 +235,17 @@ export default function KanjiPage() {
       setSaveMessage("");
     }
   }, [isDailyLimitReached]);
+
+  useEffect(() => {
+    if (!submitted) return;
+
+    setTimeout(() => {
+      resultRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+  }, [submitted]);
 
   const speakJapanese = (text: string, key: string) => {
     try {
@@ -579,10 +591,10 @@ export default function KanjiPage() {
                 {userPlan === "PRO"
                   ? "자세한 이용 안내 보기"
                   : isDailyLimitReached
-                  ? "오늘 이용 완료"
-                  : remainingSets === 1
-                  ? "오늘 1세트 남음"
-                  : `오늘 ${remainingSets}세트 남음`}
+                    ? "오늘 이용 완료"
+                    : remainingSets === 1
+                      ? "오늘 1세트 남음"
+                      : `오늘 ${remainingSets}세트 남음`}
               </p>
             </div>
             <span className={isDailyLimitReached ? "shrink-0 text-sm sm:text-base text-red-500" : "shrink-0 text-sm sm:text-base text-gray-500"}>
@@ -602,8 +614,8 @@ export default function KanjiPage() {
                 {userPlan === "PRO"
                   ? "PRO는 단어와 한자를 제한 없이 이용할 수 있습니다."
                   : isDailyLimitReached
-                  ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
-                  : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+                    ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
+                    : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
@@ -723,8 +735,8 @@ export default function KanjiPage() {
                                 isCorrectChoice
                                   ? "font-semibold text-green-600"
                                   : isWrongChoice
-                                  ? "font-semibold text-red-600"
-                                  : ""
+                                    ? "font-semibold text-red-600"
+                                    : ""
                               }
                             >
                               <span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
@@ -741,8 +753,8 @@ export default function KanjiPage() {
                             isRight
                               ? "text-sm font-semibold text-green-600"
                               : isWrong
-                              ? "text-sm font-semibold text-red-600"
-                              : "text-sm text-gray-500"
+                                ? "text-sm font-semibold text-red-600"
+                                : "text-sm text-gray-500"
                           }
                         >
                           {isRight ? "정답입니다." : "오답입니다."}
@@ -791,7 +803,7 @@ export default function KanjiPage() {
                 </button>
               ) : (
                 <>
-                  <div className="rounded-2xl bg-green-50 p-4">
+                  <div ref={resultRef} className="rounded-2xl bg-green-50 p-4">
                     <p className="text-base sm:text-lg font-semibold text-green-700">
                       점수: {score} / {questions.length}
                     </p>
@@ -888,9 +900,6 @@ export default function KanjiPage() {
                       ❌ 틀린 문제만 다시 풀기
                     </button>
                   </div>
-                  {saveMessage ? (
-                    <p className="text-sm text-gray-500">{saveMessage}</p>
-                  ) : null}
                 </>
               )}
             </div>
