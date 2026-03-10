@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchAllAttempts, type QuizAttemptRow } from "@/lib/attempts";
 
-type AdminTab = "members" | "stats" | "push" | "logs" | "backup";
+type AdminTab = "members" | "stats" | "push" | "logs" | "app" | "backup";
 type LogFilter = "all" | "word" | "kanji" | "talk";
 
 type AdminProfile = {
@@ -102,10 +102,6 @@ function countWhere<T>(items: T[], predicate: (item: T) => boolean) {
 
 function getAdminDisplayName(item: AdminProfile) {
   return item.full_name?.trim() || item.email || "(이름 없음)";
-}
-
-function getAdminSubLabel(item: AdminProfile) {
-  return item.full_name?.trim() ? item.email || "-" : item.id;
 }
 
 function buildRecentLogs(attempts: QuizAttemptRow[]) {
@@ -497,10 +493,10 @@ export default function AdminPage() {
         logType === "all"
           ? true
           : logType === "word"
-          ? isWordAttempt(item)
-          : logType === "kanji"
-          ? isKanjiAttempt(item)
-          : isTalkAttempt(item);
+            ? isWordAttempt(item)
+            : logType === "kanji"
+              ? isKanjiAttempt(item)
+              : isTalkAttempt(item);
 
       const queryOk = !q
         ? true
@@ -770,8 +766,8 @@ export default function AdminPage() {
         pushMode === "test"
           ? `테스트 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건`
           : pushMode === "selected"
-          ? `선택 회원 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
-          : `전체 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
+            ? `선택 회원 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
+            : `전체 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
       );
     } catch (error) {
       console.error(error);
@@ -1089,7 +1085,9 @@ export default function AdminPage() {
         try {
           const data = await res.json();
           if (data?.error) message = String(data.error);
-        } catch {}
+        } catch {
+          // ignore
+        }
         throw new Error(message);
       }
 
@@ -1201,6 +1199,12 @@ export default function AdminPage() {
               label="기록"
             />
             <TabButton
+              active={tab === "app"}
+              onClick={() => setTab("app")}
+              icon="⚙️"
+              label="앱 설정"
+            />
+            <TabButton
               active={tab === "backup"}
               onClick={() => setTab("backup")}
               icon="🗂️"
@@ -1216,117 +1220,6 @@ export default function AdminPage() {
               <p className="mt-3 text-sm text-gray-600">
                 기존 플랜 변경 UI는 유지하고, 하단 기록 정리와 메시지 발송까지 연결했습니다.
               </p>
-            </div>
-
-            <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-bold">상단 메뉴 설정</h2>
-              <p className="mt-3 text-sm text-gray-600">
-                상단 공통 메뉴의 표시 여부와 최소 플랜을 설정합니다.
-              </p>
-
-              <div className="mt-6 space-y-4">
-                {[
-                  { label: "홈", showKey: "show_home", planKey: "home_min_plan" },
-                  { label: "단어", showKey: "show_word", planKey: "word_min_plan" },
-                  { label: "한자", showKey: "show_kanji", planKey: "kanji_min_plan" },
-                  {
-                    label: "활용",
-                    showKey: "show_katsuyou",
-                    planKey: "katsuyou_min_plan",
-                  },
-                  { label: "회화", showKey: "show_talk", planKey: "talk_min_plan" },
-                  {
-                    label: "MY",
-                    showKey: "show_mypage",
-                    planKey: "mypage_min_plan",
-                  },
-                  {
-                    label: "관리자",
-                    showKey: "show_admin",
-                    planKey: "admin_min_plan",
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="grid grid-cols-1 gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-[120px_140px_1fr]"
-                  >
-                    <div className="flex items-center text-base font-semibold text-gray-900">
-                      {item.label}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleMenuToggle(item.showKey as keyof MenuSettings, true)
-                        }
-                        className={
-                          menuSettings[item.showKey as keyof MenuSettings] === true
-                            ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
-                            : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                        }
-                      >
-                        표시
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleMenuToggle(item.showKey as keyof MenuSettings, false)
-                        }
-                        className={
-                          menuSettings[item.showKey as keyof MenuSettings] === false
-                            ? "rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
-                            : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                        }
-                      >
-                        숨김
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700">
-                        최소 플랜
-                      </label>
-                      <select
-                        value={String(menuSettings[item.planKey as keyof MenuSettings])}
-                        onChange={(e) =>
-                          handleMenuToggle(
-                            item.planKey as keyof MenuSettings,
-                            e.target.value === "PRO" ? "PRO" : "FREE"
-                          )
-                        }
-                        className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-base outline-none"
-                      >
-                        <option value="FREE">FREE</option>
-                        <option value="PRO">PRO</option>
-                      </select>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleSaveMenuSettings}
-                  disabled={menuSaving}
-                  className={
-                    menuSaving
-                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
-                      : "inline-flex rounded-2xl bg-black px-6 py-4 text-base font-semibold text-white"
-                  }
-                >
-                  {menuSaving ? "저장 중..." : "메뉴 설정 저장"}
-                </button>
-
-                {menuMessage ? (
-                  <p className="text-sm text-gray-600">{menuMessage}</p>
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    저장 후 새로고침하면 상단 메뉴 반영을 바로 확인할 수 있습니다.
-                  </p>
-                )}
-              </div>
             </div>
 
             <div className="mt-8">
@@ -1762,9 +1655,13 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={handleProbeMemberMessageTarget}
-                  disabled={memberMsgProbeBusy || (memberMsgTarget === "selected" && !selectedMemberId)}
+                  disabled={
+                    memberMsgProbeBusy ||
+                    (memberMsgTarget === "selected" && !selectedMemberId)
+                  }
                   className={
-                    memberMsgProbeBusy || (memberMsgTarget === "selected" && !selectedMemberId)
+                    memberMsgProbeBusy ||
+                    (memberMsgTarget === "selected" && !selectedMemberId)
                       ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-base font-semibold text-gray-400"
                       : "inline-flex rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800"
                   }
@@ -2030,10 +1927,10 @@ export default function AdminPage() {
                   {pushBusy
                     ? "푸시 발송 중..."
                     : pushMode === "test"
-                    ? "🚀 테스트 발송"
-                    : pushMode === "selected"
-                    ? "🚀 선택 회원 발송"
-                    : "🚀 전체 발송"}
+                      ? "🚀 테스트 발송"
+                      : pushMode === "selected"
+                        ? "🚀 선택 회원 발송"
+                        : "🚀 전체 발송"}
                 </button>
               </div>
 
@@ -2140,6 +2037,123 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+        ) : null}
+
+        {tab === "app" ? (
+          <section className="mt-8 space-y-8">
+            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="text-2xl font-bold">앱 설정</h2>
+              <p className="mt-3 text-sm text-gray-600">
+                상단 공통 메뉴의 표시 여부와 최소 플랜을 설정합니다.
+              </p>
+            </div>
+
+            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="space-y-4">
+                {[
+                  { label: "홈", showKey: "show_home", planKey: "home_min_plan" },
+                  { label: "단어", showKey: "show_word", planKey: "word_min_plan" },
+                  { label: "한자", showKey: "show_kanji", planKey: "kanji_min_plan" },
+                  {
+                    label: "활용",
+                    showKey: "show_katsuyou",
+                    planKey: "katsuyou_min_plan",
+                  },
+                  { label: "회화", showKey: "show_talk", planKey: "talk_min_plan" },
+                  {
+                    label: "MY",
+                    showKey: "show_mypage",
+                    planKey: "mypage_min_plan",
+                  },
+                  {
+                    label: "관리자",
+                    showKey: "show_admin",
+                    planKey: "admin_min_plan",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="grid grid-cols-1 gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-[120px_140px_1fr]"
+                  >
+                    <div className="flex items-center text-base font-semibold text-gray-900">
+                      {item.label}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleMenuToggle(item.showKey as keyof MenuSettings, true)
+                        }
+                        className={
+                          menuSettings[item.showKey as keyof MenuSettings] === true
+                            ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
+                            : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                        }
+                      >
+                        표시
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleMenuToggle(item.showKey as keyof MenuSettings, false)
+                        }
+                        className={
+                          menuSettings[item.showKey as keyof MenuSettings] === false
+                            ? "rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
+                            : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                        }
+                      >
+                        숨김
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700">
+                        최소 플랜
+                      </label>
+                      <select
+                        value={String(menuSettings[item.planKey as keyof MenuSettings])}
+                        onChange={(e) =>
+                          handleMenuToggle(
+                            item.planKey as keyof MenuSettings,
+                            e.target.value === "PRO" ? "PRO" : "FREE"
+                          )
+                        }
+                        className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-base outline-none"
+                      >
+                        <option value="FREE">FREE</option>
+                        <option value="PRO">PRO</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSaveMenuSettings}
+                  disabled={menuSaving}
+                  className={
+                    menuSaving
+                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
+                      : "inline-flex rounded-2xl bg-black px-6 py-4 text-base font-semibold text-white"
+                  }
+                >
+                  {menuSaving ? "저장 중..." : "메뉴 설정 저장"}
+                </button>
+
+                {menuMessage ? (
+                  <p className="text-sm text-gray-600">{menuMessage}</p>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    저장 후 새로고침하면 상단 메뉴 반영을 바로 확인할 수 있습니다.
+                  </p>
+                )}
+              </div>
             </div>
           </section>
         ) : null}
