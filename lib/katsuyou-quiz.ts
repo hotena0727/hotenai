@@ -119,6 +119,13 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     te_form_a: "짜고",
     te_form_b: "짜서",
   },
+  아프: {
+    polite_present: "아픕니다",
+    plain_past: "아팠다",
+    polite_past: "아팠습니다",
+    te_form_a: "아프고",
+    te_form_b: "아파서",
+  },
 };
 
 function buildKrFormsByPattern(
