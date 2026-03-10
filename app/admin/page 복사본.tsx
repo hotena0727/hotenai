@@ -241,9 +241,6 @@ export default function AdminPage() {
   });
   const [menuSaving, setMenuSaving] = useState(false);
   const [menuMessage, setMenuMessage] = useState("");
-  const [showMyClassroomSection, setShowMyClassroomSection] = useState(false);
-  const [pageSettingsSaving, setPageSettingsSaving] = useState(false);
-  const [pageSettingsMessage, setPageSettingsMessage] = useState("");
 
   const [pushTitle, setPushTitle] = useState("하테나 알림");
   const [pushBody, setPushBody] = useState("오늘 15분만 같이 달려요. 🔥");
@@ -436,18 +433,6 @@ export default function AdminPage() {
           });
         }
 
-        const { data: pageRow, error: pageError } = await supabase
-          .from("app_page_settings")
-          .select("show_my_classroom_section")
-          .eq("id", 1)
-          .maybeSingle();
-
-        if (pageError) {
-          console.error(pageError);
-        } else if (pageRow) {
-          setShowMyClassroomSection(Boolean(pageRow.show_my_classroom_section));
-        }
-
         const allAttempts = await fetchAllAttempts(user.id, 300);
         setAttempts(allAttempts);
       } catch (error) {
@@ -622,36 +607,6 @@ export default function AdminPage() {
       );
     } finally {
       setMenuSaving(false);
-    }
-  };
-
-  const handleSavePageSettings = async () => {
-    try {
-      setPageSettingsSaving(true);
-      setPageSettingsMessage("");
-
-      const { error } = await supabase
-        .from("app_page_settings")
-        .upsert(
-          {
-            id: 1,
-            show_my_classroom_section: showMyClassroomSection,
-          },
-          { onConflict: "id" }
-        );
-
-      if (error) throw error;
-
-      setPageSettingsMessage("마이페이지 영역 설정을 저장했습니다.");
-    } catch (error) {
-      console.error(error);
-      setPageSettingsMessage(
-        error instanceof Error
-          ? error.message
-          : "마이페이지 영역 설정 저장 중 오류가 발생했습니다."
-      );
-    } finally {
-      setPageSettingsSaving(false);
     }
   };
 
@@ -2309,97 +2264,6 @@ export default function AdminPage() {
                   </div>
                 );
               })}
-            </div>
-
-            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-xl font-bold">마이페이지 영역 공개 설정</h3>
-                  <p className="mt-3 text-sm text-gray-600">
-                    마이페이지에서 아직 공개하지 않을 영역을 미리 만들어 두고, 준비가 끝났을 때만 노출할 수 있습니다.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSavePageSettings}
-                  disabled={pageSettingsSaving}
-                  className={
-                    pageSettingsSaving
-                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-400"
-                      : "inline-flex rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
-                  }
-                >
-                  {pageSettingsSaving ? "저장 중..." : "영역 설정 저장"}
-                </button>
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-lg font-bold text-gray-900">나의 강의실</h4>
-                      <span
-                        className={
-                          showMyClassroomSection
-                            ? "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
-                            : "rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600"
-                        }
-                      >
-                        {showMyClassroomSection ? "표시 중" : "숨김 중"}
-                      </span>
-                    </div>
-                    <p className="mt-3 text-sm text-gray-600">
-                      마이페이지의 현재 플랜 아래에 ‘나의 강의실’ 안내 블록을 노출합니다.
-                    </p>
-                  </div>
-
-                  <div className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700">
-                    대상 페이지: MY
-                  </div>
-                </div>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMyClassroomSection(true);
-                      setPageSettingsMessage("");
-                    }}
-                    className={
-                      showMyClassroomSection
-                        ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
-                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                    }
-                  >
-                    표시
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMyClassroomSection(false);
-                      setPageSettingsMessage("");
-                    }}
-                    className={
-                      !showMyClassroomSection
-                        ? "rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
-                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                    }
-                  >
-                    숨김
-                  </button>
-                </div>
-
-                <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                  <p className="text-sm font-semibold text-blue-900">
-                    지금은 숨김으로 두고 내부 테스트만 한 뒤, 준비가 끝났을 때 표시로 바꾸면 됩니다.
-                  </p>
-                </div>
-
-                {pageSettingsMessage ? (
-                  <p className="mt-4 text-sm text-gray-600">{pageSettingsMessage}</p>
-                ) : null}
-              </div>
             </div>
 
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">

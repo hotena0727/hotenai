@@ -279,7 +279,6 @@ export default function MyPage() {
   const [wrongFilter, setWrongFilter] = useState<WrongFilterKey>("all");
 
   const [installGuideOpen, setInstallGuideOpen] = useState(false);
-  const [showMyClassroomSection, setShowMyClassroomSection] = useState(false);
 
   const [noticeRefreshing, setNoticeRefreshing] = useState(false);
   const [noticeEnabling, setNoticeEnabling] = useState(false);
@@ -347,18 +346,6 @@ export default function MyPage() {
           plan_started_at: profileRow?.plan_started_at ?? null,
           plan_expires_at: profileRow?.plan_expires_at ?? null,
         });
-
-        const { data: sectionRow, error: sectionError } = await supabase
-          .from("app_page_settings")
-          .select("show_my_classroom_section")
-          .eq("id", 1)
-          .maybeSingle();
-
-        if (sectionError) {
-          console.error(sectionError);
-        } else {
-          setShowMyClassroomSection(Boolean(sectionRow?.show_my_classroom_section));
-        }
 
         const recent = await fetchRecentAttempts(user.id, 12);
         const all = await fetchAllAttempts(user.id, 300);
@@ -815,56 +802,6 @@ export default function MyPage() {
             </div>
           </div>
         </div>
-
-        {showMyClassroomSection ? (
-          <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-500">나의 강의실</p>
-                <p className="mt-2 text-lg font-bold text-gray-900">
-                  지금 듣고 있는 강의를 이어가 보세요
-                </p>
-                <p className="mt-2 text-sm text-gray-600">
-                  수강 중인 강의, 최근 본 강의, 이어보기 항목을 한눈에 확인할 수 있습니다.
-                </p>
-              </div>
-
-              <a
-                href="/classroom"
-                className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800"
-              >
-                강의실로 이동
-              </a>
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-3">
-              <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                수강 중 3개
-              </div>
-              <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                오늘 이어보기 1개
-              </div>
-              <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                완료 강의 12개
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <a
-                href="/classroom"
-                className="rounded-2xl bg-black px-5 py-4 text-center text-base font-semibold text-white"
-              >
-                📚 강의실 열기
-              </a>
-              <a
-                href="/classroom"
-                className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
-              >
-                ▶ 이어서 학습
-              </a>
-            </div>
-          </div>
-        ) : null}
 
         <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
