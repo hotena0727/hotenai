@@ -50,19 +50,19 @@ function addBieupBatchim(word: string): string {
   const ch = lastChar(word);
   const s = splitSyllable(ch);
   if (!s || s.jong !== 0) return word;
-  return word.slice(0, -1) + makeSyllable(s.cho, s.jung, 17); // ㅂ
+  return word.slice(0, -1) + makeSyllable(s.cho, s.jung, 17);
 }
 
 function addRieulBatchim(word: string): string {
   const ch = lastChar(word);
   const s = splitSyllable(ch);
   if (!s || s.jong !== 0) return word;
-  return word.slice(0, -1) + makeSyllable(s.cho, s.jung, 8); // ㄹ
+  return word.slice(0, -1) + makeSyllable(s.cho, s.jung, 8);
 }
 
 function chooseAeo(root: string): "아" | "어" {
   const v = vowelIndex(lastChar(root));
-  if (v === 0 || v === 8) return "아"; // ㅏ, ㅗ
+  if (v === 0 || v === 8) return "아";
   return "어";
 }
 
@@ -72,14 +72,14 @@ function mergeNoBatchim(root: string, suffix: "아" | "어"): string | null {
   if (!s || s.jong !== 0) return null;
 
   if (suffix === "아") {
-    if (s.jung === 0) return root; // ㅏ
-    if (s.jung === 8) return replaceLast(root, makeSyllable(s.cho, 9, 0)); // ㅗ+ㅏ=ㅘ
+    if (s.jung === 0) return root;
+    if (s.jung === 8) return replaceLast(root, makeSyllable(s.cho, 9, 0));
   }
 
   if (suffix === "어") {
-    if (s.jung === 4) return root; // ㅓ
-    if (s.jung === 13) return replaceLast(root, makeSyllable(s.cho, 14, 0)); // ㅜ+ㅓ=ㅝ
-    if (s.jung === 20) return replaceLast(root, makeSyllable(s.cho, 5, 0)); // ㅣ+ㅓ=ㅕ
+    if (s.jung === 4) return root;
+    if (s.jung === 13) return replaceLast(root, makeSyllable(s.cho, 14, 0));
+    if (s.jung === 20) return replaceLast(root, makeSyllable(s.cho, 5, 0));
   }
 
   return null;
@@ -104,12 +104,13 @@ function makeEoAStem(root: string): string {
     고르: "골라",
     자르: "잘라",
     서두르: "서둘러",
+    돌려주: "돌려줘",
   };
   if (direct[root]) return direct[root];
 
   if (root.endsWith("르")) {
-    const front = root.slice(0, -1); // 르 제거 전
-    const before = front.slice(0, -1); // 르 제거
+    const front = root.slice(0, -1);
+    const before = front.slice(0, -1);
     const withRieul = addRieulBatchim(before);
     const aeo = chooseAeo(withRieul);
     return `${withRieul}${aeo}`;
@@ -147,6 +148,7 @@ function makePolitePresent(baseKr: string): string {
     배우: "배웁니다",
     깨우: "깨웁니다",
     가지: "가집니다",
+    돌려주: "돌려줍니다",
   };
   if (special[root]) return special[root];
 
@@ -184,6 +186,8 @@ function makePast(baseKr: string): string {
     깨우: "깨웠다",
     주: "줬다",
     두: "뒀다",
+    돌려주: "돌려줬다",
+    노래하: "노래했다",
   };
   if (special[root]) return special[root];
 
@@ -218,8 +222,6 @@ function makePotential(baseKr: string): string {
     "들어가다",
     "돌아가다",
     "서두르다",
-    "빌리다",
-    "사다",
   ]);
   if (blocked.has(baseKr)) return "";
 
@@ -255,6 +257,8 @@ function makePotential(baseKr: string): string {
     오: "올 수 있다",
     가: "갈 수 있다",
     마시: "마실 수 있다",
+    빌리: "빌릴 수 있다",
+    사: "살 수 있다",
   };
   if (special[root]) return special[root];
 
@@ -302,6 +306,7 @@ function makeImperative(baseKr: string): string {
     자르: "잘라라",
     말하: "말해라",
     서두르: "서둘러라",
+    돌려주: "돌려줘라",
   };
   if (special[root]) return special[root];
 
@@ -331,10 +336,8 @@ function makePassive(baseKr: string): string {
   ]);
   if (blocked.has(baseKr)) return "";
 
-  // 의미 전환형: 형태 그대로보다 상황 의미를 반영
   const semantic: Record<string, string> = {
     "돌려주다": "돌려받다",
-    // 향후 言う 계열이 들어오면 "듣다" 등으로 대응 가능
   };
   if (semantic[baseKr]) return semantic[baseKr];
 
@@ -354,6 +357,8 @@ function makePassive(baseKr: string): string {
     "사다": "사다(수동형)",
     "빌리다": "빌리다(수동형)",
     "가지다": "가지다(수동형)",
+    "고르다": "고르다(수동형)",
+    "내리다": "내리다(수동형)",
     "헤엄치다": "헤엄치다(수동형)",
     "달리다": "달리다(수동형)",
     "듣다": "듣다(수동형)",
@@ -396,9 +401,6 @@ function makeCausativePassive(baseKr: string): string {
     "가지다",
     "알다",
     "믿다",
-    "빌리다",
-    "헤엄치다",
-    "달리다",
     "대답하다",
     "노래하다",
   ]);
@@ -444,6 +446,7 @@ function makeConnectiveB(baseKr: string): string {
     사: "사서",
     말하: "말해서",
     돌려주: "돌려줘서",
+    노래하: "노래해서",
   };
   if (special[root]) return special[root];
 
