@@ -704,7 +704,7 @@ function buildVerbJpForms(row: KatsuyouRow): VerbFormSet | null {
     す: { i: "し", a: "さ", e: "せ", o: "そ", te: "して", ta: "した" },
     つ: { i: "ち", a: "た", e: "て", o: "と", te: "って", ta: "った" },
     ぬ: { i: "に", a: "な", e: "ね", o: "の", te: "んで", ta: "んだ" },
-    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "ん다" },
+    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "んだ" },
     ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "んだ" },
     る: { i: "り", a: "ら", e: "れ", o: "ろ", te: "って", ta: "った" },
   } as const;
@@ -768,6 +768,7 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
     causative_passive: "(억지로) 하게 되다",
   },
   들어가다: {
+    plain_past: "들어갔다",
     passive: "들어가게 되다",
     causative_passive: "(억지로) 들어가게 되다",
   },
@@ -809,11 +810,14 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   헤엄치다: {
     imperative: "헤엄쳐라",
     potential: "헤엄칠 수 있다",
+    passive: "헤엄치다(수동형)",
   },
   만들다: {
     potential: "만들 수 있다",
   },
   일어나다: {
+    polite_present: "일어납니다",
+    plain_past: "일어났다",
     passive: "일어나게 되다",
     potential: "일어날 수 있다",
   },
@@ -835,6 +839,7 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
     polite_present: "건넙니다",
   },
   놀다: {
+    polite_present: "놉니다",
     potential: "놀 수 있다",
   },
   마시다: {
@@ -850,8 +855,10 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   },
   자르다: {
     passive: "잘리다",
+    potential: "자를 수 있다",
   },
   알다: {
+    plain_past: "알았다",
     passive: "알려지다",
   },
   사다: {
@@ -861,10 +868,31 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
     passive: "서두르다(수동형)",
   },
   달리다: {
+    plain_past: "달렸다",
     potential: "달릴 수 있다",
+    imperative: "달려라",
   },
   듣다: {
     passive: "듣다(수동형)",
+  },
+  내리다: {
+    plain_past: "내렸다",
+  },
+  열다: {
+    polite_present: "엽니다",
+    imperative: "열어라",
+  },
+  보다: {
+    potential: "볼 수 있다",
+  },
+  믿다: {
+    passive: "믿어지다",
+  },
+  죽다: {
+    passive: "죽다(수동형)",
+  },
+  먹다: {
+    imperative: "먹어라",
   },
 };
 
