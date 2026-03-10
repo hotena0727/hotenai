@@ -804,6 +804,7 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   },
   헤엄치다: {
     imperative: "헤엄쳐라",
+    potential: "헤엄칠 수 있다",
   },
   만들다: {
     potential: "만들 수 있다",
@@ -832,6 +833,19 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
   },
   마시다: {
     imperative: "마셔라",
+    passive: "",
+  },
+  만나다: {
+    passive: "",
+  },
+  닫다: {
+    imperative: "닫아라",
+  },
+  자르다: {
+    passive: "잘리다",
+  },
+  알다: {
+    passive: "알려지다",
   },
 };
 
@@ -878,6 +892,27 @@ function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
   };
 }
 
+function pushVerbForm(
+  acc: GeneratedForm[],
+  row: KatsuyouRow,
+  formKey: KatsuyouFormKey,
+  promptKr: string,
+  answerJp: string
+) {
+  if (!promptKr || !answerJp) return;
+
+  acc.push({
+    pos: "verb",
+    qtype: "kr2jp",
+    formKey,
+    promptKr,
+    answerJp,
+    baseJp: row.jp,
+    baseKr: row.kr,
+    reading: row.reading,
+  });
+}
+
 function buildVerbForms(row: KatsuyouRow): GeneratedForm[] {
   if (row.pos !== "verb") return [];
 
@@ -885,129 +920,22 @@ function buildVerbForms(row: KatsuyouRow): GeneratedForm[] {
   if (!jp) return [];
 
   const kr = buildVerbKrForms(row);
+  const forms: GeneratedForm[] = [];
 
-  return [
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "plain_present",
-      promptKr: kr.plain_present,
-      answerJp: jp.plain_present,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "polite_present",
-      promptKr: kr.polite_present,
-      answerJp: jp.polite_present,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "plain_negative",
-      promptKr: kr.plain_negative,
-      answerJp: jp.plain_negative,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "plain_past",
-      promptKr: kr.plain_past,
-      answerJp: jp.plain_past,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "plain_negative_past",
-      promptKr: kr.plain_negative_past,
-      answerJp: jp.plain_negative_past,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "te_form",
-      promptKr: kr.te_form,
-      answerJp: jp.te_form,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "potential",
-      promptKr: kr.potential,
-      answerJp: jp.potential,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "imperative",
-      promptKr: kr.imperative,
-      answerJp: jp.imperative,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "volitional",
-      promptKr: kr.volitional,
-      answerJp: jp.volitional,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "passive",
-      promptKr: kr.passive,
-      answerJp: jp.passive,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "causative",
-      promptKr: kr.causative,
-      answerJp: jp.causative,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-    {
-      pos: "verb",
-      qtype: "kr2jp",
-      formKey: "causative_passive",
-      promptKr: kr.causative_passive,
-      answerJp: jp.causative_passive,
-      baseJp: row.jp,
-      baseKr: row.kr,
-      reading: row.reading,
-    },
-  ];
+  pushVerbForm(forms, row, "plain_present", kr.plain_present, jp.plain_present);
+  pushVerbForm(forms, row, "polite_present", kr.polite_present, jp.polite_present);
+  pushVerbForm(forms, row, "plain_negative", kr.plain_negative, jp.plain_negative);
+  pushVerbForm(forms, row, "plain_past", kr.plain_past, jp.plain_past);
+  pushVerbForm(forms, row, "plain_negative_past", kr.plain_negative_past, jp.plain_negative_past);
+  pushVerbForm(forms, row, "te_form", kr.te_form, jp.te_form);
+  pushVerbForm(forms, row, "potential", kr.potential, jp.potential);
+  pushVerbForm(forms, row, "imperative", kr.imperative, jp.imperative);
+  pushVerbForm(forms, row, "volitional", kr.volitional, jp.volitional);
+  pushVerbForm(forms, row, "passive", kr.passive, jp.passive);
+  pushVerbForm(forms, row, "causative", kr.causative, jp.causative);
+  pushVerbForm(forms, row, "causative_passive", kr.causative_passive, jp.causative_passive);
+
+  return forms;
 }
 
 /* =========================
