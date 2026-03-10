@@ -43,6 +43,7 @@ function toPolitePresent(baseKr: string): string {
     건너: "건넙니다",
     쓰: "씁니다",
     만나: "만납니다",
+    마시: "마십니다",
   };
   if (special[root]) return special[root];
 
@@ -85,6 +86,9 @@ function toNegativePast(baseKr: string): string {
 }
 
 function toPotential(baseKr: string): string {
+  const blocked = new Set(["필요하다"]);
+  if (blocked.has(baseKr)) return "";
+
   if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}할 수 있다`;
 
   const root = stripDa(baseKr);
@@ -153,6 +157,7 @@ function toPassive(baseKr: string): string {
     공부하다: "",
     필요하다: "",
     사다: "사다(수동형)",
+    빌리다: "빌리다(수동형)",
     쓰다: "쓰이다",
     버리다: "버려지다",
     자르다: "잘리다",
@@ -197,6 +202,8 @@ function toConnective(baseKr: string): string {
   const special: Record<string, string> = {
     자: "자서",
     빌리: "빌려서",
+    닫: "닫고",
+    죽: "죽고",
   };
   if (special[root]) return special[root];
 
