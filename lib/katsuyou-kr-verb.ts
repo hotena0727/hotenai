@@ -42,6 +42,7 @@ function toPolitePresent(baseKr: string): string {
     빌리: "빌립니다",
     건너: "건넙니다",
     쓰: "씁니다",
+    만나: "만납니다",
   };
   if (special[root]) return special[root];
 
@@ -66,6 +67,7 @@ function toPast(baseKr: string): string {
     버리: "버렸다",
     마시: "마셨다",
     서: "섰다",
+    서두르: "서둘렀다",
   };
   if (special[root]) return special[root];
 
@@ -100,6 +102,7 @@ function toPotential(baseKr: string): string {
     자르: "자를 수 있다",
     가르치: "가르칠 수 있다",
     건너: "건널 수 있다",
+    기다리: "기다릴 수 있다",
   };
   if (special[root]) return special[root];
 
@@ -130,6 +133,12 @@ function toImperative(baseKr: string): string {
 }
 
 function toVolitional(baseKr: string): string {
+  const blocked = new Set([
+    "필요하다",
+  ]);
+
+  if (blocked.has(baseKr)) return "";
+
   if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}하자`;
   return `${stripDa(baseKr)}자`;
 }
@@ -151,7 +160,7 @@ function toPassive(baseKr: string): string {
     들어가다: "들어가게 되다",
     돌아가다: "돌아가다(수동형)",
     일어나다: "일어나게 되다",
-    가지다: "가지게 되다",
+    가지다: "가지다(수동형)",
     헤엄치다: "헤엄치다(수동형)",
     달리다: "달리다(수동형)",
     듣다: "듣다(수동형)",
@@ -199,6 +208,7 @@ function toConnective(baseKr: string): string {
     놀: "놀아서",
     건너: "건너서",
     열: "열어서",
+    읽: "읽고",
   };
   if (special[root]) return special[root];
 
