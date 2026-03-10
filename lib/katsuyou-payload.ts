@@ -1,9 +1,8 @@
 import type { KatsuyouPos, KatsuyouQuestion } from "@/app/types/katsuyou";
 
 type WrongItem = {
-  jp_word: string;
+  question: KatsuyouQuestion;
   selected: string;
-  correct: string;
 };
 
 export function buildKatsuyouAttemptPayload({
@@ -35,7 +34,29 @@ export function buildKatsuyouAttemptPayload({
     quiz_len,
     score,
     wrong_count: wrongList.length,
-    wrong_answers: wrongList,
+
+    // 오답노트 페이지들이 읽는 핵심 필드
+    wrong_list: wrongList.map((item) => ({
+      app: "katsuyou",
+      item_key: String(item.question.item_key || ""),
+      jp_word: item.question.jp_word,
+      kr_word: item.question.kr_word,
+      pos: item.question.pos,
+      qtype: item.question.qtype,
+      form_key: item.question.formKey,
+      reading: item.question.reading || "",
+      prompt: item.question.prompt,
+      selected: item.selected,
+      correct: item.question.correct_text,
+    })),
+
+    // 기존 호환용으로 남겨둬도 무방
+    wrong_answers: wrongList.map((item) => ({
+      jp_word: item.question.jp_word,
+      selected: item.selected,
+      correct: item.question.correct_text,
+    })),
+
     questions,
     meta: {
       category: "활용",

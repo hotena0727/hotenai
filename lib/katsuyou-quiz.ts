@@ -844,6 +844,7 @@ export function buildKatsuyouQuiz({
       if (choices.length < 4) continue;
 
       questions.push({
+        item_key: String(row.id ?? ""),
         pos: row.pos,
         qtype: "kr2jp",
         formKey: pickedForm.formKey,
@@ -859,6 +860,7 @@ export function buildKatsuyouQuiz({
       if (choices.length < 4) continue;
 
       questions.push({
+        item_key: String(row.id ?? ""),
         pos: row.pos,
         qtype: "jp2kr",
         formKey: pickedForm.formKey,

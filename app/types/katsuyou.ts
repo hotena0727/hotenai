@@ -56,6 +56,7 @@ export type KatsuyouRow = {
 };
 
 export type KatsuyouQuestion = {
+  item_key?: string;  
   pos: KatsuyouPos;
   qtype: KatsuyouQType;
   formKey: KatsuyouFormKey;
