@@ -7,6 +7,7 @@ import type {
   KatsuyouRow,
   KrForms,
   KrPattern,
+  VerbJpFormSet,
 } from "@/app/types/katsuyou";
 import { buildVerbKrForms } from "@/lib/katsuyou-kr-verb";
 
@@ -577,21 +578,6 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
  * 동사 문제 생성
  * ========================= */
 
-type VerbJpFormSet = {
-  plain_present: string;
-  polite_present: string;
-  plain_negative: string;
-  plain_past: string;
-  plain_negative_past: string;
-  te_form: string;
-  potential: string;
-  imperative: string;
-  volitional: string;
-  passive: string;
-  causative: string;
-  causative_passive: string;
-};
-
 function godanBase(row: KatsuyouRow): string {
   return row.jp.slice(0, -1);
 }
@@ -752,7 +738,8 @@ function buildVerbForms(row: KatsuyouRow): GeneratedForm[] {
   pushVerbForm(forms, row, "plain_negative", kr.plain_negative, jp.plain_negative);
   pushVerbForm(forms, row, "plain_past", kr.plain_past, jp.plain_past);
   pushVerbForm(forms, row, "plain_negative_past", kr.plain_negative_past, jp.plain_negative_past);
-  pushVerbForm(forms, row, "te_form", kr.te_form, jp.te_form);
+  pushVerbForm(forms, row, "connective_a", kr.connective_a, jp.te_form);
+  pushVerbForm(forms, row, "connective_b", kr.connective_b, jp.te_form);
   pushVerbForm(forms, row, "potential", kr.potential, jp.potential);
   pushVerbForm(forms, row, "imperative", kr.imperative, jp.imperative);
   pushVerbForm(forms, row, "volitional", kr.volitional, jp.volitional);

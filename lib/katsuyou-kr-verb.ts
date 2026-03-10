@@ -1,40 +1,4 @@
-import type { KatsuyouRow } from "@/app/types/katsuyou";
-
-export type VerbKrFormSet = {
-  plain_present: string;
-  polite_present: string;
-  plain_negative: string;
-  plain_past: string;
-  plain_negative_past: string;
-  te_form: string;
-  potential: string;
-  imperative: string;
-  volitional: string;
-  passive: string;
-  causative: string;
-  causative_passive: string;
-};
-
-const POTENTIAL_ALLOWED = new Set([
-  "가다",
-  "오다",
-  "먹다",
-  "마시다",
-  "보다",
-  "읽다",
-  "쓰다",
-  "듣다",
-  "말하다",
-  "가르치다",
-  "만들다",
-  "열다",
-  "닫다",
-  "자르다",
-  "기다리다",
-  "헤엄치다",
-  "놀다",
-  "달리다",
-]);
+import type { KatsuyouRow, VerbKrFormSet } from "@/app/types/katsuyou";
 
 function stripDa(word: string): string {
   return word.endsWith("다") ? word.slice(0, -1) : word;
@@ -66,9 +30,8 @@ function toPolitePresent(baseKr: string): string {
     만나: "만납니다",
     마시: "마십니다",
   };
-  if (special[root]) return special[root];
 
-  return `${root}습니다`;
+  return special[root] ?? `${root}습니다`;
 }
 
 function toPast(baseKr: string): string {
@@ -91,9 +54,8 @@ function toPast(baseKr: string): string {
     서: "섰다",
     서두르: "서둘렀다",
   };
-  if (special[root]) return special[root];
 
-  return `${root}었다`;
+  return special[root] ?? `${root}었다`;
 }
 
 function toNegative(baseKr: string): string {
@@ -107,8 +69,6 @@ function toNegativePast(baseKr: string): string {
 }
 
 function toPotential(baseKr: string): string {
-  if (!POTENTIAL_ALLOWED.has(baseKr)) return "";
-
   if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}할 수 있다`;
 
   const root = stripDa(baseKr);
@@ -152,15 +112,11 @@ function toImperative(baseKr: string): string {
     내리: "내려라",
     쓰: "써라",
   };
-  if (special[root]) return special[root];
 
-  return `${root}라`;
+  return special[root] ?? `${root}라`;
 }
 
 function toVolitional(baseKr: string): string {
-  const blocked = new Set(["필요하다"]);
-  if (blocked.has(baseKr)) return "";
-
   if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}하자`;
   return `${stripDa(baseKr)}자`;
 }
@@ -171,8 +127,6 @@ function toPassive(baseKr: string): string {
     샤워하다: "샤워하다(수동형)",
     대답하다: "대답하다(수동형)",
     노래하다: "노래하다(수동형)",
-    공부하다: "",
-    필요하다: "",
     사다: "사다(수동형)",
     빌리다: "빌리다(수동형)",
     쓰다: "쓰이다",
@@ -189,11 +143,9 @@ function toPassive(baseKr: string): string {
     달리다: "달리다(수동형)",
     듣다: "듣다(수동형)",
     죽다: "죽다(수동형)",
-    마시다: "",
-    만나다: "",
   };
 
-  if (baseKr in special) return special[baseKr];
+  if (special[baseKr]) return special[baseKr];
 
   if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}되다`;
 
@@ -206,73 +158,130 @@ function toCausative(baseKr: string): string {
 }
 
 function toCausativePassive(baseKr: string): string {
-  if (baseKr === "필요하다") return "";
   if (isHadaVerb(baseKr)) return `(억지로) ${stemForHada(baseKr)}하게 되다`;
   return `(억지로) ${stripDa(baseKr)}게 되다`;
 }
 
-function toConnective(baseKr: string): string {
+function toConnectiveA(baseKr: string): string {
   if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}하고`;
+  return `${stripDa(baseKr)}고`;
+}
+
+function toConnectiveB(baseKr: string): string {
+  if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}해서`;
 
   const root = stripDa(baseKr);
 
   const special: Record<string, string> = {
     자: "자서",
     빌리: "빌려서",
-    닫: "닫고",
-    죽: "죽고",
+    닫: "닫아서",
+    죽: "죽어서",
+    마시: "마셔서",
+    내리: "내려서",
+    기다리: "기다려서",
+    읽: "읽어서",
+    헤엄치: "헤엄쳐서",
+    가르치: "가르쳐서",
+    달리: "달려서",
+    쓰: "써서",
+    놀: "놀아서",
+    서두르: "서둘러서",
+    건너: "건너서",
+    열: "열어서",
+    보: "봐서",
+    와: "와서",
   };
+
   if (special[root]) return special[root];
 
-  return `${root}해서`;
+  return `${root}어서`;
 }
 
-const OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
-  가다: {
-    polite_present: "갑니다",
-    plain_past: "갔다",
-    potential: "갈 수 있다",
-    imperative: "가라",
-    passive: "가게 되다",
-    causative: "가게 하다",
-    causative_passive: "(억지로) 가게 되다",
-    te_form: "가서",
-  },
-  오다: {
-    polite_present: "옵니다",
-    plain_past: "왔다",
-    potential: "올 수 있다",
-    imperative: "오라",
-    passive: "오게 되다",
-    causative: "오게 하다",
-    causative_passive: "(억지로) 오게 되다",
-    te_form: "와서",
-  },
-  하다: {
-    passive: "되다",
-  },
-};
+function buildRestrictedNeedForms(): VerbKrFormSet {
+  return {
+    plain_present: "필요하다",
+    polite_present: "필요합니다",
+    plain_negative: "필요하지 않다",
+    plain_past: "필요했다",
+    plain_negative_past: "필요하지 않았다",
+    connective_a: "필요하고",
+    connective_b: "필요해서",
+    potential: "",
+    imperative: "",
+    volitional: "",
+    passive: "",
+    causative: "",
+    causative_passive: "",
+  };
+}
+
+function applyBoolGate(value: string, allowed?: boolean): string {
+  if (allowed === false) return "";
+  return value;
+}
+
+function applyPassiveType(value: string, passiveType?: KatsuyouRow["passive_type"]): string {
+  if (passiveType === "none") return "";
+  return value;
+}
 
 export function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
   const baseKr = row.kr;
 
-  const base: VerbKrFormSet = {
-    plain_present: baseKr,
-    polite_present: toPolitePresent(baseKr),
-    plain_negative: toNegative(baseKr),
-    plain_past: toPast(baseKr),
-    plain_negative_past: toNegativePast(baseKr),
-    te_form: toConnective(baseKr),
-    potential: toPotential(baseKr),
-    imperative: toImperative(baseKr),
-    volitional: toVolitional(baseKr),
-    passive: toPassive(baseKr),
-    causative: toCausative(baseKr),
-    causative_passive: toCausativePassive(baseKr),
-  };
+  if (baseKr === "필요하다") {
+    return buildRestrictedNeedForms();
+  }
+
+  const polite_present = row.kr_polite_present_override || toPolitePresent(baseKr);
+  const plain_past = row.kr_past_override || toPast(baseKr);
+
+  const connective_a = row.kr_connective_a || toConnectiveA(baseKr);
+  const connective_b = row.kr_connective_b || toConnectiveB(baseKr);
+
+  const potential = applyBoolGate(
+    row.kr_potential_override || toPotential(baseKr),
+    row.can_potential
+  );
+
+  const imperative = applyBoolGate(
+    row.kr_imperative_override || toImperative(baseKr),
+    row.can_imperative
+  );
+
+  const volitional = applyBoolGate(
+    toVolitional(baseKr),
+    row.can_volitional
+  );
+
+  const passive = applyPassiveType(
+    row.kr_passive_override || toPassive(baseKr),
+    row.passive_type
+  );
+
+  const causative = applyBoolGate(
+    toCausative(baseKr),
+    row.can_causative
+  );
+
+  const causative_passive = applyBoolGate(
+    toCausativePassive(baseKr),
+    row.can_causative_passive
+  );
 
   return {
-    ...base,
-    ...(OVERRIDE[baseKr] ?? {}),
+    plain_present: baseKr,
+    polite_present,
+    plain_negative: toNegative(baseKr),
+    plain_past,
+    plain_negative_past: toNegativePast(baseKr),
+    connective_a,
+    connective_b,
+    potential,
+    imperative,
+    volitional,
+    passive,
+    causative,
+    causative_passive,
   };
 }

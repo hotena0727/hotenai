@@ -1,4 +1,10 @@
-import type { KatsuyouRow, KatsuyouPos, KrPattern, VerbGroup } from "@/app/types/katsuyou";
+import type {
+  KatsuyouRow,
+  KatsuyouPos,
+  KrPattern,
+  PassiveType,
+  VerbGroup,
+} from "@/app/types/katsuyou";
 
 type CsvRow = Record<string, string>;
 
@@ -71,36 +77,91 @@ function normalizePattern(value: string): KrPattern | undefined {
 }
 
 function normalizeVerbGroup(value: string): VerbGroup | undefined {
-  const v = String(value || "").trim();
-  if (v === "ichidan" || v === "godan" || v === "irregular") {
-    return v;
-  }
+  const v = String(value || "").trim().toLowerCase();
+  if (v === "godan" || v === "ichidan" || v === "irregular") return v;
   return undefined;
+}
+
+function parseYN(value: string): boolean | undefined {
+  const v = String(value || "").trim().toUpperCase();
+  if (v === "Y") return true;
+  if (v === "N") return false;
+  return undefined;
+}
+
+function parsePassiveType(value: string): PassiveType | undefined {
+  const v = String(value || "").trim().toLowerCase();
+  if (v === "natural" || v === "descriptive" || v === "none") return v;
+  return undefined;
+}
+
+function clean(value: string): string | undefined {
+  const v = String(value || "").trim();
+  return v ? v : undefined;
+}
+
+function pickJp(row: CsvRow): string {
+  return String(
+    row.base_jp || row.jp || row.word_jp || ""
+  ).trim();
+}
+
+function pickKr(row: CsvRow): string {
+  return String(
+    row.base_kr || row.kr || row.word_kr || ""
+  ).trim();
+}
+
+function pickReading(row: CsvRow): string {
+  return String(
+    row.reading || row.yomi || ""
+  ).trim();
 }
 
 function toKatsuyouRow(row: CsvRow, index: number): KatsuyouRow | null {
   const pos = normalizePos(row.pos);
   if (!pos) return null;
 
-  const jp = String(row.base_jp || "").trim();
-  const kr = String(row.base_kr || "").trim();
-  const reading = String(row.reading || "").trim();
-  const kr_root = String(row.kr_root || "").trim();
-  const kr_pattern = normalizePattern(row.kr_pattern || "");
-  const verb_group = normalizeVerbGroup(row.verb_group || "");
+  const jp = pickJp(row);
+  const kr = pickKr(row);
+  const reading = pickReading(row);
 
   if (!jp || !kr) return null;
 
-  return {
+  const result: KatsuyouRow = {
     id: `${pos}-${index + 1}`,
     pos,
     jp,
     kr,
     reading: reading || undefined,
-    kr_root: kr_root || undefined,
-    kr_pattern,
-    verb_group,
   };
+
+  if (pos === "i_adj" || pos === "na_adj") {
+    result.kr_root = clean(row.kr_root);
+    result.kr_pattern = normalizePattern(row.kr_pattern || "");
+  }
+
+  if (pos === "verb") {
+    result.verb_group = normalizeVerbGroup(row.verb_group || "");
+
+    result.can_potential = parseYN(row.can_potential);
+    result.passive_type = parsePassiveType(row.passive_type || "");
+    result.can_causative = parseYN(row.can_causative);
+    result.can_causative_passive = parseYN(row.can_causative_passive);
+    result.can_volitional = parseYN(row.can_volitional);
+    result.can_imperative = parseYN(row.can_imperative);
+
+    result.kr_connective_a = clean(row.kr_connective_a);
+    result.kr_connective_b = clean(row.kr_connective_b);
+
+    result.kr_passive_override = clean(row.kr_passive_override);
+    result.kr_potential_override = clean(row.kr_potential_override);
+    result.kr_imperative_override = clean(row.kr_imperative_override);
+    result.kr_polite_present_override = clean(row.kr_polite_present_override);
+    result.kr_past_override = clean(row.kr_past_override);
+  }
+
+  return result;
 }
 
 async function loadCsvFile(path: string): Promise<CsvRow[]> {
@@ -130,7 +191,7 @@ export async function loadKatsuyouRows(): Promise<KatsuyouRow[]> {
       .filter((row): row is KatsuyouRow => row !== null)
   );
 
-  const verbRows = await loadCsvFile("/csv/katsuyou_verb.csv");
+  const verbRows = await loadCsvFile("/csv/katsuyou_verb_50_rules.csv");
   all.push(
     ...verbRows
       .map((row, idx) => toKatsuyouRow(row, 20000 + idx))
