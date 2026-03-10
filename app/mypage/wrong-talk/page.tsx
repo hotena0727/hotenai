@@ -1,16 +1,33 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchAttemptsByPrefix, type QuizAttemptRow } from "@/lib/attempts";
 import { supabase } from "@/lib/supabase";
-import type { TalkAttemptWrongItem } from "@/lib/talk-payload";
 
 const JA_FONT_STYLE = {
   fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
 } as const;
 
-type FlattenedWrongItem = TalkAttemptWrongItem & {
+type TalkWrongItem = {
+  app: "talk";
+  item_key: string;
+  selected?: string;
+  correct?: string;
+
+  // 회화에서 자주 쓰일 수 있는 필드들
+  theme?: string;
+  topic?: string;
+  situation?: string;
+  prompt?: string;
+  question_jp?: string;
+  question_kr?: string;
+  jp_word?: string;
+  answer_jp?: string;
+  answer_kr?: string;
+  reading?: string;
+};
+
+type FlattenedWrongItem = TalkWrongItem & {
   attempt_id?: string;
   created_at?: string;
   pos_mode?: string;
@@ -36,16 +53,37 @@ function formatDate(value?: string): string {
   }
 }
 
+function displayTitle(item: FlattenedWrongItem): string {
+  return (
+    item.question_jp ||
+    item.prompt ||
+    item.jp_word ||
+    item.answer_jp ||
+    item.theme ||
+    item.topic ||
+    "회화 오답"
+  );
+}
 
+function displaySubTitle(item: FlattenedWrongItem): string {
+  return (
+    item.question_kr ||
+    item.answer_kr ||
+    item.situation ||
+    item.topic ||
+    "-"
+  );
+}
 
 function WrongPageTabs({
   current,
 }: {
-  current: "word" | "kanji" | "talk";
+  current: "word" | "kanji" | "katsuyou" | "talk";
 }) {
   const tabs = [
     { key: "word", label: "단어 오답", href: "/mypage/wrong-word" },
     { key: "kanji", label: "한자 오답", href: "/mypage/wrong-kanji" },
+    { key: "katsuyou", label: "활용 오답", href: "/mypage/wrong-katsuyou" },
     { key: "talk", label: "회화 오답", href: "/mypage/wrong-talk" },
   ] as const;
 
@@ -53,6 +91,7 @@ function WrongPageTabs({
     <div className="mt-5 flex flex-wrap gap-2">
       {tabs.map((tab) => {
         const active = current === tab.key;
+
         return (
           <a
             key={tab.key}
@@ -76,9 +115,8 @@ export default function WrongTalkPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [attempts, setAttempts] = useState<QuizAttemptRow[]>([]);
 
-  const [selectedQids, setSelectedQids] = useState<string[]>([]);
-  const [selectedTag, setSelectedTag] = useState("전체");
-  const [selectedSub, setSelectedSub] = useState("전체");
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [selectedTheme, setSelectedTheme] = useState("전체");
   const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
@@ -115,7 +153,7 @@ export default function WrongTalkPage() {
 
     for (const attempt of attempts) {
       const wrongs = Array.isArray(attempt.wrong_list)
-        ? (attempt.wrong_list as TalkAttemptWrongItem[])
+        ? (attempt.wrong_list as TalkWrongItem[])
         : [];
 
       for (const item of wrongs) {
@@ -135,84 +173,84 @@ export default function WrongTalkPage() {
     return rows;
   }, [attempts]);
 
-  const tagOptions = useMemo(() => {
+  const themeOptions = useMemo(() => {
     const values = Array.from(
       new Set(
         flattened
-          .map((item) => String(item.tag_kr || "").trim())
+          .map((item) => String(item.theme || item.topic || "").trim())
           .filter(Boolean)
       )
     );
     return ["전체", ...values];
   }, [flattened]);
 
-  const subOptions = useMemo(() => {
-    const filteredByTag =
-      selectedTag === "전체"
-        ? flattened
-        : flattened.filter((item) => (item.tag_kr || "") === selectedTag);
-
-    const values = Array.from(
-      new Set(
-        filteredByTag
-          .map((item) => String(item.sub_kr || "").trim())
-          .filter(Boolean)
-      )
-    );
-    return ["전체", ...values];
-  }, [flattened, selectedTag]);
-
   const filteredItems = useMemo(() => {
     const q = searchText.trim().toLowerCase();
 
     return flattened.filter((item) => {
-      const tagOk = selectedTag === "전체" || (item.tag_kr || "") === selectedTag;
-      const subOk = selectedSub === "전체" || (item.sub_kr || "") === selectedSub;
+      const themeValue = String(item.theme || item.topic || "").trim();
+      const themeOk = selectedTheme === "전체" || themeValue === selectedTheme;
 
       const haystack = [
-        item.situation_kr || "",
-        item.partner_jp || "",
+        item.theme || "",
+        item.topic || "",
+        item.situation || "",
+        item.prompt || "",
+        item.question_jp || "",
+        item.question_kr || "",
+        item.jp_word || "",
         item.answer_jp || "",
-        item.selected || "",
-        item.partner_kr || "",
         item.answer_kr || "",
-        item.explain_kr || "",
-        item.tag_kr || "",
-        item.sub_kr || "",
+        item.selected || "",
+        item.correct || "",
       ]
         .join(" ")
         .toLowerCase();
 
       const searchOk = !q || haystack.includes(q);
-      return tagOk && subOk && searchOk;
+      return themeOk && searchOk;
     });
-  }, [flattened, selectedTag, selectedSub, searchText]);
+  }, [flattened, selectedTheme, searchText]);
 
-  const toggleQid = (qid: string) => {
-    setSelectedQids((prev) =>
-      prev.includes(qid) ? prev.filter((x) => x !== qid) : [...prev, qid]
+  const makeSelectionKey = (item: FlattenedWrongItem) =>
+    `${item.app}|${item.item_key}`;
+
+  const toggleKey = (key: string) => {
+    setSelectedKeys((prev) =>
+      prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]
     );
   };
 
   const selectAllVisible = () => {
-    const qids = Array.from(
-      new Set(filteredItems.map((item) => item.qid).filter(Boolean))
+    const keys = Array.from(
+      new Set(filteredItems.map((item) => makeSelectionKey(item)).filter(Boolean))
     );
-    setSelectedQids(qids);
+    setSelectedKeys(keys);
   };
 
   const clearAllVisible = () => {
-    setSelectedQids([]);
+    setSelectedKeys([]);
   };
 
   const startReviewSet = () => {
-    if (selectedQids.length === 0) {
+    if (selectedKeys.length === 0) {
       alert("복습할 문제를 선택해주세요.");
       return;
     }
 
-    const q = encodeURIComponent(selectedQids.join(","));
-    window.location.href = `/talk?review=1&qids=${q}`;
+    const itemKeys = filteredItems
+      .filter((item) => selectedKeys.includes(makeSelectionKey(item)))
+      .map((item) => item.item_key);
+
+    if (itemKeys.length === 0) {
+      alert("복습할 문제를 찾지 못했습니다.");
+      return;
+    }
+
+    const qids = encodeURIComponent(itemKeys.join(","));
+    const theme = encodeURIComponent(selectedTheme === "전체" ? "" : selectedTheme);
+
+    window.location.href = `/talk?review=1&qids=${qids}&theme=${theme}`;
   };
 
   if (loading) {
@@ -238,7 +276,7 @@ export default function WrongTalkPage() {
   }
 
   const summaryCount = filteredItems.length;
-  const selectedCount = selectedQids.length;
+  const selectedCount = selectedKeys.length;
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
@@ -246,7 +284,7 @@ export default function WrongTalkPage() {
         <section className="mt-4">
           <h1 className="text-3xl font-bold">회화 오답노트</h1>
           <p className="mt-3 text-base text-gray-600">
-            막혔던 대화문만 모아 다시 복습하고, 말문을 자연스럽게 이어가세요.
+            막혔던 회화 표현만 다시 골라, 오늘 복습 루틴으로 차분히 정리해보세요.
           </p>
           <WrongPageTabs current="talk" />
         </section>
@@ -265,7 +303,7 @@ export default function WrongTalkPage() {
           </div>
 
           <p className="mt-4 text-sm text-gray-600">
-            상황과 표현을 기준으로 묶어, 필요한 회화 오답만 바로 다시 볼 수 있습니다.
+            대답이 막혔던 회화 문제만 다시 골라 복습할 수 있습니다.
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">
@@ -296,10 +334,9 @@ export default function WrongTalkPage() {
             <button
               type="button"
               onClick={() => {
-                setSelectedTag("전체");
-                setSelectedSub("전체");
+                setSelectedTheme("전체");
                 setSearchText("");
-                setSelectedQids([]);
+                setSelectedKeys([]);
               }}
               className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
             >
@@ -317,50 +354,22 @@ export default function WrongTalkPage() {
 
         <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <div>
-            <p className="text-sm font-semibold text-gray-700">유형</p>
+            <p className="text-sm font-semibold text-gray-700">테마</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {tagOptions.map((item) => {
-                const active = selectedTag === item;
+              {themeOptions.map((item) => {
+                const active = selectedTheme === item;
 
                 return (
                   <button
                     key={item}
                     type="button"
                     onClick={() => {
-                      setSelectedTag(item);
-                      setSelectedSub("전체");
-                      setSelectedQids([]);
+                      setSelectedTheme(item);
+                      setSelectedKeys([]);
                     }}
                     className={
                       active
                         ? "rounded-full border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
-                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
-                    }
-                  >
-                    {item}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-5 border-t border-gray-100 pt-5">
-            <p className="text-sm font-semibold text-gray-700">상황</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {subOptions.map((item) => {
-                const active = selectedSub === item;
-
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => {
-                      setSelectedSub(item);
-                      setSelectedQids([]);
-                    }}
-                    className={
-                      active
-                        ? "rounded-full border border-gray-900 bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
                         : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
                     }
                   >
@@ -378,9 +387,9 @@ export default function WrongTalkPage() {
               value={searchText}
               onChange={(e) => {
                 setSearchText(e.target.value);
-                setSelectedQids([]);
+                setSelectedKeys([]);
               }}
-              placeholder="상황, 상대(말), 정답, 내가 고른 답으로 검색"
+              placeholder="테마, 질문, 정답, 내가 말한 답으로 검색"
               className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-400"
             />
           </div>
@@ -390,7 +399,7 @@ export default function WrongTalkPage() {
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
             <p className="text-lg font-semibold text-gray-900">좋아요. 저장된 회화 오답이 아직 없습니다.</p>
             <p className="mt-2 text-sm text-gray-600">
-              회화 세트를 풀고 다시 오면, 막혔던 문장들이 여기에 정리됩니다.
+              회화 문제를 풀고 다시 오면, 막혔던 문제들이 여기에 정리됩니다.
             </p>
             <a
               href="/talk"
@@ -403,30 +412,33 @@ export default function WrongTalkPage() {
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
             <p className="text-lg font-semibold text-gray-900">현재 필터 조건에 맞는 오답이 없습니다.</p>
             <p className="mt-2 text-sm text-gray-600">
-              유형이나 상황을 넓혀 다시 확인해보세요.
+              테마를 넓히거나 검색어를 비워 다시 확인해보세요.
             </p>
           </div>
         ) : (
-          <>
+          <div className="mt-6 space-y-4">
+            {filteredItems.map((item, idx) => {
+              const selectionKey = makeSelectionKey(item);
 
-            <div className="mt-6 space-y-4">
-              {filteredItems.map((item, idx) => (
+              return (
                 <div
-                  key={`${item.attempt_id}-${item.qid}-${idx}`}
+                  key={`${item.attempt_id}-${item.item_key}-${idx}`}
                   className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <label className="flex items-center gap-2 text-sm text-gray-700">
                       <input
                         type="checkbox"
-                        checked={selectedQids.includes(item.qid)}
-                        onChange={() => toggleQid(item.qid)}
+                        checked={selectedKeys.includes(selectionKey)}
+                        onChange={() => toggleKey(selectionKey)}
                       />
                       선택
                     </label>
 
                     <a
-                      href={`/talk?review=1&qids=${encodeURIComponent(item.qid)}`}
+                      href={`/talk?review=1&qids=${encodeURIComponent(item.item_key)}&theme=${encodeURIComponent(
+                        item.theme || item.topic || ""
+                      )}`}
                       className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
                     >
                       이 문제만 복습
@@ -434,53 +446,58 @@ export default function WrongTalkPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                    {item.tag_kr ? (
-                      <span className="rounded-full bg-gray-100 px-2 py-1">{item.tag_kr}</span>
-                    ) : null}
-                    {item.sub_kr ? (
-                      <span className="rounded-full bg-gray-100 px-2 py-1">{item.sub_kr}</span>
-                    ) : null}
+                    <span className="rounded-full bg-gray-100 px-2 py-1">
+                      {item.theme || item.topic || "회화"}
+                    </span>
                     <span className="rounded-full bg-gray-100 px-2 py-1">
                       {formatDate(item.created_at)}
                     </span>
                   </div>
 
-                  {item.situation_kr ? (
-                    <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                      <p className="text-sm font-medium text-blue-800">상황</p>
-                      <p className="mt-1 text-sm text-gray-900">{item.situation_kr}</p>
-                    </div>
-                  ) : null}
-
-                  <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                    <p className="text-sm font-medium text-gray-700">상대(말)</p>
-                    <p className="mt-1 text-sm text-gray-800"><span lang="ja" style={JA_FONT_STYLE}>{item.partner_jp || "-"}</span></p>
-                    <p className="mt-1 text-sm text-gray-500">{item.partner_kr || "-"}</p>
+                  <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                    <p className="text-sm font-medium text-blue-800">문제</p>
+                    <p className="mt-1 text-base font-bold text-gray-900">
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {displayTitle(item)}
+                      </span>
+                    </p>
+                    <p className="mt-2 text-sm text-gray-600">{displaySubTitle(item)}</p>
+                    {item.reading ? (
+                      <p className="mt-1 text-sm text-gray-600">
+                        읽기: <span lang="ja" style={JA_FONT_STYLE}>{item.reading}</span>
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
                     <p className="text-sm font-medium text-red-700">내가 고른 답</p>
-                    <p className="mt-1 text-sm text-gray-800"><span lang="ja" style={JA_FONT_STYLE}>{item.selected || "-"}</span></p>
+                    <p className="mt-1 text-sm text-gray-800">
+                      <span lang="ja" style={JA_FONT_STYLE}>{item.selected || "-"}</span>
+                    </p>
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
                     <p className="text-sm font-medium text-green-700">정답</p>
-                    <p className="mt-1 text-sm text-gray-800"><span lang="ja" style={JA_FONT_STYLE}>{item.answer_jp || item.correct || "-"}</span></p>
-                    <p className="mt-1 text-sm text-gray-500">{item.answer_kr || "-"}</p>
+                    <p className="mt-1 text-sm text-gray-800">
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.correct || item.answer_jp || "-"}
+                      </span>
+                    </p>
+                    {item.answer_kr ? (
+                      <p className="mt-1 text-sm text-gray-600">{item.answer_kr}</p>
+                    ) : null}
                   </div>
 
-                  {item.explain_kr ? (
-                    <div className="mt-3 rounded-2xl bg-blue-50 p-4">
-                      <p className="text-sm font-medium text-blue-900">
-                        하테나쌤 원포인트 일본어
-                      </p>
-                      <p className="mt-2 text-sm text-blue-900">{item.explain_kr}</p>
+                  {item.situation ? (
+                    <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                      <p className="text-sm font-medium text-gray-700">상황</p>
+                      <p className="mt-1 text-sm text-gray-700">{item.situation}</p>
                     </div>
                   ) : null}
                 </div>
-              ))}
-            </div>
-          </>
+              );
+            })}
+          </div>
         )}
       </div>
     </main>

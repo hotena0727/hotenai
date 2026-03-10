@@ -5,7 +5,7 @@ import { fetchAttemptsByPrefix, type QuizAttemptRow } from "@/lib/attempts";
 import { supabase } from "@/lib/supabase";
 
 type Bucket = {
-  key: "word" | "kanji" | "talk";
+  key: "word" | "kanji" | "katsuyou" | "talk";
   title: string;
   description: string;
   href: string;
@@ -36,6 +36,10 @@ function getRecommendation(buckets: Bucket[]) {
     return "오늘은 한자 오답부터 정리하며, 읽기와 뜻이 흔들린 부분을 차분히 다듬어 보세요.";
   }
 
+  if (top.key === "katsuyou") {
+    return "오늘은 활용 오답부터 다시 보며, 헷갈렸던 형태를 하나씩 정확히 정리해 보세요.";
+  }
+
   return "오늘은 단어 오답부터 다시 보며, 자주 흔들리는 어휘를 먼저 잡아보세요.";
 }
 
@@ -44,6 +48,7 @@ export default function WrongHubPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [wordAttempts, setWordAttempts] = useState<QuizAttemptRow[]>([]);
   const [kanjiAttempts, setKanjiAttempts] = useState<QuizAttemptRow[]>([]);
+  const [katsuyouAttempts, setKatsuyouAttempts] = useState<QuizAttemptRow[]>([]);
   const [talkAttempts, setTalkAttempts] = useState<QuizAttemptRow[]>([]);
 
   useEffect(() => {
@@ -62,14 +67,16 @@ export default function WrongHubPage() {
           return;
         }
 
-        const [wordRows, kanjiRows, talkRows] = await Promise.all([
+        const [wordRows, kanjiRows, katsuyouRows, talkRows] = await Promise.all([
           fetchAttemptsByPrefix(user.id, "단어", 50),
           fetchAttemptsByPrefix(user.id, "한자", 50),
+          fetchAttemptsByPrefix(user.id, "활용", 50),
           fetchAttemptsByPrefix(user.id, "회화", 50),
         ]);
 
         setWordAttempts(wordRows);
         setKanjiAttempts(kanjiRows);
+        setKatsuyouAttempts(katsuyouRows);
         setTalkAttempts(talkRows);
       } catch (error) {
         console.error(error);
@@ -101,6 +108,14 @@ export default function WrongHubPage() {
         recentWrong: calcWrongCount(kanjiAttempts),
       },
       {
+        key: "katsuyou",
+        title: "활용 오답",
+        description: "틀렸던 활용 형태를 다시 묶어, 형용사·동사 활용을 차분히 정리해보세요.",
+        href: "/mypage/wrong-katsuyou",
+        count: katsuyouAttempts.length,
+        recentWrong: calcWrongCount(katsuyouAttempts),
+      },
+      {
         key: "talk",
         title: "회화 오답",
         description: "막혔던 대화문만 모아 다시 복습하고, 말문을 자연스럽게 이어가세요.",
@@ -109,7 +124,7 @@ export default function WrongHubPage() {
         recentWrong: calcWrongCount(talkAttempts),
       },
     ];
-  }, [wordAttempts, kanjiAttempts, talkAttempts]);
+  }, [wordAttempts, kanjiAttempts, katsuyouAttempts, talkAttempts]);
 
   const totalCount = buckets.reduce((sum, item) => sum + item.count, 0);
   const totalWrong = buckets.reduce((sum, item) => sum + item.recentWrong, 0);
@@ -154,7 +169,7 @@ export default function WrongHubPage() {
               누적 오답 {totalWrong}개
             </span>
             <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 font-semibold text-gray-700">
-              복습 영역 3개
+              복습 영역 4개
             </span>
           </div>
 

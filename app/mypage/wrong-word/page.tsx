@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -68,12 +67,12 @@ function posLabel(pos?: string): string {
   switch (raw) {
     case "noun":
       return "명사";
-    case "verb":
-      return "동사";
     case "adj_i":
       return "い형용사";
     case "adj_na":
       return "な형용사";
+    case "verb":
+      return "동사";
     case "adverb":
       return "부사";
     case "particle":
@@ -83,19 +82,19 @@ function posLabel(pos?: string): string {
     case "interjection":
       return "감탄사";
     default:
-      return pos || "-";
+      return raw || "-";
   }
 }
-
 
 function WrongPageTabs({
   current,
 }: {
-  current: "word" | "kanji" | "talk";
+  current: "word" | "kanji" | "katsuyou" | "talk";
 }) {
   const tabs = [
     { key: "word", label: "단어 오답", href: "/mypage/wrong-word" },
     { key: "kanji", label: "한자 오답", href: "/mypage/wrong-kanji" },
+    { key: "katsuyou", label: "활용 오답", href: "/mypage/wrong-katsuyou" },
     { key: "talk", label: "회화 오답", href: "/mypage/wrong-talk" },
   ] as const;
 
@@ -145,7 +144,6 @@ export default function WrongWordPage() {
 
         if (userError || !user) {
           setErrorMsg("로그인이 필요합니다.");
-          setLoading(false);
           return;
         }
 
@@ -210,8 +208,8 @@ export default function WrongWordPage() {
     const q = searchText.trim().toLowerCase();
 
     return flattened.filter((item) => {
-      const qtypeOk = selectedQType === "전체" || item.qtype === selectedQType;
-      const posOk = selectedPos === "전체" || item.pos === selectedPos;
+      const qtypeOk = selectedQType === "전체" || (item.qtype || "") === selectedQType;
+      const posOk = selectedPos === "전체" || (item.pos || "") === selectedPos;
 
       const haystack = [
         item.jp_word || "",
@@ -219,6 +217,7 @@ export default function WrongWordPage() {
         item.meaning_kr || "",
         item.selected || "",
         item.correct || "",
+        item.pos || "",
         item.level || "",
         item.example_jp || "",
         item.example_kr || "",
@@ -304,7 +303,7 @@ export default function WrongWordPage() {
         <section className="mt-4">
           <h1 className="text-3xl font-bold">단어 오답노트</h1>
           <p className="mt-3 text-base text-gray-600">
-            틀린 단어를 다시 묶어, 오늘 복습 루틴으로 바로 이어가세요.
+            헷갈렸던 단어만 다시 골라, 오늘 복습 루틴으로 가볍게 정리해보세요.
           </p>
           <WrongPageTabs current="word" />
         </section>
@@ -323,7 +322,7 @@ export default function WrongWordPage() {
           </div>
 
           <p className="mt-4 text-sm text-gray-600">
-            원하는 문제만 골라 복습하거나, 지금 필터 상태 그대로 다시 시험볼 수 있습니다.
+            뜻, 발음, 한→일로 흔들렸던 단어만 골라 다시 복습할 수 있습니다.
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">
@@ -363,6 +362,7 @@ export default function WrongWordPage() {
             >
               필터 초기화
             </button>
+
             <a
               href="/mypage"
               className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
@@ -449,7 +449,7 @@ export default function WrongWordPage() {
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
             <p className="text-lg font-semibold text-gray-900">좋아요. 저장된 단어 오답이 아직 없습니다.</p>
             <p className="mt-2 text-sm text-gray-600">
-              새 문제를 풀고 다시 오면, 틀린 단어가 이곳에 차곡차곡 쌓입니다.
+              단어 문제를 풀고 다시 오면, 헷갈린 문제들이 여기에 정리됩니다.
             </p>
             <a
               href="/word"
@@ -462,90 +462,100 @@ export default function WrongWordPage() {
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
             <p className="text-lg font-semibold text-gray-900">현재 필터 조건에 맞는 오답이 없습니다.</p>
             <p className="mt-2 text-sm text-gray-600">
-              필터를 조금 완화하거나, 전체로 바꿔서 다시 확인해보세요.
+              품사나 문제 유형을 넓혀 다시 확인해보세요.
             </p>
           </div>
         ) : (
-          <>
+          <div className="mt-6 space-y-4">
+            {filteredItems.map((item, idx) => {
+              const selectionKey = makeSelectionKey(item);
 
-            <div className="mt-6 space-y-4">
-              {filteredItems.map((item, idx) => {
-                const selectionKey = makeSelectionKey(item);
+              return (
+                <div
+                  key={`${item.attempt_id}-${item.item_key}-${idx}`}
+                  className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={selectedKeys.includes(selectionKey)}
+                        onChange={() => toggleKey(selectionKey)}
+                      />
+                      선택
+                    </label>
 
-                return (
-                  <div
-                    key={`${item.attempt_id}-${item.item_key}-${idx}`}
-                    className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
-                  >
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <label className="flex items-center gap-2 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={selectedKeys.includes(selectionKey)}
-                          onChange={() => toggleKey(selectionKey)}
-                        />
-                        선택
-                      </label>
-
-                      <a
-                        href={`/word?review=1&qids=${encodeURIComponent(
-                          item.item_key
-                        )}&qtype=${encodeURIComponent(item.qtype)}&pos=${encodeURIComponent(
-                          item.pos || ""
-                        )}`}
-                        className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
-                      >
-                        이 문제만 복습
-                      </a>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                      <span className="rounded-full bg-gray-100 px-2 py-1">
-                        {qtypeLabel(item.qtype)}
-                      </span>
-                      <span className="rounded-full bg-gray-100 px-2 py-1">
-                        {posLabel(item.pos)}
-                      </span>
-                      <span className="rounded-full bg-gray-100 px-2 py-1">
-                        {item.level || "-"}
-                      </span>
-                      <span className="rounded-full bg-gray-100 px-2 py-1">
-                        {formatDate(item.created_at)}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                      <p className="text-sm font-medium text-blue-800">문제 단어</p>
-                      <p className="mt-1 text-xl font-bold text-gray-900">
-                        {item.jp_word || "-"}
-                      </p>
-                      <p className="mt-2 text-sm text-gray-600">
-                        {item.reading || "-"} · {item.meaning_kr || "-"}
-                      </p>
-                    </div>
-
-                    {item.example_jp || item.example_kr ? (
-                      <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                        <p className="text-sm font-medium text-gray-700">예문</p>
-                        <p className="mt-1 text-sm text-gray-900">{item.example_jp || "-"}</p>
-                        <p className="mt-1 text-sm text-gray-500">{item.example_kr || "-"}</p>
-                      </div>
-                    ) : null}
-
-                    <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-                      <p className="text-sm font-medium text-red-700">내가 고른 답</p>
-                      <p className="mt-1 text-sm text-gray-800">{item.selected || "-"}</p>
-                    </div>
-
-                    <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
-                      <p className="text-sm font-medium text-green-700">정답</p>
-                      <p className="mt-1 text-sm text-gray-800">{item.correct || "-"}</p>
-                    </div>
+                    <a
+                      href={`/word?review=1&qids=${encodeURIComponent(
+                        item.item_key
+                      )}&qtype=${encodeURIComponent(item.qtype)}&pos=${encodeURIComponent(
+                        item.pos || ""
+                      )}`}
+                      className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
+                    >
+                      이 문제만 복습
+                    </a>
                   </div>
-                );
-              })}
-            </div>
-          </>
+
+                  <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                    <span className="rounded-full bg-gray-100 px-2 py-1">
+                      {qtypeLabel(item.qtype)}
+                    </span>
+                    <span className="rounded-full bg-gray-100 px-2 py-1">
+                      {posLabel(item.pos)}
+                    </span>
+                    <span className="rounded-full bg-gray-100 px-2 py-1">
+                      {item.level || "-"}
+                    </span>
+                    <span className="rounded-full bg-gray-100 px-2 py-1">
+                      {formatDate(item.created_at)}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                    <p className="text-sm font-medium text-blue-800">문제 단어</p>
+                    <p className="mt-1 text-xl font-bold text-gray-900">
+                      <span lang="ja" style={JA_FONT_STYLE}>{item.jp_word || "-"}</span>
+                    </p>
+                    <p className="mt-2 text-sm text-gray-600">
+                      읽기: <span lang="ja" style={JA_FONT_STYLE}>{item.reading || "-"}</span>
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      뜻: {item.meaning_kr || "-"}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+                    <p className="text-sm font-medium text-red-700">내가 고른 답</p>
+                    <p className="mt-1 text-sm text-gray-800">
+                      <span lang="ja" style={JA_FONT_STYLE}>{item.selected || "-"}</span>
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
+                    <p className="text-sm font-medium text-green-700">정답</p>
+                    <p className="mt-1 text-sm text-gray-800">
+                      <span lang="ja" style={JA_FONT_STYLE}>{item.correct || "-"}</span>
+                    </p>
+                  </div>
+
+                  {item.example_jp || item.example_kr ? (
+                    <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                      <p className="text-sm font-medium text-gray-700">예문</p>
+                      {item.example_jp ? (
+                        <p className="mt-1 text-sm text-gray-800">
+                          <span lang="ja" style={JA_FONT_STYLE}>{item.example_jp}</span>
+                        </p>
+                      ) : null}
+                      {item.example_kr ? (
+                        <p className="mt-1 text-sm text-gray-600">{item.example_kr}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </main>

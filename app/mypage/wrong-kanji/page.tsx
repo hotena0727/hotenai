@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -61,15 +60,15 @@ function qtypeLabel(qtype?: string): string {
   }
 }
 
-
 function WrongPageTabs({
   current,
 }: {
-  current: "word" | "kanji" | "talk";
+  current: "word" | "kanji" | "katsuyou" | "talk";
 }) {
   const tabs = [
     { key: "word", label: "단어 오답", href: "/mypage/wrong-word" },
     { key: "kanji", label: "한자 오답", href: "/mypage/wrong-kanji" },
+    { key: "katsuyou", label: "활용 오답", href: "/mypage/wrong-katsuyou" },
     { key: "talk", label: "회화 오답", href: "/mypage/wrong-talk" },
   ] as const;
 
@@ -436,78 +435,79 @@ export default function WrongKanjiPage() {
             </p>
           </div>
         ) : (
-          <>
+          <div className="mt-6 space-y-4">
+            {filteredItems.map((item, idx) => {
+              const selectionKey = makeSelectionKey(item);
 
-            <div className="mt-6 space-y-4">
-              {filteredItems.map((item, idx) => {
-                const selectionKey = makeSelectionKey(item);
+              return (
+                <div
+                  key={`${item.attempt_id}-${item.item_key}-${idx}`}
+                  className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={selectedKeys.includes(selectionKey)}
+                        onChange={() => toggleKey(selectionKey)}
+                      />
+                      선택
+                    </label>
 
-                return (
-                  <div
-                    key={`${item.attempt_id}-${item.item_key}-${idx}`}
-                    className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
-                  >
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <label className="flex items-center gap-2 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={selectedKeys.includes(selectionKey)}
-                          onChange={() => toggleKey(selectionKey)}
-                        />
-                        선택
-                      </label>
-
-                      <a
-                        href={`/kanji?review=1&qids=${encodeURIComponent(
-                          item.item_key
-                        )}&qtype=${encodeURIComponent(item.qtype)}&level=${encodeURIComponent(
-                          item.level || ""
-                        )}`}
-                        className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
-                      >
-                        이 문제만 복습
-                      </a>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                      <span className="rounded-full bg-gray-100 px-2 py-1">
-                        {qtypeLabel(item.qtype)}
-                      </span>
-                      <span className="rounded-full bg-gray-100 px-2 py-1">
-                        {item.level || "-"}
-                      </span>
-                      <span className="rounded-full bg-gray-100 px-2 py-1">
-                        {formatDate(item.created_at)}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                      <p className="text-sm font-medium text-blue-800">문제 한자</p>
-                      <p className="mt-1 text-xl font-bold text-gray-900">
-                        {item.jp_word || "-"}
-                      </p>
-                      <p className="mt-2 text-sm text-gray-600">
-                        읽기: {item.reading || "-"}
-                      </p>
-                      <p className="mt-1 text-sm text-gray-600">
-                        뜻: {item.meaning_kr || "-"}
-                      </p>
-                    </div>
-
-                    <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-                      <p className="text-sm font-medium text-red-700">내가 고른 답</p>
-                      <p className="mt-1 text-sm text-gray-800">{item.selected || "-"}</p>
-                    </div>
-
-                    <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
-                      <p className="text-sm font-medium text-green-700">정답</p>
-                      <p className="mt-1 text-sm text-gray-800">{item.correct || "-"}</p>
-                    </div>
+                    <a
+                      href={`/kanji?review=1&qids=${encodeURIComponent(
+                        item.item_key
+                      )}&qtype=${encodeURIComponent(item.qtype)}&level=${encodeURIComponent(
+                        item.level || ""
+                      )}`}
+                      className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
+                    >
+                      이 문제만 복습
+                    </a>
                   </div>
-                );
-              })}
-            </div>
-          </>
+
+                  <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                    <span className="rounded-full bg-gray-100 px-2 py-1">
+                      {qtypeLabel(item.qtype)}
+                    </span>
+                    <span className="rounded-full bg-gray-100 px-2 py-1">
+                      {item.level || "-"}
+                    </span>
+                    <span className="rounded-full bg-gray-100 px-2 py-1">
+                      {formatDate(item.created_at)}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                    <p className="text-sm font-medium text-blue-800">문제 한자</p>
+                    <p className="mt-1 text-xl font-bold text-gray-900">
+                      {item.jp_word || "-"}
+                    </p>
+                    <p className="mt-2 text-sm text-gray-600">
+                      읽기: <span lang="ja" style={JA_FONT_STYLE}>{item.reading || "-"}</span>
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      뜻: {item.meaning_kr || "-"}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+                    <p className="text-sm font-medium text-red-700">내가 고른 답</p>
+                    <p className="mt-1 text-sm text-gray-800">
+                      <span lang="ja" style={JA_FONT_STYLE}>{item.selected || "-"}</span>
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
+                    <p className="text-sm font-medium text-green-700">정답</p>
+                    <p className="mt-1 text-sm text-gray-800">
+                      <span lang="ja" style={JA_FONT_STYLE}>{item.correct || "-"}</span>
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </main>

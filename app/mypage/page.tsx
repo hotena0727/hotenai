@@ -16,6 +16,7 @@ import {
 } from "@/lib/attempts";
 import {
   isKanjiAttempt,
+  isKatsuyouAttempt,
   isTalkAttempt,
   isWordAttempt,
   detectAppKind,
@@ -34,14 +35,15 @@ type MyProfile = {
 };
 
 type MainTabKey = "wrong" | "history" | "message" | "notice";
-type WrongAppKey = "word" | "kanji" | "talk";
-type WrongFilterKey = "all" | "word" | "kanji" | "talk";
+type WrongAppKey = "word" | "kanji" | "katsuyou" | "talk";
+type WrongFilterKey = "all" | "word" | "kanji" | "katsuyou" | "talk";
 
 type DayStat = {
   label: string;
   total: number;
   word: number;
   kanji: number;
+  katsuyou: number;
   talk: number;
 };
 
@@ -151,6 +153,7 @@ function buildLast7Days(attempts: QuizAttemptRow[]): DayStat[] {
       total: 0,
       word: 0,
       kanji: 0,
+      katsuyou: 0,
       talk: 0,
     });
   }
@@ -166,6 +169,7 @@ function buildLast7Days(attempts: QuizAttemptRow[]): DayStat[] {
     bucket.total += 1;
     if (isWordAttempt(item.pos_mode)) bucket.word += 1;
     if (isKanjiAttempt(item.pos_mode)) bucket.kanji += 1;
+    if (isKatsuyouAttempt(item.pos_mode)) bucket.katsuyou += 1;
     if (isTalkAttempt(item.pos_mode)) bucket.talk += 1;
   });
 
@@ -204,6 +208,7 @@ function getTopWrongType(attempts: QuizAttemptRow[]) {
   if (!top || top[1] === 0) return "-";
   if (top[0] === "word") return "단어";
   if (top[0] === "kanji") return "한자";
+  if (top[0] === "katsuyou") return "활용";
   return "회화";
 }
 
@@ -234,7 +239,6 @@ function withFullIfMissing(posMode?: string): string {
   if (parts.length === 2) {
     return `${parts[0]} · ${parts[1]} · 전체`;
   }
-
 
   if (parts.length >= 3 && parts[0] === "회화" && !parts[2]) {
     return `${parts[0]} · ${parts[1]} · 전체`;
@@ -409,6 +413,7 @@ export default function MyPage() {
     const talkAttempts = allAttempts.filter((item) => isTalkAttempt(item.pos_mode));
     const wordAttempts = allAttempts.filter((item) => isWordAttempt(item.pos_mode));
     const kanjiAttempts = allAttempts.filter((item) => isKanjiAttempt(item.pos_mode));
+    const katsuyouAttempts = allAttempts.filter((item) => isKatsuyouAttempt(item.pos_mode));
 
     const totalAttempts = allAttempts.length;
     const totalWrong = allAttempts.reduce(
@@ -432,6 +437,8 @@ export default function MyPage() {
       wordAverage: calcAveragePercent(wordAttempts),
       kanjiCount: kanjiAttempts.length,
       kanjiAverage: calcAveragePercent(kanjiAttempts),
+      katsuyouCount: katsuyouAttempts.length,
+      katsuyouAverage: calcAveragePercent(katsuyouAttempts),
       last7,
       streak,
       thisWeekCount,
@@ -448,6 +455,8 @@ export default function MyPage() {
       base = base.filter((item) => isWordAttempt(item.pos_mode));
     } else if (wrongFilter === "kanji") {
       base = base.filter((item) => isKanjiAttempt(item.pos_mode));
+    } else if (wrongFilter === "katsuyou") {
+      base = base.filter((item) => isKatsuyouAttempt(item.pos_mode));
     } else if (wrongFilter === "talk") {
       base = base.filter((item) => isTalkAttempt(item.pos_mode));
     }
@@ -574,6 +583,10 @@ export default function MyPage() {
       window.location.href = "/mypage/wrong-kanji";
       return;
     }
+    if (wrongApp === "katsuyou") {
+      window.location.href = "/mypage/wrong-katsuyou";
+      return;
+    }
     window.location.href = "/mypage/wrong-talk";
   };
 
@@ -596,18 +609,22 @@ export default function MyPage() {
       ? "오늘의 코치 팁 · 회화"
       : stats.topWrongType === "한자"
         ? "오늘의 코치 팁 · 한자"
-        : stats.topWrongType === "단어"
-          ? "오늘의 코치 팁 · 단어"
-          : "오늘의 코치 팁";
+        : stats.topWrongType === "활용"
+          ? "오늘의 코치 팁 · 활용"
+          : stats.topWrongType === "단어"
+            ? "오늘의 코치 팁 · 단어"
+            : "오늘의 코치 팁";
 
   const coachTipBody =
     stats.topWrongType === "회화"
       ? "오답이 많은 회화는 정답을 읽는 것보다 소리 내어 2~3번 따라 하는 쪽이 훨씬 오래 남습니다. 짧게라도 입으로 꺼내 보세요."
       : stats.topWrongType === "한자"
         ? "한자는 많이 보기보다 헷갈린 것만 다시 보는 편이 효율적입니다. 오늘은 오답노트에서 자주 틀린 것부터 정리해 보세요."
-        : stats.topWrongType === "단어"
-          ? "단어는 뜻만 보지 말고 짧은 문장 안에서 다시 만나야 기억이 오래 갑니다. 오늘은 오답 10개만 가볍게 복습해 보세요."
-          : "오늘의 학습 기록을 바탕으로, 가장 부담 없는 루틴부터 다시 이어가 보세요.";
+        : stats.topWrongType === "활용"
+          ? "활용은 한 번에 많이 보기보다 틀린 형태만 다시 입으로 읽고 직접 써보는 쪽이 오래 남습니다. 오늘은 오답 활용 10개만 가볍게 정리해 보세요."
+          : stats.topWrongType === "단어"
+            ? "단어는 뜻만 보지 말고 짧은 문장 안에서 다시 만나야 기억이 오래 갑니다. 오늘은 오답 10개만 가볍게 복습해 보세요."
+            : "오늘의 학습 기록을 바탕으로, 가장 부담 없는 루틴부터 다시 이어가 보세요.";
 
   const warmMessage =
     stats.totalWrong === 0
@@ -786,7 +803,6 @@ export default function MyPage() {
           </div>
         </div>
 
-
         <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
             <p className="text-2xl sm:text-4xl font-bold">{stats.streak}</p>
@@ -813,10 +829,10 @@ export default function MyPage() {
               {stats.totalAttempts === 0
                 ? "0%"
                 : `${Math.round(
-                  ((stats.totalAttempts * 10 - stats.totalWrong) /
-                    Math.max(stats.totalAttempts * 10, 1)) *
-                  100
-                )}%`}
+                    ((stats.totalAttempts * 10 - stats.totalWrong) /
+                      Math.max(stats.totalAttempts * 10, 1)) *
+                      100
+                  )}%`}
             </p>
             <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">평균 정답률</p>
           </div>
@@ -843,6 +859,9 @@ export default function MyPage() {
                 한자 {stats.kanjiCount}
               </span>
               <span className="rounded-full bg-gray-100 px-3 py-1 font-semibold text-gray-700">
+                활용 {stats.katsuyouCount}
+              </span>
+              <span className="rounded-full bg-gray-100 px-3 py-1 font-semibold text-gray-700">
                 회화 {stats.talkCount}
               </span>
               <span className="rounded-full bg-gray-100 px-3 py-1 font-semibold text-gray-700">
@@ -855,14 +874,15 @@ export default function MyPage() {
             {stats.last7.map((day, idx) => (
               <div
                 key={`${day.label}-${idx}`}
-                className="rounded-2xl border border-blue-200 bg-blue-50 p-2 sm:p-4 text-center"
+                className="rounded-2xl border border-blue-200 bg-blue-50 p-2 text-center sm:p-4"
               >
-                <p className="text-xs sm:text-lg font-bold">{day.label}</p>
-                <p className="mt-2 sm:mt-3 text-lg sm:text-3xl font-bold">{idx + 1}</p>
-                <p className="mt-1 sm:mt-2 text-[10px] sm:text-sm font-semibold text-gray-700">{day.total}회</p>
-                <div className="mt-2 sm:mt-3 text-[10px] sm:text-sm text-gray-600">
+                <p className="text-xs font-bold sm:text-lg">{day.label}</p>
+                <p className="mt-2 text-lg font-bold sm:mt-3 sm:text-3xl">{idx + 1}</p>
+                <p className="mt-1 text-[10px] font-semibold text-gray-700 sm:mt-2 sm:text-sm">{day.total}회</p>
+                <div className="mt-2 text-[10px] text-gray-600 sm:mt-3 sm:text-sm">
                   <p>단어 {day.word}</p>
                   <p>한자 {day.kanji}</p>
+                  <p>활용 {day.katsuyou}</p>
                   <p>회화 {day.talk}</p>
                 </div>
               </div>
@@ -958,6 +978,7 @@ export default function MyPage() {
                     {[
                       { key: "word", label: "단어" },
                       { key: "kanji", label: "한자" },
+                      { key: "katsuyou", label: "활용" },
                       { key: "talk", label: "회화" },
                     ].map((item) => (
                       <button
@@ -1031,6 +1052,7 @@ export default function MyPage() {
                   { key: "all", label: "전체" },
                   { key: "word", label: "단어" },
                   { key: "kanji", label: "한자" },
+                  { key: "katsuyou", label: "활용" },
                   { key: "talk", label: "회화" },
                 ].map((item) => (
                   <button
@@ -1082,9 +1104,9 @@ export default function MyPage() {
                         <p className="mt-1">
                           {item.created_at
                             ? new Date(item.created_at).toLocaleTimeString("ko-KR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
                             : "-"}
                         </p>
                       </div>
@@ -1135,7 +1157,9 @@ export default function MyPage() {
                         ? "border-blue-200 bg-blue-50 text-blue-700"
                         : kind === "kanji"
                           ? "border-green-200 bg-green-50 text-green-700"
-                          : "border-gray-200 bg-gray-50 text-gray-700";
+                          : kind === "katsuyou"
+                            ? "border-orange-200 bg-orange-50 text-orange-700"
+                            : "border-gray-200 bg-gray-50 text-gray-700";
 
                   return (
                     <div
@@ -1277,7 +1301,9 @@ export default function MyPage() {
                       ? "/mypage/wrong-talk"
                       : stats.topWrongType === "한자"
                         ? "/mypage/wrong-kanji"
-                        : "/mypage/wrong-word"
+                        : stats.topWrongType === "활용"
+                          ? "/mypage/wrong-katsuyou"
+                          : "/mypage/wrong-word"
                   }
                   className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
                 >
