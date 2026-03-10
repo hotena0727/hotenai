@@ -114,6 +114,40 @@ function buildRecentLogs(attempts: QuizAttemptRow[]) {
     .slice(0, 20);
 }
 
+function getMenuStatusLabel(show: boolean, minPlan: "FREE" | "PRO") {
+  if (!show) {
+    return {
+      text: "숨김",
+      className:
+        "rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600",
+    };
+  }
+
+  if (minPlan === "PRO") {
+    return {
+      text: "PRO 전용",
+      className:
+        "rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700",
+    };
+  }
+
+  return {
+    text: "FREE 공개",
+    className:
+      "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700",
+  };
+}
+
+function canUserSeeMenu(
+  userPlan: "FREE" | "PRO",
+  show: boolean,
+  minPlan: "FREE" | "PRO"
+) {
+  if (!show) return false;
+  if (minPlan === "FREE") return true;
+  return userPlan === "PRO";
+}
+
 function TabButton({
   active,
   onClick,
@@ -2044,95 +2078,250 @@ export default function AdminPage() {
         {tab === "app" ? (
           <section className="mt-8 space-y-8">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-bold">앱 설정</h2>
-              <p className="mt-3 text-sm text-gray-600">
-                상단 공통 메뉴의 표시 여부와 최소 플랜을 설정합니다.
-              </p>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold">앱 설정</h2>
+                  <p className="mt-3 text-sm text-gray-600">
+                    상단 메뉴와 홈 화면 카드에 노출되는 메뉴를 한 번에 관리합니다.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSaveMenuSettings}
+                  disabled={menuSaving}
+                  className={
+                    menuSaving
+                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-400"
+                      : "inline-flex rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
+                  }
+                >
+                  {menuSaving ? "저장 중..." : "설정 저장"}
+                </button>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700">
+                  홈 카드 + 상단 메뉴 연동
+                </span>
+                <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700">
+                  FREE / PRO 노출 제어
+                </span>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <p className="text-sm font-semibold text-blue-900">
+                  표시/숨김은 메뉴 자체를 감추고, 최소 플랜은 보이는 대상을 나눕니다.
+                </p>
+                <p className="mt-2 text-sm text-blue-800">
+                  예: 회화를 표시 + PRO로 설정하면, FREE에게는 숨겨지고 PRO에게만 보입니다.
+                </p>
+              </div>
+
+              {menuMessage ? (
+                <p className="mt-4 text-sm text-gray-600">{menuMessage}</p>
+              ) : null}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {[
+                {
+                  label: "홈",
+                  showKey: "show_home",
+                  planKey: "home_min_plan",
+                  desc: "상단 메뉴의 홈에 반영됩니다.",
+                },
+                {
+                  label: "단어",
+                  showKey: "show_word",
+                  planKey: "word_min_plan",
+                  desc: "상단 메뉴 + 홈의 단어 카드에 반영됩니다.",
+                },
+                {
+                  label: "한자",
+                  showKey: "show_kanji",
+                  planKey: "kanji_min_plan",
+                  desc: "상단 메뉴 + 홈의 한자 카드에 반영됩니다.",
+                },
+                {
+                  label: "활용",
+                  showKey: "show_katsuyou",
+                  planKey: "katsuyou_min_plan",
+                  desc: "상단 메뉴 + 홈의 활용 카드에 반영됩니다.",
+                },
+                {
+                  label: "회화",
+                  showKey: "show_talk",
+                  planKey: "talk_min_plan",
+                  desc: "상단 메뉴 + 홈의 회화 카드와 추천 루틴에 반영됩니다.",
+                },
+                {
+                  label: "MY",
+                  showKey: "show_mypage",
+                  planKey: "mypage_min_plan",
+                  desc: "상단 메뉴 + 홈의 MY 보기, 최근 학습 요약에 반영됩니다.",
+                },
+                {
+                  label: "관리자",
+                  showKey: "show_admin",
+                  planKey: "admin_min_plan",
+                  desc: "상단 메뉴의 관리자 버튼에 반영됩니다.",
+                },
+              ].map((item) => {
+                const showValue = Boolean(
+                  menuSettings[item.showKey as keyof MenuSettings]
+                );
+                const minPlanValue = String(
+                  menuSettings[item.planKey as keyof MenuSettings]
+                ) as "FREE" | "PRO";
+
+                const status = getMenuStatusLabel(showValue, minPlanValue);
+
+                return (
+                  <div
+                    key={item.label}
+                    className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-xl font-bold text-gray-900">{item.label}</h3>
+                          <span className={status.className}>{status.text}</span>
+                        </div>
+                        <p className="mt-3 text-sm text-gray-600">{item.desc}</p>
+                      </div>
+
+                      <div className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700">
+                        현재 최소 플랜: {minPlanValue}
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[180px_1fr]">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700">노출 여부</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleMenuToggle(item.showKey as keyof MenuSettings, true)
+                            }
+                            className={
+                              showValue
+                                ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
+                                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                            }
+                          >
+                            표시
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleMenuToggle(item.showKey as keyof MenuSettings, false)
+                            }
+                            className={
+                              !showValue
+                                ? "rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
+                                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                            }
+                          >
+                            숨김
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700">최소 플랜</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleMenuToggle(item.planKey as keyof MenuSettings, "FREE")
+                            }
+                            className={
+                              minPlanValue === "FREE"
+                                ? "rounded-full bg-green-600 px-4 py-2 text-sm font-semibold text-white"
+                                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                            }
+                          >
+                            FREE
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleMenuToggle(item.planKey as keyof MenuSettings, "PRO")
+                            }
+                            className={
+                              minPlanValue === "PRO"
+                                ? "rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white"
+                                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                            }
+                          >
+                            PRO
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <div className="space-y-4">
-                {[
-                  { label: "홈", showKey: "show_home", planKey: "home_min_plan" },
-                  { label: "단어", showKey: "show_word", planKey: "word_min_plan" },
-                  { label: "한자", showKey: "show_kanji", planKey: "kanji_min_plan" },
-                  {
-                    label: "활용",
-                    showKey: "show_katsuyou",
-                    planKey: "katsuyou_min_plan",
-                  },
-                  { label: "회화", showKey: "show_talk", planKey: "talk_min_plan" },
-                  {
-                    label: "MY",
-                    showKey: "show_mypage",
-                    planKey: "mypage_min_plan",
-                  },
-                  {
-                    label: "관리자",
-                    showKey: "show_admin",
-                    planKey: "admin_min_plan",
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="grid grid-cols-1 gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-[120px_140px_1fr]"
-                  >
-                    <div className="flex items-center text-base font-semibold text-gray-900">
-                      {item.label}
-                    </div>
+              <h3 className="text-xl font-bold">미리보기</h3>
+              <p className="mt-3 text-sm text-gray-600">
+                현재 설정 기준으로 FREE / PRO 사용자에게 어떤 메뉴가 보이는지 요약합니다.
+              </p>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleMenuToggle(item.showKey as keyof MenuSettings, true)
-                        }
-                        className={
-                          menuSettings[item.showKey as keyof MenuSettings] === true
-                            ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
-                            : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                        }
-                      >
-                        표시
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleMenuToggle(item.showKey as keyof MenuSettings, false)
-                        }
-                        className={
-                          menuSettings[item.showKey as keyof MenuSettings] === false
-                            ? "rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
-                            : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                        }
-                      >
-                        숨김
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700">
-                        최소 플랜
-                      </label>
-                      <select
-                        value={String(menuSettings[item.planKey as keyof MenuSettings])}
-                        onChange={(e) =>
-                          handleMenuToggle(
-                            item.planKey as keyof MenuSettings,
-                            e.target.value === "PRO" ? "PRO" : "FREE"
-                          )
-                        }
-                        className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-base outline-none"
-                      >
-                        <option value="FREE">FREE</option>
-                        <option value="PRO">PRO</option>
-                      </select>
-                    </div>
+              <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-base font-semibold text-gray-900">FREE 사용자에게 보임</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {[
+                      ["홈", canUserSeeMenu("FREE", menuSettings.show_home, menuSettings.home_min_plan)],
+                      ["단어", canUserSeeMenu("FREE", menuSettings.show_word, menuSettings.word_min_plan)],
+                      ["한자", canUserSeeMenu("FREE", menuSettings.show_kanji, menuSettings.kanji_min_plan)],
+                      ["활용", canUserSeeMenu("FREE", menuSettings.show_katsuyou, menuSettings.katsuyou_min_plan)],
+                      ["회화", canUserSeeMenu("FREE", menuSettings.show_talk, menuSettings.talk_min_plan)],
+                      ["MY", canUserSeeMenu("FREE", menuSettings.show_mypage, menuSettings.mypage_min_plan)],
+                    ]
+                      .filter(([, visible]) => Boolean(visible))
+                      .map(([label]) => (
+                        <span
+                          key={String(label)}
+                          className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700"
+                        >
+                          {label}
+                        </span>
+                      ))}
                   </div>
-                ))}
+                </div>
+
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-base font-semibold text-gray-900">PRO 사용자에게 보임</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {[
+                      ["홈", canUserSeeMenu("PRO", menuSettings.show_home, menuSettings.home_min_plan)],
+                      ["단어", canUserSeeMenu("PRO", menuSettings.show_word, menuSettings.word_min_plan)],
+                      ["한자", canUserSeeMenu("PRO", menuSettings.show_kanji, menuSettings.kanji_min_plan)],
+                      ["활용", canUserSeeMenu("PRO", menuSettings.show_katsuyou, menuSettings.katsuyou_min_plan)],
+                      ["회화", canUserSeeMenu("PRO", menuSettings.show_talk, menuSettings.talk_min_plan)],
+                      ["MY", canUserSeeMenu("PRO", menuSettings.show_mypage, menuSettings.mypage_min_plan)],
+                      ["관리자", canUserSeeMenu("PRO", menuSettings.show_admin, menuSettings.admin_min_plan)],
+                    ]
+                      .filter(([, visible]) => Boolean(visible))
+                      .map(([label]) => (
+                        <span
+                          key={String(label)}
+                          className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700"
+                        >
+                          {label}
+                        </span>
+                      ))}
+                  </div>
+                </div>
               </div>
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div className="mt-6">
                 <button
                   type="button"
                   onClick={handleSaveMenuSettings}
@@ -2145,14 +2334,6 @@ export default function AdminPage() {
                 >
                   {menuSaving ? "저장 중..." : "메뉴 설정 저장"}
                 </button>
-
-                {menuMessage ? (
-                  <p className="text-sm text-gray-600">{menuMessage}</p>
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    저장 후 새로고침하면 상단 메뉴 반영을 바로 확인할 수 있습니다.
-                  </p>
-                )}
               </div>
             </div>
           </section>
