@@ -41,6 +41,7 @@ function toPolitePresent(baseKr: string): string {
     자르: "자릅니다",
     빌리: "빌립니다",
     건너: "건넙니다",
+    쓰: "씁니다",
   };
   if (special[root]) return special[root];
 
@@ -63,6 +64,8 @@ function toPast(baseKr: string): string {
     달리: "달렸다",
     쓰: "썼다",
     버리: "버렸다",
+    마시: "마셨다",
+    서: "섰다",
   };
   if (special[root]) return special[root];
 
@@ -96,6 +99,7 @@ function toPotential(baseKr: string): string {
     나가: "나갈 수 있다",
     자르: "자를 수 있다",
     가르치: "가르칠 수 있다",
+    건너: "건널 수 있다",
   };
   if (special[root]) return special[root];
 
@@ -118,6 +122,7 @@ function toImperative(baseKr: string): string {
     가르치: "가르쳐라",
     헤엄치: "헤엄쳐라",
     달리: "달려라",
+    놀: "놀아라",
   };
   if (special[root]) return special[root];
 
@@ -135,20 +140,22 @@ function toPassive(baseKr: string): string {
     샤워하다: "샤워하다(수동형)",
     대답하다: "대답하다(수동형)",
     노래하다: "노래하다(수동형)",
-    필요하다: "필요하다(수동형)",
-    서두르다: "서두르다(수동형)",
-    듣다: "듣다(수동형)",
-    죽다: "죽다(수동형)",
+    공부하다: "",
+    필요하다: "",
     쓰다: "쓰이다",
     버리다: "버려지다",
     자르다: "잘리다",
     알다: "알려지다",
     믿다: "믿어지다",
+    열다: "열리다",
     들어가다: "들어가게 되다",
+    돌아가다: "돌아가다(수동형)",
     일어나다: "일어나게 되다",
     가지다: "가지게 되다",
     헤엄치다: "헤엄치다(수동형)",
     달리다: "달리다(수동형)",
+    듣다: "듣다(수동형)",
+    죽다: "죽다(수동형)",
     마시다: "",
     만나다: "",
   };
@@ -187,10 +194,15 @@ function toConnective(baseKr: string): string {
     가르치: "가르쳐서",
     일어나: "일어나서",
     들어가: "들어가서",
+    내리: "내려서",
+    서: "서서",
+    놀: "놀아서",
+    건너: "건너서",
+    열: "열어서",
   };
   if (special[root]) return special[root];
 
-  return `${root}어서`;
+  return `${root}해서`;
 }
 
 const OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
