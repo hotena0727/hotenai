@@ -1,4 +1,4 @@
-import type { KatsuyouRow, KatsuyouPos, KrPattern } from "@/app/types/katsuyou";
+import type { KatsuyouRow, KatsuyouPos, KrPattern, VerbGroup } from "@/app/types/katsuyou";
 
 type CsvRow = Record<string, string>;
 
@@ -70,6 +70,14 @@ function normalizePattern(value: string): KrPattern | undefined {
   return undefined;
 }
 
+function normalizeVerbGroup(value: string): VerbGroup | undefined {
+  const v = String(value || "").trim();
+  if (v === "ichidan" || v === "godan" || v === "irregular") {
+    return v;
+  }
+  return undefined;
+}
+
 function toKatsuyouRow(row: CsvRow, index: number): KatsuyouRow | null {
   const pos = normalizePos(row.pos);
   if (!pos) return null;
@@ -79,6 +87,7 @@ function toKatsuyouRow(row: CsvRow, index: number): KatsuyouRow | null {
   const reading = String(row.reading || "").trim();
   const kr_root = String(row.kr_root || "").trim();
   const kr_pattern = normalizePattern(row.kr_pattern || "");
+  const verb_group = normalizeVerbGroup(row.verb_group || "");
 
   if (!jp || !kr) return null;
 
@@ -90,6 +99,7 @@ function toKatsuyouRow(row: CsvRow, index: number): KatsuyouRow | null {
     reading: reading || undefined,
     kr_root: kr_root || undefined,
     kr_pattern,
+    verb_group,
   };
 }
 
@@ -117,6 +127,13 @@ export async function loadKatsuyouRows(): Promise<KatsuyouRow[]> {
   all.push(
     ...naAdjRows
       .map((row, idx) => toKatsuyouRow(row, 10000 + idx))
+      .filter((row): row is KatsuyouRow => row !== null)
+  );
+
+  const verbRows = await loadCsvFile("/csv/katsuyou_verb.csv");
+  all.push(
+    ...verbRows
+      .map((row, idx) => toKatsuyouRow(row, 20000 + idx))
       .filter((row): row is KatsuyouRow => row !== null)
   );
 

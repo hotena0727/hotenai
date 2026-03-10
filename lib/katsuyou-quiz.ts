@@ -573,6 +573,360 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
 }
 
 /* =========================
+ * 동사 문제 생성
+ * ========================= */
+
+type VerbFormSet = {
+  plain_present: string;
+  polite_present: string;
+  plain_negative: string;
+  plain_past: string;
+  plain_negative_past: string;
+  te_form: string;
+  potential: string;
+  imperative: string;
+  volitional: string;
+  passive: string;
+  causative: string;
+  causative_passive: string;
+};
+
+type VerbKrFormSet = {
+  plain_present: string;
+  polite_present: string;
+  plain_negative: string;
+  plain_past: string;
+  plain_negative_past: string;
+  te_form: string;
+  potential: string;
+  imperative: string;
+  volitional: string;
+  passive: string;
+  causative: string;
+  causative_passive: string;
+};
+
+function godanBase(row: KatsuyouRow): string {
+  return row.jp.slice(0, -1);
+}
+
+function godanEnding(row: KatsuyouRow): string {
+  return row.jp.slice(-1);
+}
+
+function buildVerbJpForms(row: KatsuyouRow): VerbFormSet | null {
+  const baseJp = row.jp;
+  const group = row.verb_group;
+
+  if (!group) return null;
+
+  if (group === "ichidan") {
+    const stem = baseJp.slice(0, -1);
+    return {
+      plain_present: baseJp,
+      polite_present: `${stem}ます`,
+      plain_negative: `${stem}ない`,
+      plain_past: `${stem}た`,
+      plain_negative_past: `${stem}なかった`,
+      te_form: `${stem}て`,
+      potential: `${stem}られる`,
+      imperative: `${stem}ろ`,
+      volitional: `${stem}よう`,
+      passive: `${stem}られる`,
+      causative: `${stem}させる`,
+      causative_passive: `${stem}させられる`,
+    };
+  }
+
+  if (group === "irregular") {
+    if (baseJp === "する") {
+      return {
+        plain_present: "する",
+        polite_present: "します",
+        plain_negative: "しない",
+        plain_past: "した",
+        plain_negative_past: "しなかった",
+        te_form: "して",
+        potential: "できる",
+        imperative: "しろ",
+        volitional: "しよう",
+        passive: "される",
+        causative: "させる",
+        causative_passive: "させられる",
+      };
+    }
+
+    if (baseJp === "来る") {
+      return {
+        plain_present: "来る",
+        polite_present: "来ます",
+        plain_negative: "来ない",
+        plain_past: "来た",
+        plain_negative_past: "来なかった",
+        te_form: "来て",
+        potential: "来られる",
+        imperative: "来い",
+        volitional: "来よう",
+        passive: "来られる",
+        causative: "来させる",
+        causative_passive: "来させられる",
+      };
+    }
+
+    if (baseJp.endsWith("する")) {
+      const stem = baseJp.slice(0, -2);
+      return {
+        plain_present: baseJp,
+        polite_present: `${stem}します`,
+        plain_negative: `${stem}しない`,
+        plain_past: `${stem}した`,
+        plain_negative_past: `${stem}しなかった`,
+        te_form: `${stem}して`,
+        potential: `${stem}できる`,
+        imperative: `${stem}しろ`,
+        volitional: `${stem}しよう`,
+        passive: `${stem}される`,
+        causative: `${stem}させる`,
+        causative_passive: `${stem}させられる`,
+      };
+    }
+
+    return null;
+  }
+
+  const stem = godanBase(row);
+  const end = godanEnding(row);
+
+  const map = {
+    う: { i: "い", a: "わ", e: "え", o: "お", te: "って", ta: "った" },
+    く: { i: "き", a: "か", e: "け", o: "こ", te: "いて", ta: "いた" },
+    ぐ: { i: "ぎ", a: "が", e: "げ", o: "ご", te: "いで", ta: "いだ" },
+    す: { i: "し", a: "さ", e: "せ", o: "そ", te: "して", ta: "した" },
+    つ: { i: "ち", a: "た", e: "て", o: "と", te: "って", ta: "った" },
+    ぬ: { i: "に", a: "な", e: "ね", o: "の", te: "んで", ta: "んだ" },
+    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "んだ" },
+    ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "んだ" },
+    る: { i: "り", a: "ら", e: "れ", o: "ろ", te: "って", ta: "った" },
+  } as const;
+
+  const rule = map[end as keyof typeof map];
+  if (!rule) return null;
+
+  const teForm = baseJp === "行く" ? "行って" : `${stem}${rule.te}`;
+  const taForm = baseJp === "行く" ? "行った" : `${stem}${rule.ta}`;
+
+  return {
+    plain_present: baseJp,
+    polite_present: `${stem}${rule.i}ます`,
+    plain_negative: `${stem}${rule.a}ない`,
+    plain_past: taForm,
+    plain_negative_past: `${stem}${rule.a}なかった`,
+    te_form: teForm,
+    potential: `${stem}${rule.e}る`,
+    imperative: `${stem}${rule.e}`,
+    volitional: `${stem}${rule.o}う`,
+    passive: `${stem}${rule.a}れる`,
+    causative: `${stem}${rule.a}せる`,
+    causative_passive: `${stem}${rule.a}せられる`,
+  };
+}
+
+const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
+  가다: {
+    polite_present: "갑니다",
+    plain_past: "갔다",
+    plain_negative_past: "가지 않았다",
+    te_form: "가고",
+    potential: "갈 수 있다",
+    imperative: "가라",
+    volitional: "가자",
+    passive: "가게 되다",
+    causative: "가게 하다",
+    causative_passive: "가게 하게 하다",
+  },
+  오다: {
+    polite_present: "옵니다",
+    plain_past: "왔다",
+    plain_negative_past: "오지 않았다",
+    te_form: "오고",
+    potential: "올 수 있다",
+    imperative: "오라",
+    volitional: "오자",
+    passive: "오게 되다",
+    causative: "오게 하다",
+    causative_passive: "오게 하게 하다",
+  },
+  하다: {
+    polite_present: "합니다",
+    plain_past: "했다",
+    te_form: "하고",
+    potential: "할 수 있다",
+    imperative: "해라",
+    volitional: "하자",
+    passive: "되다",
+    causative: "하게 하다",
+    causative_passive: "하게 하다",
+  },
+};
+
+function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
+  const baseKr = row.kr;
+  const root = baseKr.endsWith("다") ? baseKr.slice(0, -1) : baseKr;
+
+  const base: VerbKrFormSet = {
+    plain_present: baseKr,
+    polite_present: `${root}습니다`,
+    plain_negative: `${root}지 않다`,
+    plain_past: `${root}었다`,
+    plain_negative_past: `${root}지 않았다`,
+    te_form: `${root}고`,
+    potential: `${root}을 수 있다`,
+    imperative: `${root}라`,
+    volitional: `${root}자`,
+    passive: `${root}되다`,
+    causative: `${root}게 하다`,
+    causative_passive: `${root}게 하다`,
+  };
+
+  return {
+    ...base,
+    ...(VERB_KR_OVERRIDE[baseKr] ?? {}),
+  };
+}
+
+function buildVerbForms(row: KatsuyouRow): GeneratedForm[] {
+  if (row.pos !== "verb") return [];
+
+  const jp = buildVerbJpForms(row);
+  if (!jp) return [];
+
+  const kr = buildVerbKrForms(row);
+
+  return [
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "plain_present",
+      promptKr: kr.plain_present,
+      answerJp: jp.plain_present,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "polite_present",
+      promptKr: kr.polite_present,
+      answerJp: jp.polite_present,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "plain_negative",
+      promptKr: kr.plain_negative,
+      answerJp: jp.plain_negative,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "plain_past",
+      promptKr: kr.plain_past,
+      answerJp: jp.plain_past,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "plain_negative_past",
+      promptKr: kr.plain_negative_past,
+      answerJp: jp.plain_negative_past,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "te_form",
+      promptKr: kr.te_form,
+      answerJp: jp.te_form,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "potential",
+      promptKr: kr.potential,
+      answerJp: jp.potential,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "imperative",
+      promptKr: kr.imperative,
+      answerJp: jp.imperative,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "volitional",
+      promptKr: kr.volitional,
+      answerJp: jp.volitional,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "passive",
+      promptKr: kr.passive,
+      answerJp: jp.passive,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "causative",
+      promptKr: kr.causative,
+      answerJp: jp.causative,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+    {
+      pos: "verb",
+      qtype: "kr2jp",
+      formKey: "causative_passive",
+      promptKr: kr.causative_passive,
+      answerJp: jp.causative_passive,
+      baseJp: row.jp,
+      baseKr: row.kr,
+      reading: row.reading,
+    },
+  ];
+}
+
+/* =========================
  * 공통 선택지 생성
  * ========================= */
 
@@ -622,76 +976,13 @@ function buildChoicesForKrAnswer(form: GeneratedForm, siblings: GeneratedForm[])
 }
 
 /* =========================
- * 레거시 (동사용)
- * ========================= */
-
-function buildLegacyQuiz({
-  rows,
-  qtype,
-  pos,
-  excludedWords = [],
-  size = 10,
-}: {
-  rows: KatsuyouRow[];
-  qtype: KatsuyouQType;
-  pos: KatsuyouPos;
-  excludedWords?: string[];
-  size?: number;
-}): KatsuyouQuestion[] {
-  const excludedSet = new Set(excludedWords);
-
-  const filtered = rows.filter((row) => row.pos === pos && !excludedSet.has(row.jp));
-  const fallback = rows.filter((row) => row.pos === pos);
-  const source = filtered.length >= Math.min(size, 4) ? filtered : fallback;
-
-  if (source.length === 0) return [];
-
-  const picked = shuffleArray(source).slice(0, Math.min(size, source.length));
-
-  return picked.map((row) => {
-    const correctText = qtype === "kr2jp" ? row.jp : row.kr;
-
-    const pool =
-      qtype === "kr2jp"
-        ? rows.filter((r) => r.pos === pos).map((r) => r.jp)
-        : rows.filter((r) => r.pos === pos).map((r) => r.kr);
-
-    const wrongChoices = shuffleArray(
-      uniqueStrings(pool).filter((choice) => choice !== correctText)
-    ).slice(0, 3);
-
-    const choices = shuffleArray(uniqueStrings([correctText, ...wrongChoices])).slice(0, 4);
-
-    const safeChoices =
-      choices.length === 4
-        ? choices
-        : shuffleArray(
-            uniqueStrings([correctText, ...pool.filter((v) => v !== correctText)])
-          ).slice(0, 4);
-
-    const prompt = qtype === "kr2jp" ? row.kr : row.jp;
-
-    return {
-      pos: row.pos,
-      qtype,
-      formKey: "plain_present" as KatsuyouFormKey,
-      prompt,
-      choices: safeChoices,
-      correct_text: correctText,
-      jp_word: row.jp,
-      kr_word: row.kr,
-      reading: row.reading,
-    };
-  });
-}
-
-/* =========================
  * 최종 퀴즈 생성
  * ========================= */
 
 function buildFormsForRow(row: KatsuyouRow): GeneratedForm[] {
   if (row.pos === "i_adj") return buildIAdjForms(row);
   if (row.pos === "na_adj") return buildNaAdjForms(row);
+  if (row.pos === "verb") return buildVerbForms(row);
   return [];
 }
 
@@ -708,16 +999,6 @@ export function buildKatsuyouQuiz({
   excludedWords?: string[];
   size?: number;
 }): KatsuyouQuestion[] {
-  if (pos === "verb") {
-    return buildLegacyQuiz({
-      rows,
-      qtype,
-      pos,
-      excludedWords,
-      size,
-    });
-  }
-
   const excludedSet = new Set(excludedWords);
   const filteredRows = rows.filter((row) => row.pos === pos && !excludedSet.has(row.jp));
   const fallbackRows = rows.filter((row) => row.pos === pos);

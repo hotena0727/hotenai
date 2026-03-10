@@ -1,6 +1,7 @@
 export type KatsuyouPos = "i_adj" | "na_adj" | "verb";
 export type KatsuyouQType = "kr2jp" | "jp2kr";
 export type KrPattern = "it" | "eu" | "wo" | "ha" | "reu";
+export type VerbGroup = "ichidan" | "godan" | "irregular";
 
 export type KatsuyouFormKey =
   | "plain_present"
@@ -12,7 +13,13 @@ export type KatsuyouFormKey =
   | "plain_negative_past"
   | "polite_negative_past"
   | "adverbial"
-  | "te_form";
+  | "te_form"
+  | "potential"
+  | "imperative"
+  | "volitional"
+  | "passive"
+  | "causative"
+  | "causative_passive";
 
 export type KatsuyouRow = {
   id?: string;
@@ -22,6 +29,7 @@ export type KatsuyouRow = {
   reading?: string;
   kr_root?: string;
   kr_pattern?: KrPattern;
+  verb_group?: VerbGroup;
 };
 
 export type KatsuyouQuestion = {
