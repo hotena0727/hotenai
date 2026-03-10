@@ -8,6 +8,7 @@ import type {
   KrForms,
   KrPattern,
 } from "@/app/types/katsuyou";
+import { buildVerbKrForms } from "@/lib/katsuyou-kr-verb";
 
 function shuffleArray<T>(arr: T[]): T[] {
   const copied = [...arr];
@@ -576,22 +577,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
  * 동사 문제 생성
  * ========================= */
 
-type VerbFormSet = {
-  plain_present: string;
-  polite_present: string;
-  plain_negative: string;
-  plain_past: string;
-  plain_negative_past: string;
-  te_form: string;
-  potential: string;
-  imperative: string;
-  volitional: string;
-  passive: string;
-  causative: string;
-  causative_passive: string;
-};
-
-type VerbKrFormSet = {
+type VerbJpFormSet = {
   plain_present: string;
   polite_present: string;
   plain_negative: string;
@@ -614,7 +600,7 @@ function godanEnding(row: KatsuyouRow): string {
   return row.jp.slice(-1);
 }
 
-function buildVerbJpForms(row: KatsuyouRow): VerbFormSet | null {
+function buildVerbJpForms(row: KatsuyouRow): VerbJpFormSet | null {
   const baseJp = row.jp;
   const group = row.verb_group;
 
@@ -728,220 +714,6 @@ function buildVerbJpForms(row: KatsuyouRow): VerbFormSet | null {
     passive: `${stem}${rule.a}れる`,
     causative: `${stem}${rule.a}せる`,
     causative_passive: `${stem}${rule.a}せられる`,
-  };
-}
-
-const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
-  가다: {
-    polite_present: "갑니다",
-    plain_past: "갔다",
-    plain_negative_past: "가지 않았다",
-    te_form: "가고",
-    potential: "갈 수 있다",
-    imperative: "가라",
-    volitional: "가자",
-    passive: "가게 되다",
-    causative: "가게 하다",
-    causative_passive: "(억지로) 가게 되다",
-  },
-  오다: {
-    polite_present: "옵니다",
-    plain_past: "왔다",
-    plain_negative_past: "오지 않았다",
-    te_form: "오고",
-    potential: "올 수 있다",
-    imperative: "오라",
-    volitional: "오자",
-    passive: "오게 되다",
-    causative: "오게 하다",
-    causative_passive: "(억지로) 오게 되다",
-  },
-  하다: {
-    polite_present: "합니다",
-    plain_past: "했다",
-    te_form: "하고",
-    potential: "할 수 있다",
-    imperative: "해라",
-    volitional: "하자",
-    passive: "되다",
-    causative: "하게 하다",
-    causative_passive: "(억지로) 하게 되다",
-  },
-  들어가다: {
-    plain_past: "들어갔다",
-    passive: "들어가게 되다",
-    causative_passive: "(억지로) 들어가게 되다",
-  },
-  빌리다: {
-    plain_past: "빌렸다",
-    polite_present: "빌립니다",
-    causative_passive: "(억지로) 빌리게 되다",
-  },
-  기다리다: {
-    plain_past: "기다렸다",
-  },
-  가지다: {
-    passive: "가지게 되다",
-    causative_passive: "(억지로) 가지게 되다",
-  },
-  샤워하다: {
-    potential: "샤워할 수 있다",
-    passive: "샤워하다(수동형)",
-    causative_passive: "(억지로) 샤워하게 되다",
-  },
-  조사하다: {
-    passive: "조사되다",
-    causative_passive: "(억지로) 조사하게 되다",
-  },
-  대답하다: {
-    passive: "대답하다(수동형)",
-  },
-  노래하다: {
-    passive: "노래하다(수동형)",
-  },
-  필요하다: {
-    causative_passive: "",
-  },
-  입다: {
-    imperative: "입어라",
-    causative_passive: "(억지로) 입게 되다",
-  },
-  버리다: {
-    plain_past: "버렸다",
-    passive: "버려지다",
-    causative_passive: "(억지로) 버리게 되다",
-  },
-  헤엄치다: {
-    imperative: "헤엄쳐라",
-    potential: "헤엄칠 수 있다",
-    passive: "헤엄치다(수동형)",
-  },
-  만들다: {
-    potential: "만들 수 있다",
-  },
-  일어나다: {
-    polite_present: "일어납니다",
-    plain_past: "일어났다",
-    passive: "일어나게 되다",
-    potential: "일어날 수 있다",
-  },
-  나가다: {
-    polite_present: "나갑니다",
-    potential: "나갈 수 있다",
-  },
-  쓰다: {
-    plain_past: "썼다",
-    passive: "쓰이다",
-  },
-  자다: {
-    potential: "잘 수 있다",
-  },
-  가르치다: {
-    imperative: "가르쳐라",
-  },
-  건너다: {
-    polite_present: "건넙니다",
-  },
-  놀다: {
-    polite_present: "놉니다",
-    potential: "놀 수 있다",
-  },
-  마시다: {
-    imperative: "마셔라",
-    passive: "",
-  },
-  만나다: {
-    plain_past: "만났다",
-    passive: "",
-  },
-  닫다: {
-    imperative: "닫아라",
-  },
-  자르다: {
-    passive: "잘리다",
-    potential: "자를 수 있다",
-    polite_present: "자릅니다",
-  },
-  알다: {
-    plain_past: "알았다",
-    passive: "알려지다",
-  },
-  사다: {
-    polite_present: "삽니다",
-  },
-  서두르다: {
-    passive: "서두르다(수동형)",
-  },
-  달리다: {
-    plain_past: "달렸다",
-    potential: "달릴 수 있다",
-    imperative: "달려라",
-    passive: "달리다(수동형)",
-  },
-  듣다: {
-    passive: "듣다(수동형)",
-  },
-  내리다: {
-    plain_past: "내렸다",
-  },
-  열다: {
-    polite_present: "엽니다",
-    imperative: "열어라",
-  },
-  보다: {
-    potential: "볼 수 있다",
-  },
-  믿다: {
-    passive: "믿어지다",
-  },
-  죽다: {
-    passive: "죽다(수동형)",
-  },
-  먹다: {
-    imperative: "먹어라",
-  },
-};
-
-function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
-  const baseKr = row.kr;
-  const root = baseKr.endsWith("다") ? baseKr.slice(0, -1) : baseKr;
-
-  const isHada = baseKr.endsWith("하다");
-  const stem = isHada ? baseKr.slice(0, -2) : root;
-
-  const base: VerbKrFormSet = isHada
-    ? {
-        plain_present: baseKr,
-        polite_present: `${stem}합니다`,
-        plain_negative: `${stem}하지 않다`,
-        plain_past: `${stem}했다`,
-        plain_negative_past: `${stem}하지 않았다`,
-        te_form: `${stem}하고`,
-        potential: `${stem}할 수 있다`,
-        imperative: `${stem}해라`,
-        volitional: `${stem}하자`,
-        passive: `${stem}되다`,
-        causative: `${stem}하게 하다`,
-        causative_passive: `(억지로) ${stem}하게 되다`,
-      }
-    : {
-        plain_present: baseKr,
-        polite_present: `${root}습니다`,
-        plain_negative: `${root}지 않다`,
-        plain_past: `${root}었다`,
-        plain_negative_past: `${root}지 않았다`,
-        te_form: `${root}고`,
-        potential: `${root}을 수 있다`,
-        imperative: `${root}라`,
-        volitional: `${root}자`,
-        passive: `${root}되다`,
-        causative: `${root}게 하다`,
-        causative_passive: `(억지로) ${root}게 되다`,
-      };
-
-  return {
-    ...base,
-    ...(VERB_KR_OVERRIDE[baseKr] ?? {}),
   };
 }
 
