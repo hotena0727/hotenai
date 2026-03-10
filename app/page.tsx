@@ -11,12 +11,32 @@ import {
   isWordAttempt,
 } from "@/lib/labels";
 
+type PlanType = "FREE" | "PRO";
+
 type HomeProfile = {
   id: string;
   email: string;
   full_name: string;
-  plan: string;
+  plan: PlanType;
   is_admin: boolean;
+};
+
+type MenuSettings = {
+  show_home: boolean;
+  show_word: boolean;
+  show_kanji: boolean;
+  show_katsuyou: boolean;
+  show_talk: boolean;
+  show_mypage: boolean;
+  show_admin: boolean;
+
+  home_min_plan: PlanType;
+  word_min_plan: PlanType;
+  kanji_min_plan: PlanType;
+  katsuyou_min_plan: PlanType;
+  talk_min_plan: PlanType;
+  mypage_min_plan: PlanType;
+  admin_min_plan: PlanType;
 };
 
 type DayBucket = {
@@ -26,6 +46,16 @@ type DayBucket = {
 };
 
 const DAILY_GOAL_SETS = 3;
+
+function normalizePlan(value?: string | null): PlanType {
+  return String(value || "FREE").toUpperCase() === "PRO" ? "PRO" : "FREE";
+}
+
+function canAccess(userPlan: PlanType, minPlan: PlanType, show: boolean): boolean {
+  if (!show) return false;
+  if (minPlan === "FREE") return true;
+  return userPlan === "PRO";
+}
 
 function calcCount(
   attempts: QuizAttemptRow[],
@@ -152,8 +182,27 @@ function getTodayAttemptCount(attempts: QuizAttemptRow[]) {
 
 export default function HomePage() {
   const router = useRouter();
+
   const [profile, setProfile] = useState<HomeProfile | null>(null);
   const [attempts, setAttempts] = useState<QuizAttemptRow[]>([]);
+  const [menuSettings, setMenuSettings] = useState<MenuSettings>({
+    show_home: true,
+    show_word: true,
+    show_kanji: true,
+    show_katsuyou: true,
+    show_talk: true,
+    show_mypage: true,
+    show_admin: true,
+
+    home_min_plan: "FREE",
+    word_min_plan: "FREE",
+    kanji_min_plan: "FREE",
+    katsuyou_min_plan: "FREE",
+    talk_min_plan: "FREE",
+    mypage_min_plan: "FREE",
+    admin_min_plan: "PRO",
+  });
+
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -206,9 +255,52 @@ export default function HomePage() {
           id: user.id,
           email: user.email ?? "",
           full_name: profileRow?.full_name || googleName || "",
-          plan: String(profileRow?.plan || "FREE").toUpperCase(),
+          plan: normalizePlan(profileRow?.plan),
           is_admin: Boolean(profileRow?.is_admin),
         });
+
+        const { data: menuRow, error: menuError } = await supabase
+          .from("app_menu_settings")
+          .select(`
+            show_home,
+            show_word,
+            show_kanji,
+            show_katsuyou,
+            show_talk,
+            show_mypage,
+            show_admin,
+            home_min_plan,
+            word_min_plan,
+            kanji_min_plan,
+            katsuyou_min_plan,
+            talk_min_plan,
+            mypage_min_plan,
+            admin_min_plan
+          `)
+          .eq("id", 1)
+          .maybeSingle();
+
+        if (menuError) {
+          console.error(menuError);
+        } else if (menuRow) {
+          setMenuSettings({
+            show_home: Boolean(menuRow.show_home),
+            show_word: Boolean(menuRow.show_word),
+            show_kanji: Boolean(menuRow.show_kanji),
+            show_katsuyou: Boolean(menuRow.show_katsuyou),
+            show_talk: Boolean(menuRow.show_talk),
+            show_mypage: Boolean(menuRow.show_mypage),
+            show_admin: Boolean(menuRow.show_admin),
+
+            home_min_plan: normalizePlan(menuRow.home_min_plan),
+            word_min_plan: normalizePlan(menuRow.word_min_plan),
+            kanji_min_plan: normalizePlan(menuRow.kanji_min_plan),
+            katsuyou_min_plan: normalizePlan(menuRow.katsuyou_min_plan),
+            talk_min_plan: normalizePlan(menuRow.talk_min_plan),
+            mypage_min_plan: normalizePlan(menuRow.mypage_min_plan),
+            admin_min_plan: normalizePlan(menuRow.admin_min_plan || "PRO"),
+          });
+        }
 
         const all = await fetchAllAttempts(user.id, 300);
         setAttempts(all);
@@ -299,6 +391,79 @@ export default function HomePage() {
       </main>
     );
   }
+
+  const userPlan = profile?.plan || "FREE";
+
+  const canWord = canAccess(userPlan, menuSettings.word_min_plan, menuSettings.show_word);
+  const canKanji = canAccess(userPlan, menuSettings.kanji_min_plan, menuSettings.show_kanji);
+  const canKatsuyou = canAccess(
+    userPlan,
+    menuSettings.katsuyou_min_plan,
+    menuSettings.show_katsuyou
+  );
+  const canTalk = canAccess(userPlan, menuSettings.talk_min_plan, menuSettings.show_talk);
+  const canMyPage = canAccess(
+    userPlan,
+    menuSettings.mypage_min_plan,
+    menuSettings.show_mypage
+  );
+
+  const recommendedMainHref = canTalk
+    ? "/talk"
+    : canWord
+      ? "/word"
+      : canKanji
+        ? "/kanji"
+        : canKatsuyou
+          ? "/katsuyou"
+          : null;
+
+  const recommendedMainLabel = canTalk
+    ? "🗣️ 회화 시작"
+    : canWord
+      ? "📝 단어 시작"
+      : canKanji
+        ? "🈯 한자 시작"
+        : canKatsuyou
+          ? "🔄 활용 시작"
+          : null;
+
+  const recommendedWrongHref = canMyPage
+    ? canTalk
+      ? "/mypage/wrong-talk"
+      : canWord
+        ? "/mypage/wrong-word"
+        : canKanji
+          ? "/mypage/wrong-kanji"
+          : canKatsuyou
+            ? "/mypage/wrong-katsuyou"
+            : null
+    : null;
+
+  const recommendedWrongLabel = canMyPage
+    ? canTalk
+      ? "↪️ 반복오답 루틴"
+      : canWord
+        ? "↪️ 단어 오답 루틴"
+        : canKanji
+          ? "↪️ 한자 오답 루틴"
+          : canKatsuyou
+            ? "↪️ 활용 오답 루틴"
+            : null
+    : null;
+
+  const recommendationText =
+    stats.goalPercent >= 100
+      ? "오늘 목표 달성! 내일도 1세트부터 가볍게 이어가요."
+      : canTalk
+        ? "오늘은 회화 1세트부터 가볍게 이어가보세요."
+        : canWord
+          ? "오늘은 단어 1세트부터 가볍게 이어가보세요."
+          : canKanji
+            ? "오늘은 한자 1세트부터 가볍게 이어가보세요."
+            : canKatsuyou
+              ? "오늘은 활용 1세트부터 가볍게 이어가보세요."
+              : "오늘 이용 가능한 학습 메뉴를 관리자 설정에서 확인해 주세요.";
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
@@ -393,187 +558,199 @@ export default function HomePage() {
         </div>
 
         <div className="mt-10 grid grid-cols-1 gap-4">
-          <div className="rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-2xl font-bold">📝 단어</p>
-                <p className="mt-2 text-sm text-gray-600">
-                  기본 어휘를 문제와 패턴 카드로 익혀보세요.
-                </p>
+          {canWord ? (
+            <div className="rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-2xl font-bold">📝 단어</p>
+                  <p className="mt-2 text-sm text-gray-600">
+                    기본 어휘를 문제와 패턴 카드로 익혀보세요.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold">{stats.wordCount}</p>
+                  <p className="text-xs text-gray-500">학습 횟수</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xl font-bold">{stats.wordCount}</p>
-                <p className="text-xs text-gray-500">학습 횟수</p>
-              </div>
-            </div>
 
-            <div className="mt-5 flex items-end justify-between">
-              <div>
-                <p className="text-sm text-gray-500">평균 점수</p>
-                <p className="mt-1 text-2xl font-bold">{stats.wordAvg}%</p>
+              <div className="mt-5 flex items-end justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">평균 점수</p>
+                  <p className="mt-1 text-2xl font-bold">{stats.wordAvg}%</p>
+                </div>
+                <a
+                  href="/word"
+                  className="rounded-2xl border border-blue-200 bg-white px-4 py-2 text-sm text-gray-800"
+                >
+                  단어 시작
+                </a>
               </div>
-              <a
-                href="/word"
-                className="rounded-2xl border border-blue-200 bg-white px-4 py-2 text-sm text-gray-800"
-              >
-                단어 시작
-              </a>
             </div>
-          </div>
+          ) : null}
 
-          <div className="rounded-3xl border border-green-200 bg-gradient-to-r from-green-50 to-white p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-2xl font-bold">🈯 한자</p>
-                <p className="mt-2 text-sm text-gray-600">
-                  레벨별 한자 문제를 풀며 읽기와 뜻을 익혀보세요.
-                </p>
+          {canKanji ? (
+            <div className="rounded-3xl border border-green-200 bg-gradient-to-r from-green-50 to-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-2xl font-bold">🈯 한자</p>
+                  <p className="mt-2 text-sm text-gray-600">
+                    레벨별 한자 문제를 풀며 읽기와 뜻을 익혀보세요.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold">{stats.kanjiCount}</p>
+                  <p className="text-xs text-gray-500">학습 횟수</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xl font-bold">{stats.kanjiCount}</p>
-                <p className="text-xs text-gray-500">학습 횟수</p>
-              </div>
-            </div>
 
-            <div className="mt-5 flex items-end justify-between">
-              <div>
-                <p className="text-sm text-gray-500">평균 점수</p>
-                <p className="mt-1 text-2xl font-bold">{stats.kanjiAvg}%</p>
+              <div className="mt-5 flex items-end justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">평균 점수</p>
+                  <p className="mt-1 text-2xl font-bold">{stats.kanjiAvg}%</p>
+                </div>
+                <a
+                  href="/kanji"
+                  className="rounded-2xl border border-green-200 bg-white px-4 py-2 text-sm text-gray-800"
+                >
+                  한자 시작
+                </a>
               </div>
-              <a
-                href="/kanji"
-                className="rounded-2xl border border-green-200 bg-white px-4 py-2 text-sm text-gray-800"
-              >
-                한자 시작
-              </a>
             </div>
-          </div>
+          ) : null}
 
-          <div className="rounded-3xl border border-rose-200 bg-gradient-to-r from-rose-50 to-white p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-2xl font-bold">🔄 활용</p>
-                <p className="mt-2 text-sm text-gray-600">
-                  い형용사·な형용사·동사의 기본형을 문제로 익혀보세요.
-                </p>
+          {canKatsuyou ? (
+            <div className="rounded-3xl border border-rose-200 bg-gradient-to-r from-rose-50 to-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-2xl font-bold">🔄 활용</p>
+                  <p className="mt-2 text-sm text-gray-600">
+                    い형용사·な형용사·동사의 기본형을 문제로 익혀보세요.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold">{stats.katsuyouCount}</p>
+                  <p className="text-xs text-gray-500">학습 횟수</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xl font-bold">{stats.katsuyouCount}</p>
-                <p className="text-xs text-gray-500">학습 횟수</p>
-              </div>
-            </div>
 
-            <div className="mt-5 flex items-end justify-between">
-              <div>
-                <p className="text-sm text-gray-500">평균 점수</p>
-                <p className="mt-1 text-2xl font-bold">{stats.katsuyouAvg}%</p>
+              <div className="mt-5 flex items-end justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">평균 점수</p>
+                  <p className="mt-1 text-2xl font-bold">{stats.katsuyouAvg}%</p>
+                </div>
+                <a
+                  href="/katsuyou"
+                  className="rounded-2xl border border-rose-200 bg-white px-4 py-2 text-sm text-gray-800"
+                >
+                  활용 시작
+                </a>
               </div>
-              <a
-                href="/katsuyou"
-                className="rounded-2xl border border-rose-200 bg-white px-4 py-2 text-sm text-gray-800"
-              >
-                활용 시작
-              </a>
             </div>
-          </div>
+          ) : null}
 
-          <div className="rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-50 to-white p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-2xl font-bold">🗣️ 회화</p>
-                <p className="mt-2 text-sm text-gray-600">
-                  실제 대화형 문제로 말문을 자연스럽게 열어보세요.
-                </p>
+          {canTalk ? (
+            <div className="rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-50 to-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-2xl font-bold">🗣️ 회화</p>
+                  <p className="mt-2 text-sm text-gray-600">
+                    실제 대화형 문제로 말문을 자연스럽게 열어보세요.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold">{stats.talkCount}</p>
+                  <p className="text-xs text-gray-500">학습 횟수</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xl font-bold">{stats.talkCount}</p>
-                <p className="text-xs text-gray-500">학습 횟수</p>
-              </div>
-            </div>
 
-            <div className="mt-5 flex items-end justify-between">
-              <div>
-                <p className="text-sm text-gray-500">평균 점수</p>
-                <p className="mt-1 text-2xl font-bold">{stats.talkAvg}%</p>
+              <div className="mt-5 flex items-end justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">평균 점수</p>
+                  <p className="mt-1 text-2xl font-bold">{stats.talkAvg}%</p>
+                </div>
+                <a
+                  href="/talk"
+                  className="rounded-2xl border border-purple-200 bg-white px-4 py-2 text-sm text-gray-800"
+                >
+                  회화 시작
+                </a>
               </div>
-              <a
-                href="/talk"
-                className="rounded-2xl border border-purple-200 bg-white px-4 py-2 text-sm text-gray-800"
-              >
-                회화 시작
-              </a>
             </div>
-          </div>
+          ) : null}
         </div>
 
-        <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
-          <p className="text-lg font-semibold">오늘의 추천 루틴</p>
-          <p className="mt-2 text-sm text-gray-600">
-            오늘 목표 달성에 가장 가볍게 이어가기 좋은 루틴부터 시작해보세요.
-          </p>
-
-          <div className="mt-5 rounded-2xl border border-gray-200 p-4">
-            <p className="text-base font-medium">
-              {stats.goalPercent >= 100
-                ? "오늘 목표 달성! 내일도 1세트부터 가볍게 이어가요."
-                : "오늘은 회화 1세트부터 가볍게 이어가보세요."}
+        {(recommendedMainHref || recommendedWrongHref) ? (
+          <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
+            <p className="text-lg font-semibold">오늘의 추천 루틴</p>
+            <p className="mt-2 text-sm text-gray-600">
+              오늘 목표 달성에 가장 가볍게 이어가기 좋은 루틴부터 시작해보세요.
             </p>
-          </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <a
-              href="/talk"
-              className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
-            >
-              🗣️ 회화 시작
-            </a>
+            <div className="mt-5 rounded-2xl border border-gray-200 p-4">
+              <p className="text-base font-medium">{recommendationText}</p>
+            </div>
 
-            <a
-              href="/mypage/wrong-talk"
-              className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
-            >
-              ↪️ 반복오답 루틴
-            </a>
-          </div>
-        </div>
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {recommendedMainHref && recommendedMainLabel ? (
+                <a
+                  href={recommendedMainHref}
+                  className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
+                >
+                  {recommendedMainLabel}
+                </a>
+              ) : null}
 
-        <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-lg font-semibold">최근 학습 요약</p>
-              <p className="mt-2 text-sm text-gray-600">
-                최근 저장된 학습 결과를 빠르게 확인하세요.
-              </p>
-            </div>
-            <a
-              href="/mypage"
-              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
-            >
-              MY 보기
-            </a>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500">총 학습 횟수</p>
-              <p className="mt-2 text-2xl font-bold">{stats.totalAttempts}</p>
-            </div>
-            <div className="rounded-2xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500">총 오답 수</p>
-              <p className="mt-2 text-2xl font-bold">{stats.totalWrong}</p>
-            </div>
-            <div className="rounded-2xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500">단어 + 한자 + 활용</p>
-              <p className="mt-2 text-2xl font-bold">
-                {stats.wordCount + stats.kanjiCount + stats.katsuyouCount}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500">회화</p>
-              <p className="mt-2 text-2xl font-bold">{stats.talkCount}</p>
+              {recommendedWrongHref && recommendedWrongLabel ? (
+                <a
+                  href={recommendedWrongHref}
+                  className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
+                >
+                  {recommendedWrongLabel}
+                </a>
+              ) : null}
             </div>
           </div>
-        </div>
+        ) : null}
+
+        {canMyPage ? (
+          <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-lg font-semibold">최근 학습 요약</p>
+                <p className="mt-2 text-sm text-gray-600">
+                  최근 저장된 학습 결과를 빠르게 확인하세요.
+                </p>
+              </div>
+              <a
+                href="/mypage"
+                className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+              >
+                MY 보기
+              </a>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-2xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-500">총 학습 횟수</p>
+                <p className="mt-2 text-2xl font-bold">{stats.totalAttempts}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-500">총 오답 수</p>
+                <p className="mt-2 text-2xl font-bold">{stats.totalWrong}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-500">단어 + 한자 + 활용</p>
+                <p className="mt-2 text-2xl font-bold">
+                  {stats.wordCount + stats.kanjiCount + stats.katsuyouCount}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-500">회화</p>
+                <p className="mt-2 text-2xl font-bold">{stats.talkCount}</p>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </main>
   );

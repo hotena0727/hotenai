@@ -13,8 +13,10 @@ type ActiveKey =
   | "mypage"
   | "none";
 
+type PlanType = "FREE" | "PRO";
+
 type ProfileLite = {
-  plan: string;
+  plan: PlanType;
   is_admin: boolean;
 };
 
@@ -27,14 +29,18 @@ type MenuSettings = {
   show_mypage: boolean;
   show_admin: boolean;
 
-  home_min_plan: string;
-  word_min_plan: string;
-  kanji_min_plan: string;
-  katsuyou_min_plan: string;
-  talk_min_plan: string;
-  mypage_min_plan: string;
-  admin_min_plan: string;
+  home_min_plan: PlanType;
+  word_min_plan: PlanType;
+  kanji_min_plan: PlanType;
+  katsuyou_min_plan: PlanType;
+  talk_min_plan: PlanType;
+  mypage_min_plan: PlanType;
+  admin_min_plan: PlanType;
 };
+
+function normalizePlan(value?: string | null): PlanType {
+  return String(value || "FREE").toUpperCase() === "PRO" ? "PRO" : "FREE";
+}
 
 function getActiveKey(pathname: string): ActiveKey {
   if (pathname === "/") return "home";
@@ -54,13 +60,9 @@ function shouldHideNav(pathname: string): boolean {
   );
 }
 
-function hasMenuAccess(userPlan: string, minPlan: string): boolean {
-  const current = String(userPlan || "FREE").toUpperCase();
-  const required = String(minPlan || "FREE").toUpperCase();
-
-  if (required === "FREE") return true;
-  if (required === "PRO") return current === "PRO";
-  return true;
+function hasMenuAccess(userPlan: PlanType, minPlan: PlanType): boolean {
+  if (minPlan === "FREE") return true;
+  return userPlan === "PRO";
 }
 
 export default function AppTopNav() {
@@ -113,7 +115,7 @@ export default function AppTopNav() {
           }
 
           setProfile({
-            plan: String(profileRow?.plan || "FREE").toUpperCase(),
+            plan: normalizePlan(profileRow?.plan),
             is_admin: Boolean(profileRow?.is_admin),
           });
         }
@@ -154,13 +156,13 @@ export default function AppTopNav() {
             show_mypage: Boolean(menuRow.show_mypage),
             show_admin: Boolean(menuRow.show_admin),
 
-            home_min_plan: String(menuRow.home_min_plan || "FREE").toUpperCase(),
-            word_min_plan: String(menuRow.word_min_plan || "FREE").toUpperCase(),
-            kanji_min_plan: String(menuRow.kanji_min_plan || "FREE").toUpperCase(),
-            katsuyou_min_plan: String(menuRow.katsuyou_min_plan || "FREE").toUpperCase(),
-            talk_min_plan: String(menuRow.talk_min_plan || "FREE").toUpperCase(),
-            mypage_min_plan: String(menuRow.mypage_min_plan || "FREE").toUpperCase(),
-            admin_min_plan: String(menuRow.admin_min_plan || "PRO").toUpperCase(),
+            home_min_plan: normalizePlan(menuRow.home_min_plan),
+            word_min_plan: normalizePlan(menuRow.word_min_plan),
+            kanji_min_plan: normalizePlan(menuRow.kanji_min_plan),
+            katsuyou_min_plan: normalizePlan(menuRow.katsuyou_min_plan),
+            talk_min_plan: normalizePlan(menuRow.talk_min_plan),
+            mypage_min_plan: normalizePlan(menuRow.mypage_min_plan),
+            admin_min_plan: normalizePlan(menuRow.admin_min_plan || "PRO"),
           });
         }
       } catch (error) {
