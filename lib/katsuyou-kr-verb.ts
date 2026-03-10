@@ -15,6 +15,27 @@ export type VerbKrFormSet = {
   causative_passive: string;
 };
 
+const POTENTIAL_ALLOWED = new Set([
+  "가다",
+  "오다",
+  "먹다",
+  "마시다",
+  "보다",
+  "읽다",
+  "쓰다",
+  "듣다",
+  "말하다",
+  "가르치다",
+  "만들다",
+  "열다",
+  "닫다",
+  "자르다",
+  "기다리다",
+  "헤엄치다",
+  "놀다",
+  "달리다",
+]);
+
 function stripDa(word: string): string {
   return word.endsWith("다") ? word.slice(0, -1) : word;
 }
@@ -86,8 +107,7 @@ function toNegativePast(baseKr: string): string {
 }
 
 function toPotential(baseKr: string): string {
-  const blocked = new Set(["필요하다"]);
-  if (blocked.has(baseKr)) return "";
+  if (!POTENTIAL_ALLOWED.has(baseKr)) return "";
 
   if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}할 수 있다`;
 
@@ -96,15 +116,11 @@ function toPotential(baseKr: string): string {
   const special: Record<string, string> = {
     자: "잘 수 있다",
     보: "볼 수 있다",
-    사: "살 수 있다",
     놀: "놀 수 있다",
     달리: "달릴 수 있다",
     헤엄치: "헤엄칠 수 있다",
     만들: "만들 수 있다",
-    일어나: "일어날 수 있다",
-    나가: "나갈 수 있다",
     가르치: "가르칠 수 있다",
-    건너: "건널 수 있다",
     기다리: "기다릴 수 있다",
   };
   if (special[root]) return special[root];
@@ -134,6 +150,7 @@ function toImperative(baseKr: string): string {
     달리: "달려라",
     놀: "놀아라",
     내리: "내려라",
+    쓰: "써라",
   };
   if (special[root]) return special[root];
 

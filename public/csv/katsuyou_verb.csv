@@ -1,51 +1,52 @@
-﻿pos,base_jp,base_kr,reading,verb_group
-verb,食べる,먹다,たべる,ichidan
-verb,見る,보다,みる,ichidan
-verb,起きる,일어나다,おきる,ichidan
-verb,寝る,자다,ねる,ichidan
-verb,浴びる,샤워하다,あびる,ichidan
-verb,教える,가르치다,おしえる,ichidan
-verb,借りる,빌리다,かりる,ichidan
-verb,信じる,믿다,しんじる,ichidan
-verb,着る,입다,きる,ichidan
-verb,降りる,내리다,おりる,ichidan
-verb,調べる,조사하다,しらべる,ichidan
-verb,開ける,열다,あける,ichidan
-verb,閉める,닫다,しめる,ichidan
-verb,始める,시작하다,はじめる,ichidan
-verb,続ける,계속하다,つづける,ichidan
-verb,考える,생각하다,かんがえる,ichidan
-verb,決める,정하다,きめる,ichidan
-verb,出る,나가다,でる,ichidan
-verb,捨てる,버리다,すてる,ichidan
-verb,答える,대답하다,こたえる,ichidan
-verb,書く,쓰다,かく,godan
-verb,聞く,듣다,きく,godan
-verb,話す,말하다,はなす,godan
-verb,待つ,기다리다,まつ,godan
-verb,死ぬ,죽다,しぬ,godan
-verb,読む,읽다,よむ,godan
-verb,飲む,마시다,のむ,godan
-verb,遊ぶ,놀다,あそぶ,godan
-verb,泳ぐ,헤엄치다,およぐ,godan
-verb,急ぐ,서두르다,いそぐ,godan
-verb,買う,사다,かう,godan
-verb,会う,만나다,あう,godan
-verb,使う,사용하다,つかう,godan
-verb,歌う,노래하다,うたう,godan
-verb,立つ,서다,たつ,godan
-verb,持つ,가지다,もつ,godan
-verb,帰る,돌아가다,かえる,godan
-verb,走る,달리다,はしる,godan
-verb,入る,들어가다,はいる,godan
-verb,切る,자르다,きる,godan
-verb,知る,알다,しる,godan
-verb,作る,만들다,つくる,godan
-verb,座る,앉다,すわる,godan
-verb,要る,필요하다,いる,godan
-verb,渡る,건너다,わたる,godan
-verb,する,하다,する,irregular
-verb,来る,오다,くる,irregular
-verb,勉強する,공부하다,べんきょうする,irregular
-verb,運転する,운전하다,うんてんする,irregular
-verb,散歩する,산책하다,さんぽする,irregular
+﻿base_jp,base_kr,pos,reading,verb_group,can_potential,can_passive,can_volitional,can_imperative,kr_connective,kr_passive_override,kr_potential_override,kr_imperative_override,kr_polite_present_override,kr_past_override
+行く,가다,verb,いく,godan,Y,Y,Y,Y,가서,가게 되다,갈 수 있다,가라,갑니다,갔다
+来る,오다,verb,くる,irregular,Y,Y,Y,Y,와서,오게 되다,올 수 있다,오라,옵니다,왔다
+食べる,먹다,verb,たべる,ichidan,Y,Y,Y,Y,먹어서,,먹을 수 있다,먹어라,,먹었다
+飲む,마시다,verb,のむ,godan,Y,N,Y,Y,마셔서,,,마셔라,마십니다,마셨다
+見る,보다,verb,みる,ichidan,Y,Y,Y,Y,봐서,,볼 수 있다,봐라,,
+聞く,듣다,verb,きく,godan,Y,Y,Y,Y,듣고,듣다(수동형),,,,
+話す,말하다,verb,はなす,godan,Y,Y,Y,Y,말하고,말하다(수동형),,,,
+読む,읽다,verb,よむ,godan,Y,Y,Y,Y,읽고,,,,,
+書く,쓰다,verb,かく,godan,Y,Y,Y,Y,써서,쓰이다,,써라,씁니다,썼다
+買う,사다,verb,かう,godan,N,Y,Y,Y,사서,사다(수동형),,,삽니다,
+会う,만나다,verb,あう,godan,N,N,Y,Y,만나서,,,,만납니다,만났다
+起きる,일어나다,verb,おきる,ichidan,N,Y,Y,Y,일어나서,일어나지다,,,일어납니다,일어났다
+入る,들어가다,verb,はいる,godan,N,Y,Y,Y,들어가서,들어가게 되다,,,,들어갔다
+帰る,돌아가다,verb,かえる,godan,N,Y,Y,Y,돌아가서,돌아가다(수동형),,,,
+急ぐ,서두르다,verb,いそぐ,godan,N,Y,Y,Y,서둘러서,서두르다(수동형),서두를 수 있다,,,서둘렀다
+借りる,빌리다,verb,かりる,ichidan,N,Y,Y,Y,빌려서,빌리다(수동형),,,빌립니다,빌렸다
+待つ,기다리다,verb,まつ,godan,Y,Y,Y,Y,기다려서,,기다릴 수 있다,,,기다렸다
+教える,가르치다,verb,おしえる,ichidan,Y,Y,Y,Y,가르쳐서,,가르칠 수 있다,가르쳐라,,
+作る,만들다,verb,つくる,godan,Y,Y,Y,Y,만들어서,,만들 수 있다,,,
+開ける,열다,verb,あける,ichidan,Y,Y,Y,Y,열어서,열리다,,열어라,엽니다,
+閉める,닫다,verb,しめる,ichidan,Y,Y,Y,Y,닫고,,,닫아라,,
+切る,자르다,verb,きる,godan,Y,Y,Y,Y,잘라서,잘리다,자를 수 있다,,자릅니다,
+泳ぐ,헤엄치다,verb,およぐ,godan,Y,Y,Y,Y,헤엄쳐서,헤엄치다(수동형),헤엄칠 수 있다,헤엄쳐라,,
+遊ぶ,놀다,verb,あそぶ,godan,Y,Y,Y,Y,놀아서,,놀 수 있다,놀아라,놉니다,
+走る,달리다,verb,はしる,godan,Y,Y,Y,Y,달려서,달리다(수동형),달릴 수 있다,달려라,,달렸다
+信じる,믿다,verb,しんじる,ichidan,N,Y,Y,Y,믿어서,믿어지다,,,,
+死ぬ,죽다,verb,しぬ,godan,N,Y,N,N,죽고,죽다(수동형),,,,
+立つ,서다,verb,たつ,godan,N,Y,Y,Y,서서,,,,,섰다
+下りる,내리다,verb,おりる,ichidan,N,Y,Y,Y,내려서,,,내려라,,내렸다
+持つ,가지다,verb,もつ,godan,N,Y,Y,Y,가지고,가지다(수동형),,가져라,,
+要る,필요하다,verb,いる,godan,N,N,N,N,필요하고,,,,필요합니다,필요했다
+調べる,조사하다,verb,しらべる,ichidan,N,Y,Y,Y,조사하고,조사되다,,,,
+勉強する,공부하다,verb,べんきょうする,irregular,N,N,Y,Y,공부하고,,,,,
+シャワーする,샤워하다,verb,しゃわーする,irregular,Y,Y,Y,Y,샤워하고,샤워하다(수동형),,,,
+答える,대답하다,verb,こたえる,ichidan,N,Y,Y,Y,대답하고,대답하다(수동형),,,,
+歌う,노래하다,verb,うたう,godan,N,Y,Y,Y,노래하고,노래하다(수동형),,,,
+入れる,넣다,verb,いれる,ichidan,Y,Y,Y,Y,넣어서,,넣을 수 있다,넣어라,,
+出す,꺼내다,verb,だす,godan,Y,Y,Y,Y,꺼내서,,꺼낼 수 있다,,,
+乗る,타다,verb,のる,godan,Y,Y,Y,Y,타서,,탈 수 있다,,,
+降りる,내리다,verb,おりる,ichidan,N,Y,Y,Y,내려서,,,내려라,,내렸다
+渡る,건너다,verb,わたる,godan,Y,Y,Y,Y,건너서,,건널 수 있다,,건넙니다,
+捨てる,버리다,verb,すてる,ichidan,N,Y,Y,Y,버려서,버려지다,,,,버렸다
+知る,알다,verb,しる,godan,N,Y,Y,Y,알아서,알려지다,,,,알았다
+持ち込む,들다,verb,はいる,godan,N,Y,Y,Y,들고,들다(수동형),,,,
+起こす,깨우다,verb,おこす,godan,Y,Y,Y,Y,깨워서,,깨울 수 있다,,,
+座る,앉다,verb,すわる,godan,N,Y,Y,Y,앉아서,,앉을 수 있다,,,
+立てる,세우다,verb,たてる,ichidan,Y,Y,Y,Y,세워서,,세울 수 있다,,,
+返す,돌려주다,verb,かえす,godan,Y,Y,Y,Y,돌려줘서,,돌려줄 수 있다,,,
+助ける,돕다,verb,たすける,ichidan,Y,Y,Y,Y,도와서,,도울 수 있다,,,
+選ぶ,고르다,verb,えらぶ,godan,Y,Y,Y,Y,골라서,,고를 수 있다,,,
+止める,멈추다,verb,とめる,ichidan,Y,Y,Y,Y,멈춰서,,멈출 수 있다,,,
