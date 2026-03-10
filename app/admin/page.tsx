@@ -7,6 +7,7 @@ import {
   getPlanBadge,
   getPlanLabel,
   getPlanOptions,
+  getPlanTheme,
   hasPlan,
   normalizePlan,
   type PlanCode,
@@ -145,47 +146,12 @@ function getMenuStatusLabel(show: boolean, minPlan: PlanCode) {
     text: `${getPlanLabel(minPlan)} 이상`,
     className:
       "rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700",
-    };
+  };
 }
 
 function canUserSeeMenu(userPlan: PlanCode, show: boolean, minPlan: PlanCode) {
   if (!show) return false;
   return hasPlan(userPlan, minPlan);
-}
-
-function getPlanTone(plan: PlanCode) {
-  switch (plan) {
-    case "free":
-      return {
-        pill: "border-gray-200 bg-gray-50 text-gray-700",
-        soft: "bg-gray-50 text-gray-700",
-      };
-    case "light":
-      return {
-        pill: "border-sky-200 bg-sky-50 text-sky-700",
-        soft: "bg-sky-50 text-sky-700",
-      };
-    case "standard":
-      return {
-        pill: "border-violet-200 bg-violet-50 text-violet-700",
-        soft: "bg-violet-50 text-violet-700",
-      };
-    case "pro":
-      return {
-        pill: "border-blue-200 bg-blue-50 text-blue-700",
-        soft: "bg-blue-50 text-blue-700",
-      };
-    case "vip":
-      return {
-        pill: "border-amber-200 bg-amber-50 text-amber-700",
-        soft: "bg-amber-50 text-amber-700",
-      };
-    default:
-      return {
-        pill: "border-gray-200 bg-gray-50 text-gray-700",
-        soft: "bg-gray-50 text-gray-700",
-      };
-  }
 }
 
 function TabButton({
@@ -1277,11 +1243,11 @@ export default function AdminPage() {
           <h2 className="text-lg font-bold text-gray-900">플랜 분포</h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {(["free", "light", "standard", "pro", "vip"] as PlanCode[]).map((plan) => {
-              const tone = getPlanTone(plan);
+              const theme = getPlanTheme(plan);
               return (
                 <span
                   key={plan}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${tone.pill}`}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${theme.badge}`}
                 >
                   {getPlanBadge(plan)} {stats.planCounts[plan]}명
                 </span>
@@ -1337,7 +1303,7 @@ export default function AdminPage() {
                 const durationDraft = durationDrafts[item.id] || 30;
                 const changed = draft !== item.plan || draft !== "free";
                 const saving = savingUserId === item.id;
-                const tone = getPlanTone(item.plan);
+                const theme = getPlanTheme(item.plan);
 
                 return (
                   <div
@@ -1366,10 +1332,10 @@ export default function AdminPage() {
                           만료: {item.plan !== "free" ? formatDateTime(item.plan_expires_at) : "-"}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <span className={`rounded-full border px-4 py-2 text-sm font-semibold ${tone.pill}`}>
+                          <span className={`rounded-full border px-4 py-2 text-sm font-semibold ${theme.badge}`}>
                             {getPlanBadge(item.plan)}
                           </span>
-                          <span className={`rounded-full px-4 py-2 text-sm font-semibold ${tone.soft}`}>
+                          <span className={`rounded-full border px-4 py-2 text-sm font-semibold ${theme.soft}`}>
                             {getPlanLabel(item.plan)}
                           </span>
                           {item.is_admin ? (
@@ -1709,7 +1675,7 @@ export default function AdminPage() {
                   <label className="text-base font-semibold text-gray-800">플랜 선택</label>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {PLAN_OPTIONS.map((option) => {
-                      const tone = getPlanTone(option.value);
+                      const theme = getPlanTheme(option.value);
                       return (
                         <button
                           key={option.value}
@@ -1721,7 +1687,7 @@ export default function AdminPage() {
                           }}
                           className={
                             memberMsgPlan === option.value
-                              ? `rounded-full border px-4 py-2 text-sm font-semibold ${tone.pill}`
+                              ? `rounded-full border px-4 py-2 text-sm font-semibold ${theme.badge}`
                               : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
                           }
                         >
@@ -2284,22 +2250,25 @@ export default function AdminPage() {
                       <div>
                         <p className="text-sm font-semibold text-gray-700">최소 플랜</p>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          {PLAN_OPTIONS.map((option) => (
-                            <button
-                              key={option.value}
-                              type="button"
-                              onClick={() =>
-                                handleMenuToggle(item.planKey as keyof MenuSettings, option.value)
-                              }
-                              className={
-                                minPlanValue === option.value
-                                  ? "rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white"
-                                  : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                              }
-                            >
-                              {option.badge}
-                            </button>
-                          ))}
+                          {PLAN_OPTIONS.map((option) => {
+                            const theme = getPlanTheme(option.value);
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() =>
+                                  handleMenuToggle(item.planKey as keyof MenuSettings, option.value)
+                                }
+                                className={
+                                  minPlanValue === option.value
+                                    ? `rounded-full border px-4 py-2 text-sm font-semibold ${theme.badge}`
+                                    : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                                }
+                              >
+                                {option.badge}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -2407,13 +2376,13 @@ export default function AdminPage() {
 
               <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
                 {(["free", "light", "standard", "pro", "vip"] as PlanCode[]).map((previewPlan) => {
-                  const tone = getPlanTone(previewPlan);
+                  const theme = getPlanTheme(previewPlan);
                   return (
                     <div
                       key={previewPlan}
                       className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
                     >
-                      <p className={`inline-flex rounded-full border px-3 py-1.5 text-base font-semibold ${tone.pill}`}>
+                      <p className={`inline-flex rounded-full border px-3 py-1.5 text-base font-semibold ${theme.badge}`}>
                         {getPlanBadge(previewPlan)} 사용자에게 보임
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">

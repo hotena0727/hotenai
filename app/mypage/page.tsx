@@ -26,6 +26,7 @@ import {
 import {
   getPlanBadge,
   getPlanLabel,
+  getPlanTheme,
   normalizePlan,
   type PlanCode,
 } from "@/lib/plans";
@@ -281,50 +282,19 @@ function getPlanGuideText(plan: PlanCode) {
   return "FREE 이용 중";
 }
 
-function getPlanTone(plan: PlanCode) {
+function getPlanProgressClass(plan: PlanCode) {
   switch (plan) {
-    case "free":
-      return {
-        card: "border-gray-200 bg-white",
-        badge: "border-gray-200 bg-gray-50 text-gray-700",
-        progress: "bg-gray-500",
-        soft: "bg-gray-50 text-gray-700",
-      };
     case "light":
-      return {
-        card: "border-sky-200 bg-sky-50/70",
-        badge: "border-sky-200 bg-sky-50 text-sky-700",
-        progress: "bg-sky-500",
-        soft: "bg-sky-50 text-sky-700",
-      };
+      return "bg-sky-500";
     case "standard":
-      return {
-        card: "border-violet-200 bg-violet-50/70",
-        badge: "border-violet-200 bg-violet-50 text-violet-700",
-        progress: "bg-violet-500",
-        soft: "bg-violet-50 text-violet-700",
-      };
+      return "bg-violet-500";
     case "pro":
-      return {
-        card: "border-blue-200 bg-blue-50/70",
-        badge: "border-blue-200 bg-blue-50 text-blue-700",
-        progress: "bg-blue-500",
-        soft: "bg-blue-50 text-blue-700",
-      };
+      return "bg-blue-500";
     case "vip":
-      return {
-        card: "border-amber-200 bg-amber-50/80",
-        badge: "border-amber-200 bg-amber-50 text-amber-700",
-        progress: "bg-amber-500",
-        soft: "bg-amber-50 text-amber-700",
-      };
+      return "bg-amber-500";
+    case "free":
     default:
-      return {
-        card: "border-gray-200 bg-white",
-        badge: "border-gray-200 bg-gray-50 text-gray-700",
-        progress: "bg-gray-500",
-        soft: "bg-gray-50 text-gray-700",
-      };
+      return "bg-gray-500";
   }
 }
 
@@ -805,7 +775,8 @@ export default function MyPage() {
   }
 
   const currentPlan = profile?.plan || "free";
-  const planTone = getPlanTone(currentPlan);
+  const planTheme = getPlanTheme(currentPlan);
+  const progressBarClass = getPlanProgressClass(currentPlan);
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
@@ -848,7 +819,7 @@ export default function MyPage() {
           ) : null}
         </div>
 
-        <div className={`mt-6 rounded-3xl border p-6 ${planTone.card}`}>
+        <div className={`mt-6 rounded-3xl border p-6 ${planTheme.soft}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-gray-500">현재 플랜</p>
@@ -860,11 +831,11 @@ export default function MyPage() {
               </p>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <span className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTone.badge}`}>
+                <span className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}>
                   {profile ? getPlanBadge(profile.plan) : "-"}
                 </span>
                 {profile ? (
-                  <span className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold ${planTone.soft}`}>
+                  <span className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}>
                     {getPlanLabel(profile.plan)}
                   </span>
                 ) : null}
@@ -884,7 +855,7 @@ export default function MyPage() {
 
           <div className="mt-5 h-3 rounded-full bg-white/70">
             <div
-              className={`h-3 rounded-full ${planTone.progress}`}
+              className={`h-3 rounded-full ${progressBarClass}`}
               style={{ width: `${stats.progressPercent}%` }}
             />
           </div>
@@ -897,7 +868,7 @@ export default function MyPage() {
               {stats.progressPercent}% 진행
             </div>
             {profile ? (
-              <div className={`rounded-full border px-4 py-2 text-sm font-semibold ${planTone.badge}`}>
+              <div className={`rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}>
                 {getPlanLabel(profile.plan)}
               </div>
             ) : null}

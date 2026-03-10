@@ -12,7 +12,7 @@ import {
 } from "@/lib/labels";
 import {
   getPlanBadge,
-  getPlanLabel,
+  getPlanTheme,
   hasPlan,
   normalizePlan,
   type PlanCode,
@@ -184,50 +184,19 @@ function getTodayAttemptCount(attempts: QuizAttemptRow[]) {
   }).length;
 }
 
-function getPlanTone(plan: PlanCode) {
+function getPlanProgressColors(plan: PlanCode) {
   switch (plan) {
-    case "free":
-      return {
-        badgeWrap: "border-gray-200 bg-gray-50 text-gray-700",
-        messageWrap: "border-gray-200 bg-gray-50 text-gray-900",
-        progressMain: "#6b7280",
-        progressRest: "#e5e7eb",
-      };
     case "light":
-      return {
-        badgeWrap: "border-sky-200 bg-sky-50 text-sky-700",
-        messageWrap: "border-sky-200 bg-sky-50 text-slate-900",
-        progressMain: "#38bdf8",
-        progressRest: "#e0f2fe",
-      };
+      return { main: "#38bdf8", rest: "#e0f2fe" };
     case "standard":
-      return {
-        badgeWrap: "border-violet-200 bg-violet-50 text-violet-700",
-        messageWrap: "border-violet-200 bg-violet-50 text-slate-900",
-        progressMain: "#8b5cf6",
-        progressRest: "#ede9fe",
-      };
+      return { main: "#8b5cf6", rest: "#ede9fe" };
     case "pro":
-      return {
-        badgeWrap: "border-blue-200 bg-blue-50 text-blue-700",
-        messageWrap: "border-blue-200 bg-blue-50 text-slate-900",
-        progressMain: "#3b82f6",
-        progressRest: "#dbeafe",
-      };
+      return { main: "#3b82f6", rest: "#dbeafe" };
     case "vip":
-      return {
-        badgeWrap: "border-amber-200 bg-amber-50 text-amber-700",
-        messageWrap: "border-amber-200 bg-amber-50 text-slate-900",
-        progressMain: "#f59e0b",
-        progressRest: "#fef3c7",
-      };
+      return { main: "#f59e0b", rest: "#fef3c7" };
+    case "free":
     default:
-      return {
-        badgeWrap: "border-gray-200 bg-gray-50 text-gray-700",
-        messageWrap: "border-gray-200 bg-gray-50 text-gray-900",
-        progressMain: "#6b7280",
-        progressRest: "#e5e7eb",
-      };
+      return { main: "#6b7280", rest: "#e5e7eb" };
   }
 }
 
@@ -444,7 +413,8 @@ export default function HomePage() {
   }
 
   const userPlan = profile?.plan || "free";
-  const planTone = getPlanTone(userPlan);
+  const planTheme = getPlanTheme(userPlan);
+  const progressColors = getPlanProgressColors(userPlan);
 
   const canWord = canAccess(userPlan, menuSettings.word_min_plan, menuSettings.show_word);
   const canKanji = canAccess(userPlan, menuSettings.kanji_min_plan, menuSettings.show_kanji);
@@ -526,15 +496,13 @@ export default function HomePage() {
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <span
-              className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTone.badgeWrap}`}
-            >
+            <span className={getPlanBadge(userPlan) ? `inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}` : ""}>
               {getPlanBadge(userPlan)}
             </span>
           </div>
 
           <div
-            className={`mt-4 inline-flex rounded-2xl border px-4 py-3 text-base font-medium ${planTone.messageWrap}`}
+            className={`mt-4 inline-flex rounded-2xl border px-4 py-3 text-base font-medium ${planTheme.soft}`}
           >
             • {todayMessage}
           </div>
@@ -549,7 +517,7 @@ export default function HomePage() {
             <div
               className="flex h-44 w-44 items-center justify-center rounded-full shadow-sm"
               style={{
-                background: `conic-gradient(${planTone.progressMain} ${(stats.goalPercent / 100) * 360}deg, ${planTone.progressRest} 0deg)`,
+                background: `conic-gradient(${progressColors.main} ${(stats.goalPercent / 100) * 360}deg, ${progressColors.rest} 0deg)`,
               }}
             >
               <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
@@ -743,7 +711,7 @@ export default function HomePage() {
           ) : null}
         </div>
 
-        {(recommendedMainHref || recommendedWrongHref) ? (
+        {recommendedMainHref || recommendedWrongHref ? (
           <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
             <p className="text-lg font-semibold">오늘의 추천 루틴</p>
             <p className="mt-2 text-sm text-gray-600">
