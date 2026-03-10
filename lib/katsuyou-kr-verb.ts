@@ -22,20 +22,6 @@ function hasBatchim(ch: string): boolean {
   return (code - 0xac00) % 28 !== 0;
 }
 
-function vowelOf(ch: string): number | null {
-  const code = ch.charCodeAt(0);
-  if (code < 0xac00 || code > 0xd7a3) return null;
-  const base = code - 0xac00;
-  return Math.floor((base % 588) / 28);
-}
-
-function jongOf(ch: string): number | null {
-  const code = ch.charCodeAt(0);
-  if (code < 0xac00 || code > 0xd7a3) return null;
-  const base = code - 0xac00;
-  return base % 28;
-}
-
 function makeSyllable(cho: number, jung: number, jong: number): string {
   return String.fromCharCode(0xac00 + cho * 588 + jung * 28 + jong);
 }
@@ -55,122 +41,95 @@ function replaceLast(word: string, ch: string): string {
   return word.slice(0, -1) + ch;
 }
 
-function mergeNoBatchimWithSuffix(last: string, suffixVowelChar: "아" | "어"): string | null {
-  const s = splitSyllable(last);
+function vowelIndex(ch: string): number | null {
+  const s = splitSyllable(ch);
+  return s ? s.jung : null;
+}
+
+function addBieupBatchim(word: string): string {
+  const ch = lastChar(word);
+  const s = splitSyllable(ch);
+  if (!s || s.jong !== 0) return word;
+  return word.slice(0, -1) + makeSyllable(s.cho, s.jung, 17); // ㅂ
+}
+
+function addRieulBatchim(word: string): string {
+  const ch = lastChar(word);
+  const s = splitSyllable(ch);
+  if (!s || s.jong !== 0) return word;
+  return word.slice(0, -1) + makeSyllable(s.cho, s.jung, 8); // ㄹ
+}
+
+function chooseAeo(root: string): "아" | "어" {
+  const v = vowelIndex(lastChar(root));
+  if (v === 0 || v === 8) return "아"; // ㅏ, ㅗ
+  return "어";
+}
+
+function mergeNoBatchim(root: string, suffix: "아" | "어"): string | null {
+  const ch = lastChar(root);
+  const s = splitSyllable(ch);
   if (!s || s.jong !== 0) return null;
 
-  if (suffixVowelChar === "아") {
-    if (s.jung === 8) return makeSyllable(s.cho, 9, 0); // ㅗ + ㅏ = ㅘ
-    if (s.jung === 0) return last; // ㅏ + 아 = ㅏ
+  if (suffix === "아") {
+    if (s.jung === 0) return root; // ㅏ
+    if (s.jung === 8) return replaceLast(root, makeSyllable(s.cho, 9, 0)); // ㅗ+ㅏ=ㅘ
   }
 
-  if (suffixVowelChar === "어") {
-    if (s.jung === 13) return makeSyllable(s.cho, 14, 0); // ㅜ + ㅓ = ㅝ
-    if (s.jung === 4) return makeSyllable(s.cho, 5, 0); // ㅓ + 어 = ㅓ
-    if (s.jung === 20) return makeSyllable(s.cho, 5, 0); // ㅣ + 어 = ㅕ
-    if (s.jung === 5) return last; // ㅔ + 어 -> mostly 유지
+  if (suffix === "어") {
+    if (s.jung === 4) return root; // ㅓ
+    if (s.jung === 13) return replaceLast(root, makeSyllable(s.cho, 14, 0)); // ㅜ+ㅓ=ㅝ
+    if (s.jung === 20) return replaceLast(root, makeSyllable(s.cho, 5, 0)); // ㅣ+ㅓ=ㅕ
   }
 
   return null;
 }
 
-function chooseAeo(root: string): "아" | "어" {
-  const v = vowelOf(lastChar(root));
-  if (v === 0 || v === 8) return "아"; // ㅏ, ㅗ
-  return "어";
-}
-
-function makeEoyoForm(root: string): string {
-  const special: Record<string, string> = {
+function makeEoAStem(root: string): string {
+  const direct: Record<string, string> = {
     보: "봐",
     쓰: "써",
-    사: "사",
-    자: "자",
-    서: "서",
-    켜: "켜",
+    주: "줘",
+    두: "둬",
+    마시: "마셔",
+    빌리: "빌려",
+    기다리: "기다려",
+    세우: "세워",
+    배우: "배워",
+    깨우: "깨워",
+    내리: "내려",
+    헤엄치: "헤엄쳐",
+    가르치: "가르쳐",
+    달리: "달려",
+    고르: "골라",
+    자르: "잘라",
+    서두르: "서둘러",
   };
-  if (special[root]) return special[root];
+  if (direct[root]) return direct[root];
 
   if (root.endsWith("르")) {
-    const front = root.slice(0, -1); // ...르 -> ...르
-    const before = front.slice(0, -1); // ... (drop 르)
-    const prev = lastChar(before);
-    const s = splitSyllable(prev);
-    if (s) {
-      const withRieul = makeSyllable(s.cho, s.jung, 8); // ㄹ 받침
-      const before2 = replaceLast(before, withRieul);
-      const aeo = chooseAeo(before2);
-      return `${before2}${aeo}`;
-    }
+    const front = root.slice(0, -1); // 르 제거 전
+    const before = front.slice(0, -1); // 르 제거
+    const withRieul = addRieulBatchim(before);
+    const aeo = chooseAeo(withRieul);
+    return `${withRieul}${aeo}`;
   }
 
-  const last = lastChar(root);
   const aeo = chooseAeo(root);
-  const merged = mergeNoBatchimWithSuffix(last, aeo);
-  if (merged) {
-    return replaceLast(root, merged);
-  }
-
-  if (hasBatchim(last)) {
-    return `${root}${aeo}`;
-  }
+  const merged = mergeNoBatchim(root, aeo);
+  if (merged) return merged;
 
   return `${root}${aeo}`;
 }
 
-function makePastForm(root: string): string {
-  const eoYo = makeEoyoForm(root);
+function makePolitePresent(baseKr: string): string {
+  if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}합니다`;
+
+  const root = stripDa(baseKr);
 
   const special: Record<string, string> = {
-    사: "샀다",
-    보: "봤다",
-    쓰: "썼다",
-    서: "섰다",
-    고르: "골랐다",
-    모르: "몰랐다",
-    자르: "잘랐다",
-    서두르: "서둘렀다",
-    빌리: "빌렸다",
-    기다리: "기다렸다",
-    마시: "마셨다",
-    세우: "세웠다",
-    배우: "배웠다",
-    깨우: "깨웠다",
-    주: "줬다",
-    두: "뒀다",
-    버리: "버렸다",
-    내리: "내렸다",
-    만나: "만났다",
-    알: "알았다",
-    들어가: "들어갔다",
-    일어나: "일어났다",
-    달리: "달렸다",
-  };
-  if (special[root]) return special[root];
-
-  if (eoYo.endsWith("아") || eoYo.endsWith("어") || eoYo.endsWith("여")) {
-    return `${eoYo}ㅆ다`
-      .replace("아ㅆ다", "았다")
-      .replace("어ㅆ다", "었다")
-      .replace("여ㅆ다", "였다");
-  }
-
-  if (eoYo.endsWith("와")) return `${eoYo.slice(0, -1)}왔다`;
-  if (eoYo.endsWith("워")) return `${eoYo.slice(0, -1)}웠다`;
-  if (eoYo.endsWith("려")) return `${eoYo}ㅆ다`.replace("려ㅆ다", "렸다");
-  if (eoYo.endsWith("셔")) return `${eoYo}ㅆ다`.replace("셔ㅆ다", "셨다");
-  if (eoYo.endsWith("켜")) return `${eoYo}ㅆ다`.replace("켜ㅆ다", "켰다");
-  if (eoYo.endsWith("춰")) return `${eoYo}ㅆ다`.replace("춰ㅆ다", "췄다");
-  if (eoYo.endsWith("워")) return `${eoYo}ㅆ다`.replace("워ㅆ다", "웠다");
-  if (eoYo.endsWith("와")) return `${eoYo}ㅆ다`.replace("와ㅆ다", "왔다");
-  if (eoYo.endsWith("봐")) return "봤다";
-  if (eoYo.endsWith("써")) return "썼다";
-
-  return `${eoYo}서`.replace(/서$/, "었다");
-}
-
-function makePolitePresent(root: string): string {
-  const special: Record<string, string> = {
+    가: "갑니다",
+    오: "옵니다",
     보: "봅니다",
     쓰: "씁니다",
     사: "삽니다",
@@ -187,17 +146,66 @@ function makePolitePresent(root: string): string {
     세우: "세웁니다",
     배우: "배웁니다",
     깨우: "깨웁니다",
+    가지: "가집니다",
   };
   if (special[root]) return special[root];
 
   const last = lastChar(root);
-  return hasBatchim(last) ? `${root}습니다` : `${root}ㅂ니다`.replace("ㅂ니다", "ㅂ니다");
+  if (hasBatchim(last)) return `${root}습니다`;
+
+  return `${addBieupBatchim(root)}니다`;
+}
+
+function makePast(baseKr: string): string {
+  if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}했다`;
+
+  const root = stripDa(baseKr);
+
+  const special: Record<string, string> = {
+    빌리: "빌렸다",
+    기다리: "기다렸다",
+    내리: "내렸다",
+    만나: "만났다",
+    알: "알았다",
+    들어가: "들어갔다",
+    일어나: "일어났다",
+    달리: "달렸다",
+    쓰: "썼다",
+    버리: "버렸다",
+    마시: "마셨다",
+    서: "섰다",
+    서두르: "서둘렀다",
+    사: "샀다",
+    보: "봤다",
+    고르: "골랐다",
+    자르: "잘랐다",
+    세우: "세웠다",
+    배우: "배웠다",
+    깨우: "깨웠다",
+    주: "줬다",
+    두: "뒀다",
+  };
+  if (special[root]) return special[root];
+
+  const eoa = makeEoAStem(root);
+
+  if (eoa.endsWith("아")) return `${eoa.slice(0, -1)}았다`;
+  if (eoa.endsWith("어")) return `${eoa.slice(0, -1)}었다`;
+  if (eoa.endsWith("여")) return `${eoa.slice(0, -1)}였다`;
+  if (eoa.endsWith("봐")) return "봤다";
+  if (eoa.endsWith("써")) return "썼다";
+  if (eoa.endsWith("워")) return `${eoa.slice(0, -1)}웠다`;
+  if (eoa.endsWith("와")) return `${eoa.slice(0, -1)}왔다`;
+  if (eoa.endsWith("려")) return `${eoa.slice(0, -1)}렸다`;
+  if (eoa.endsWith("셔")) return `${eoa.slice(0, -1)}셨다`;
+  if (eoa.endsWith("쳐")) return `${eoa.slice(0, -1)}쳤다`;
+  if (eoa.endsWith("켜")) return `${eoa.slice(0, -1)}켰다`;
+
+  return `${root}었다`;
 }
 
 function makePotential(baseKr: string): string {
   if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}할 수 있다`;
-
-  const root = stripDa(baseKr);
 
   const blocked = new Set([
     "필요하다",
@@ -214,6 +222,8 @@ function makePotential(baseKr: string): string {
     "사다",
   ]);
   if (blocked.has(baseKr)) return "";
+
+  const root = stripDa(baseKr);
 
   const special: Record<string, string> = {
     쓰: "쓸 수 있다",
@@ -248,12 +258,11 @@ function makePotential(baseKr: string): string {
   };
   if (special[root]) return special[root];
 
-  if (baseKr.endsWith("르다")) {
-    return `${baseKr.slice(0, -2)}를 수 있다`;
-  }
+  if (baseKr.endsWith("르다")) return `${baseKr.slice(0, -2)}를 수 있다`;
 
   const last = lastChar(root);
-  return hasBatchim(last) ? `${root}을 수 있다` : `${root}ㄹ 수 있다`.replace("ㄹ 수 있다", "ㄹ 수 있다");
+  if (hasBatchim(last)) return `${root}을 수 있다`;
+  return `${addRieulBatchim(root)} 수 있다`;
 }
 
 function makeImperative(baseKr: string): string {
@@ -292,11 +301,11 @@ function makeImperative(baseKr: string): string {
     배우: "배워라",
     자르: "잘라라",
     말하: "말해라",
+    서두르: "서둘러라",
   };
   if (special[root]) return special[root];
 
-  const eoYo = makeEoyoForm(root);
-  return `${eoYo}라`;
+  return `${makeEoAStem(root)}라`;
 }
 
 function makeVolitional(baseKr: string): string {
@@ -322,33 +331,40 @@ function makePassive(baseKr: string): string {
   ]);
   if (blocked.has(baseKr)) return "";
 
+  // 의미 전환형: 형태 그대로보다 상황 의미를 반영
+  const semantic: Record<string, string> = {
+    "돌려주다": "돌려받다",
+    // 향후 言う 계열이 들어오면 "듣다" 등으로 대응 가능
+  };
+  if (semantic[baseKr]) return semantic[baseKr];
+
   const natural: Record<string, string> = {
-    쓰다: "쓰이다",
-    버리다: "버려지다",
-    자르다: "잘리다",
-    알다: "알려지다",
-    믿다: "믿어지다",
-    열다: "열리다",
-    세우다: "세워지다",
-    조사하다: "조사되다",
+    "쓰다": "쓰이다",
+    "버리다": "버려지다",
+    "자르다": "잘리다",
+    "알다": "알려지다",
+    "믿다": "믿어지다",
+    "열다": "열리다",
+    "세우다": "세워지다",
+    "조사하다": "조사되다",
   };
   if (natural[baseKr]) return natural[baseKr];
 
   const descriptive: Record<string, string> = {
-    사다: "사다(수동형)",
-    빌리다: "빌리다(수동형)",
-    가지다: "가지다(수동형)",
-    헤엄치다: "헤엄치다(수동형)",
-    달리다: "달리다(수동형)",
-    듣다: "듣다(수동형)",
-    죽다: "죽다(수동형)",
-    돌아가다: "돌아가다(수동형)",
-    대답하다: "대답하다(수동형)",
-    노래하다: "노래하다(수동형)",
-    샤워하다: "샤워하다(수동형)",
-    서두르다: "서두르다(수동형)",
-    들어가다: "들어가게 되다",
-    일어나다: "일어나지다",
+    "사다": "사다(수동형)",
+    "빌리다": "빌리다(수동형)",
+    "가지다": "가지다(수동형)",
+    "헤엄치다": "헤엄치다(수동형)",
+    "달리다": "달리다(수동형)",
+    "듣다": "듣다(수동형)",
+    "죽다": "죽다(수동형)",
+    "돌아가다": "돌아가다(수동형)",
+    "대답하다": "대답하다(수동형)",
+    "노래하다": "노래하다(수동형)",
+    "샤워하다": "샤워하다(수동형)",
+    "서두르다": "서두르다(수동형)",
+    "들어가다": "들어가게 되다",
+    "일어나다": "일어나지다",
   };
   if (descriptive[baseKr]) return descriptive[baseKr];
 
@@ -383,7 +399,7 @@ function makeCausativePassive(baseKr: string): string {
     "빌리다",
     "헤엄치다",
     "달리다",
-    "답하다",
+    "대답하다",
     "노래하다",
   ]);
   if (blocked.has(baseKr)) return "";
@@ -427,11 +443,11 @@ function makeConnectiveB(baseKr: string): string {
     자르: "잘라서",
     사: "사서",
     말하: "말해서",
+    돌려주: "돌려줘서",
   };
   if (special[root]) return special[root];
 
-  const eoYo = makeEoyoForm(root);
-  return `${eoYo}서`;
+  return `${makeEoAStem(root)}서`;
 }
 
 function buildRestrictedNeedForms(): VerbKrFormSet {
@@ -469,8 +485,8 @@ export function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
     return buildRestrictedNeedForms();
   }
 
-  const polite_present = row.kr_polite_present_override || makePolitePresent(stripDa(baseKr));
-  const plain_past = row.kr_past_override || makePastForm(stripDa(baseKr));
+  const polite_present = row.kr_polite_present_override || makePolitePresent(baseKr);
+  const plain_past = row.kr_past_override || makePast(baseKr);
 
   const connective_a = row.kr_connective_a || makeConnectiveA(baseKr);
   const connective_b = row.kr_connective_b || makeConnectiveB(baseKr);
