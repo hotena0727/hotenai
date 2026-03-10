@@ -158,7 +158,7 @@ function makePolitePresent(baseKr: string): string {
   if (special[root]) return special[root];
 
   const last = lastChar(root);
-  if (hasBatchim(last)) return `${root}습니다}`;
+  if (hasBatchim(last)) return `${root}습니다`;
 
   return `${addBieupBatchim(root)}니다`;
 }

@@ -449,6 +449,17 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_negative_past: "불만이 아니었습니다",
     te_form: "불만이고",
   },
+  素敵: {
+    plain_present: "멋지다",
+    polite_present: "멋집니다",
+    plain_negative: "멋지지 않다",
+    polite_negative: "멋지지 않습니다",
+    plain_past: "멋졌다",
+    polite_past: "멋졌습니다",
+    plain_negative_past: "멋지지 않았다",
+    polite_negative_past: "멋지지 않았습니다",
+    te_form: "멋지고",
+  },
 };
 
 function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
