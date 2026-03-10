@@ -99,12 +99,15 @@ function toPotential(baseKr: string): string {
     만들: "만들 수 있다",
     일어나: "일어날 수 있다",
     나가: "나갈 수 있다",
-    자르: "자를 수 있다",
     가르치: "가르칠 수 있다",
     건너: "건널 수 있다",
     기다리: "기다릴 수 있다",
   };
   if (special[root]) return special[root];
+
+  if (baseKr.endsWith("르다")) {
+    return `${baseKr.slice(0, -2)}를 수 있다`;
+  }
 
   return `${root}을 수 있다`;
 }
@@ -126,6 +129,7 @@ function toImperative(baseKr: string): string {
     헤엄치: "헤엄쳐라",
     달리: "달려라",
     놀: "놀아라",
+    내리: "내려라",
   };
   if (special[root]) return special[root];
 
@@ -133,10 +137,7 @@ function toImperative(baseKr: string): string {
 }
 
 function toVolitional(baseKr: string): string {
-  const blocked = new Set([
-    "필요하다",
-  ]);
-
+  const blocked = new Set(["필요하다"]);
   if (blocked.has(baseKr)) return "";
 
   if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}하자`;
@@ -151,6 +152,7 @@ function toPassive(baseKr: string): string {
     노래하다: "노래하다(수동형)",
     공부하다: "",
     필요하다: "",
+    사다: "사다(수동형)",
     쓰다: "쓰이다",
     버리다: "버려지다",
     자르다: "잘리다",
@@ -159,7 +161,7 @@ function toPassive(baseKr: string): string {
     열다: "열리다",
     들어가다: "들어가게 되다",
     돌아가다: "돌아가다(수동형)",
-    일어나다: "일어나게 되다",
+    일어나다: "일어나지다",
     가지다: "가지다(수동형)",
     헤엄치다: "헤엄치다(수동형)",
     달리다: "달리다(수동형)",
@@ -193,22 +195,8 @@ function toConnective(baseKr: string): string {
   const root = stripDa(baseKr);
 
   const special: Record<string, string> = {
-    가: "가서",
-    오: "와서",
-    보: "봐서",
-    자르: "잘라서",
-    기다리: "기다려서",
-    마시: "마셔서",
-    헤엄치: "헤엄쳐서",
-    가르치: "가르쳐서",
-    일어나: "일어나서",
-    들어가: "들어가서",
-    내리: "내려서",
-    서: "서서",
-    놀: "놀아서",
-    건너: "건너서",
-    열: "열어서",
-    읽: "읽고",
+    자: "자서",
+    빌리: "빌려서",
   };
   if (special[root]) return special[root];
 
