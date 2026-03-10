@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { isPaidPlan, parsePlanOrNull } from "@/lib/plans";
 
 export const runtime = "nodejs";
 
@@ -69,24 +68,24 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const userId = String(body?.userId || "").trim();
-    const plan = parsePlanOrNull(body?.plan);
+    const plan = String(body?.plan || "").trim().toLowerCase();
     const durationDays = Number(body?.durationDays || 0);
 
     if (!userId) {
       return NextResponse.json({ error: "회원 ID가 필요합니다." }, { status: 400 });
     }
 
-    if (!plan) {
+    if (plan !== "free" && plan !== "pro") {
       return NextResponse.json(
-        { error: "플랜은 free, light, standard, pro, vip 중 하나여야 합니다." },
+        { error: "플랜은 free 또는 pro만 가능합니다." },
         { status: 400 }
       );
     }
 
-    if (isPaidPlan(plan)) {
+    if (plan === "pro") {
       if (!Number.isFinite(durationDays) || durationDays <= 0) {
         return NextResponse.json(
-          { error: "유료 플랜은 유효한 기간이 필요합니다." },
+          { error: "PRO 플랜은 유효한 기간이 필요합니다." },
           { status: 400 }
         );
       }
@@ -95,16 +94,16 @@ export async function POST(req: NextRequest) {
     const now = new Date();
 
     const updatePayload =
-      plan === "free"
+      plan === "pro"
         ? {
-            plan,
-            plan_started_at: null,
-            plan_expires_at: null,
-          }
-        : {
             plan,
             plan_started_at: now.toISOString(),
             plan_expires_at: addDays(now, durationDays).toISOString(),
+          }
+        : {
+            plan,
+            plan_started_at: null,
+            plan_expires_at: null,
           };
 
     const { error } = await admin.adminClient
@@ -123,7 +122,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       userId,
       plan,
-      durationDays: plan === "free" ? 0 : durationDays,
+      durationDays: plan === "pro" ? durationDays : 0,
       plan_started_at: updatePayload.plan_started_at,
       plan_expires_at: updatePayload.plan_expires_at,
     });

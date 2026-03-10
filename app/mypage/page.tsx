@@ -23,12 +23,18 @@ import {
   getAppLabelFromPosMode,
   getPrettyPosModeLabel,
 } from "@/lib/labels";
+import {
+  getPlanBadge,
+  getPlanLabel,
+  normalizePlan,
+  type PlanCode,
+} from "@/lib/plans";
 
 type MyProfile = {
   id: string;
   email: string;
   full_name: string;
-  plan: string;
+  plan: PlanCode;
   is_admin: boolean;
   plan_started_at?: string | null;
   plan_expires_at?: string | null;
@@ -254,14 +260,72 @@ function prettyAttemptLabel(posMode?: string): string {
     .replace(/\breading\b/g, "발음")
     .replace(/\bmeaning\b/g, "뜻")
     .replace(/\bkr2jp\b/g, "한→일")
+    .replace(/\bjp2kr\b/g, "일→한")
     .replace(/\bnoun\b/g, "명사")
     .replace(/\bverb\b/g, "동사")
     .replace(/\badj_i\b/g, "い형용사")
     .replace(/\badj_na\b/g, "な형용사")
+    .replace(/\bi_adj\b/g, "い형용사")
+    .replace(/\bna_adj\b/g, "な형용사")
     .replace(/\badverb\b/g, "부사")
     .replace(/\bparticle\b/g, "조사")
     .replace(/\bconjunction\b/g, "접속사")
     .replace(/\binterjection\b/g, "감탄사");
+}
+
+function getPlanGuideText(plan: PlanCode) {
+  if (plan === "vip") return "VIP 이용 중";
+  if (plan === "pro") return "PRO 이용 중";
+  if (plan === "standard") return "STANDARD 이용 중";
+  if (plan === "light") return "LIGHT 이용 중";
+  return "FREE 이용 중";
+}
+
+function getPlanTone(plan: PlanCode) {
+  switch (plan) {
+    case "free":
+      return {
+        card: "border-gray-200 bg-white",
+        badge: "border-gray-200 bg-gray-50 text-gray-700",
+        progress: "bg-gray-500",
+        soft: "bg-gray-50 text-gray-700",
+      };
+    case "light":
+      return {
+        card: "border-sky-200 bg-sky-50/70",
+        badge: "border-sky-200 bg-sky-50 text-sky-700",
+        progress: "bg-sky-500",
+        soft: "bg-sky-50 text-sky-700",
+      };
+    case "standard":
+      return {
+        card: "border-violet-200 bg-violet-50/70",
+        badge: "border-violet-200 bg-violet-50 text-violet-700",
+        progress: "bg-violet-500",
+        soft: "bg-violet-50 text-violet-700",
+      };
+    case "pro":
+      return {
+        card: "border-blue-200 bg-blue-50/70",
+        badge: "border-blue-200 bg-blue-50 text-blue-700",
+        progress: "bg-blue-500",
+        soft: "bg-blue-50 text-blue-700",
+      };
+    case "vip":
+      return {
+        card: "border-amber-200 bg-amber-50/80",
+        badge: "border-amber-200 bg-amber-50 text-amber-700",
+        progress: "bg-amber-500",
+        soft: "bg-amber-50 text-amber-700",
+      };
+    default:
+      return {
+        card: "border-gray-200 bg-white",
+        badge: "border-gray-200 bg-gray-50 text-gray-700",
+        progress: "bg-gray-500",
+        soft: "bg-gray-50 text-gray-700",
+      };
+  }
 }
 
 export default function MyPage() {
@@ -342,7 +406,7 @@ export default function MyPage() {
           id: user.id,
           email: user.email ?? "",
           full_name: profileRow?.full_name || googleName || "",
-          plan: String(profileRow?.plan || "FREE").toUpperCase(),
+          plan: normalizePlan(profileRow?.plan),
           is_admin: Boolean(profileRow?.is_admin),
           plan_started_at: profileRow?.plan_started_at ?? null,
           plan_expires_at: profileRow?.plan_expires_at ?? null,
@@ -588,19 +652,21 @@ export default function MyPage() {
   };
 
   const handleWrongExamStart = () => {
+    const countParam = `?count=${encodeURIComponent(wrongCount)}`;
+
     if (wrongApp === "word") {
-      window.location.href = "/mypage/wrong-word";
+      window.location.href = `/mypage/wrong-word${countParam}`;
       return;
     }
     if (wrongApp === "kanji") {
-      window.location.href = "/mypage/wrong-kanji";
+      window.location.href = `/mypage/wrong-kanji${countParam}`;
       return;
     }
     if (wrongApp === "katsuyou") {
-      window.location.href = "/mypage/wrong-katsuyou";
+      window.location.href = `/mypage/wrong-katsuyou${countParam}`;
       return;
     }
-    window.location.href = "/mypage/wrong-talk";
+    window.location.href = `/mypage/wrong-talk${countParam}`;
   };
 
   const todayMessageTitle =
@@ -677,11 +743,14 @@ export default function MyPage() {
     },
   ];
 
-  const groupedMessageHistory = messageHistory.reduce<Record<string, typeof messageHistory>>((acc, item) => {
-    if (!acc[item.section]) acc[item.section] = [];
-    acc[item.section].push(item);
-    return acc;
-  }, {});
+  const groupedMessageHistory = messageHistory.reduce<Record<string, typeof messageHistory>>(
+    (acc, item) => {
+      if (!acc[item.section]) acc[item.section] = [];
+      acc[item.section].push(item);
+      return acc;
+    },
+    {}
+  );
 
   const noticePermissionLabel =
     noticeStatus.permission === "granted"
@@ -735,6 +804,9 @@ export default function MyPage() {
     );
   }
 
+  const currentPlan = profile?.plan || "free";
+  const planTone = getPlanTone(currentPlan);
+
   return (
     <main className="min-h-screen bg-white text-gray-900">
       <div className="mx-auto max-w-3xl px-4 py-6">
@@ -766,53 +838,69 @@ export default function MyPage() {
             <div className="border-t border-sky-200 bg-white/70 px-5 py-4 text-sm leading-6 text-slate-700">
               <div className="font-semibold text-slate-900">브라우저별 안내</div>
               <div className="mt-2">
-                • <span className="font-semibold">iPhone / Safari</span>:
-                아래 공유 버튼 → 홈 화면에 추가
+                • <span className="font-semibold">iPhone / Safari</span>: 아래 공유 버튼 → 홈 화면에 추가
                 <br />
-                • <span className="font-semibold">Android / Chrome</span>:
-                브라우저 메뉴 → 홈 화면에 추가 또는 앱 설치
+                • <span className="font-semibold">Android / Chrome</span>: 브라우저 메뉴 → 홈 화면에 추가 또는 앱 설치
                 <br />
-                • <span className="font-semibold">삼성 인터넷</span>:
-                브라우저 메뉴 → 홈 화면에 추가
+                • <span className="font-semibold">삼성 인터넷</span>: 브라우저 메뉴 → 홈 화면에 추가
               </div>
             </div>
           ) : null}
         </div>
 
-        <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
+        <div className={`mt-6 rounded-3xl border p-6 ${planTone.card}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-gray-500">현재 플랜</p>
               <p className="mt-2 text-lg font-bold text-gray-900">
-                {profile?.plan === "PRO"
-                  ? `PRO 이용 중 · ${formatDateOnly(profile?.plan_expires_at)}까지`
-                  : "FREE 이용 중"}
+                {profile ? getPlanGuideText(profile.plan) : "-"}
+                {profile && profile.plan !== "free" && profile.plan_expires_at
+                  ? ` · ${formatDateOnly(profile.plan_expires_at)}까지`
+                  : ""}
               </p>
-              <p className="mt-2 text-sm text-gray-600">
-                {profile?.plan === "PRO"
-                  ? `시작일 ${formatDateOnly(profile?.plan_started_at)} · 만료일 ${formatDateOnly(profile?.plan_expires_at)}`
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTone.badge}`}>
+                  {profile ? getPlanBadge(profile.plan) : "-"}
+                </span>
+                {profile ? (
+                  <span className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold ${planTone.soft}`}>
+                    {getPlanLabel(profile.plan)}
+                  </span>
+                ) : null}
+              </div>
+
+              <p className="mt-3 text-sm text-gray-600">
+                {profile?.plan && profile.plan !== "free"
+                  ? `시작일 ${formatDateOnly(profile.plan_started_at)} · 만료일 ${formatDateOnly(profile.plan_expires_at)}`
                   : "현재는 FREE 플랜으로 이용 중입니다."}
               </p>
             </div>
-            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+
+            <div className="rounded-full border border-gray-200 bg-white/80 px-4 py-2 text-sm font-semibold text-gray-700">
               {profile?.full_name ? `${profile.full_name}님` : "학습 중"}
             </div>
           </div>
 
-          <div className="mt-5 h-3 rounded-full bg-gray-100">
+          <div className="mt-5 h-3 rounded-full bg-white/70">
             <div
-              className="h-3 rounded-full bg-blue-500"
+              className={`h-3 rounded-full ${planTone.progress}`}
               style={{ width: `${stats.progressPercent}%` }}
             />
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
-            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+            <div className="rounded-full border border-gray-200 bg-white/80 px-4 py-2 text-sm font-semibold text-gray-700">
               이번 달 {stats.thisMonthCount}/20회
             </div>
-            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+            <div className="rounded-full border border-gray-200 bg-white/80 px-4 py-2 text-sm font-semibold text-gray-700">
               {stats.progressPercent}% 진행
             </div>
+            {profile ? (
+              <div className={`rounded-full border px-4 py-2 text-sm font-semibold ${planTone.badge}`}>
+                {getPlanLabel(profile.plan)}
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -868,27 +956,27 @@ export default function MyPage() {
 
         <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">{stats.streak}</p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">연속 학습일</p>
+            <p className="text-2xl font-bold sm:text-4xl">{stats.streak}</p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">연속 학습일</p>
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">{stats.thisWeekCount}</p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">이번 주 풀이수</p>
+            <p className="text-2xl font-bold sm:text-4xl">{stats.thisWeekCount}</p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">이번 주 풀이수</p>
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">{stats.topWrongType}</p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">최다 오답 유형</p>
+            <p className="text-2xl font-bold sm:text-4xl">{stats.topWrongType}</p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">최다 오답 유형</p>
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">{stats.totalWrong}</p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">오답</p>
+            <p className="text-2xl font-bold sm:text-4xl">{stats.totalWrong}</p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">오답</p>
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">
+            <p className="text-2xl font-bold sm:text-4xl">
               {stats.totalAttempts === 0
                 ? "0%"
                 : `${Math.round(
@@ -897,14 +985,14 @@ export default function MyPage() {
                       100
                   )}%`}
             </p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">평균 정답률</p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">평균 정답률</p>
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl sm:text-4xl font-bold">
+            <p className="text-2xl font-bold sm:text-4xl">
               {stats.last7.reduce((sum, day) => sum + (day.total > 0 ? 1 : 0), 0)}
             </p>
-            <p className="mt-2 text-sm sm:text-lg font-semibold text-gray-700">최근 7일 학습</p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">최근 7일 학습</p>
           </div>
         </div>
 

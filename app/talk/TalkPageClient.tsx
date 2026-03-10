@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { isPaidPlan, normalizePlan } from "@/lib/plans";
 import {
   clearDailyState,
   loadDailyState,
@@ -229,7 +230,7 @@ function UpgradeHint({
         href={UPGRADE_URL}
         className="mt-3 inline-flex rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800"
       >
-        ✨ PRO 안내 보기
+        ✨ 유료 플랜 보기
       </a>
     </div>
   );
@@ -371,7 +372,7 @@ export default function TalkPage() {
   const [coachQuestion, setCoachQuestion] = useState("");
   const [coachOpen, setCoachOpen] = useState(false);
 
-  const [userPlan, setUserPlan] = useState("FREE");
+  const [userPlan, setUserPlan] = useState("free");
   const [listenUsed, setListenUsed] = useState(0);
   const [recordUsed, setRecordUsed] = useState(0);
   const [quotaMessage, setQuotaMessage] = useState("");
@@ -426,6 +427,7 @@ export default function TalkPage() {
   const waveLevelRef = useRef<number>(0.06);
   const waveformPhaseRef = useRef<number>(0);
   const waveformAnimRef = useRef<number | null>(null);
+
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(`talk-spoken-count:${todayKST()}`);
@@ -450,7 +452,6 @@ export default function TalkPage() {
       // noop
     }
   }, [spokenSentenceCount]);
-
 
   const resetPronunciationState = () => {
     if (recordedAudioUrl) {
@@ -519,7 +520,7 @@ export default function TalkPage() {
         return;
       }
 
-      if (userPlan !== "PRO") {
+      if (!isPaidPlan(userPlan)) {
         const usage = await consumeTalkFeatureUsage(
           "talk_record",
           DAILY_TALK_RECORD_LIMIT
@@ -530,10 +531,10 @@ export default function TalkPage() {
         } else {
           setRecordUsed(Number(usage.used || DAILY_TALK_RECORD_LIMIT));
           setQuotaMessage(
-            "오늘 FREE 녹음 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 제한 없이 이용할 수 있습니다."
+            "오늘 FREE 녹음 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 제한 없이 이용할 수 있습니다."
           );
           setPronError(
-            "오늘 FREE 녹음 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 제한 없이 이용할 수 있습니다."
+            "오늘 FREE 녹음 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 제한 없이 이용할 수 있습니다."
           );
           return;
         }
@@ -820,7 +821,7 @@ export default function TalkPage() {
             .eq("id", user.id)
             .maybeSingle();
 
-          setUserPlan(String(profileRow?.plan || "FREE").toUpperCase());
+          setUserPlan(normalizePlan(profileRow?.plan));
         }
 
         const cleaned = await loadTalkRows();
@@ -843,11 +844,10 @@ export default function TalkPage() {
     void loadCsv();
   }, []);
 
-
   useEffect(() => {
     const loadTalkQuota = async () => {
       try {
-        if (userPlan === "PRO") {
+        if (isPaidPlan(userPlan)) {
           setListenUsed(0);
           setRecordUsed(0);
           setQuotaMessage("");
@@ -937,7 +937,7 @@ export default function TalkPage() {
 
   const isCorrect = submitted && selected === currentQuestion?.answer_jp;
   const isWrong = submitted && selected !== currentQuestion?.answer_jp;
-  const isPro = userPlan === "PRO";
+  const isPro = isPaidPlan(userPlan);
   const listenLimitReached =
     !isPro && listenUsed >= DAILY_TALK_LISTEN_LIMIT;
   const recordLimitReached =
@@ -1022,7 +1022,7 @@ export default function TalkPage() {
         setCoachError("");
         setCoachLoading(false);
         setCoachQuestion("");
-setAudioError("");
+        setAudioError("");
         setAudioLoadingKey("");
         resetPronunciationState();
         setReviewNotice("");
@@ -1081,7 +1081,7 @@ setAudioError("");
       setAudioError("");
       setAudioLoadingKey(key);
 
-      if (userPlan !== "PRO") {
+      if (!isPaidPlan(userPlan)) {
         const usage = await consumeTalkFeatureUsage(
           "talk_listen",
           DAILY_TALK_LISTEN_LIMIT
@@ -1092,7 +1092,7 @@ setAudioError("");
         } else {
           setListenUsed(Number(usage.used || DAILY_TALK_LISTEN_LIMIT));
           setQuotaMessage(
-            "오늘 FREE 발음듣기 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 제한 없이 이용할 수 있습니다."
+            "오늘 FREE 발음듣기 3/3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 제한 없이 이용할 수 있습니다."
           );
           setAudioLoadingKey("");
           return;
@@ -1143,7 +1143,7 @@ setAudioError("");
   const handleAskCustomCoach = async () => {
     if (!currentQuestion) return;
     if (!isPro) {
-      setCoachError("AI 스마트코치는 PRO에서 이용할 수 있습니다.");
+      setCoachError("AI 스마트코치는 유료 플랜에서 이용할 수 있습니다.");
       return;
     }
 
@@ -1219,7 +1219,7 @@ setAudioError("");
     setCoachError("");
     setCoachLoading(false);
     setCoachQuestion("");
-setAudioError("");
+    setAudioError("");
     setAudioLoadingKey("");
     resetPronunciationState();
     setReviewNotice(
@@ -1276,7 +1276,7 @@ setAudioError("");
     setCoachError("");
     setCoachLoading(false);
     setCoachQuestion("");
-setAudioError("");
+    setAudioError("");
     setAudioLoadingKey("");
     resetPronunciationState();
     setViewMode("quiz");
@@ -1350,7 +1350,7 @@ setAudioError("");
     setCoachError("");
     setCoachLoading(false);
     setCoachQuestion("");
-setAudioError("");
+    setAudioError("");
     setAudioLoadingKey("");
     resetPronunciationState();
     setIsReviewing(true);
@@ -1409,7 +1409,7 @@ setAudioError("");
     setCoachError("");
     setCoachLoading(false);
     setCoachQuestion("");
-setAudioError("");
+    setAudioError("");
     setAudioLoadingKey("");
     resetPronunciationState();
     setSubmitted(true);
@@ -1493,9 +1493,9 @@ setAudioError("");
       setCoachError("");
       setCoachLoading(false);
       setCoachQuestion("");
-setAudioError("");
-    setAudioLoadingKey("");
-    resetPronunciationState();
+      setAudioError("");
+      setAudioLoadingKey("");
+      resetPronunciationState();
 
       await saveDailyState(
         {
@@ -1562,7 +1562,7 @@ setAudioError("");
     setCoachError("");
     setCoachLoading(false);
     setCoachQuestion("");
-setAudioError("");
+    setAudioError("");
     setAudioLoadingKey("");
     resetPronunciationState();
     setReviewNotice("");
@@ -1662,7 +1662,7 @@ setAudioError("");
                   }
                 >
                   {isPro
-                    ? "PRO · 발음듣기·녹음 무제한"
+                    ? `${String(userPlan).toUpperCase()} · 발음듣기·녹음 무제한`
                     : `FREE · 발음듣기 ${listenUsed}/${DAILY_TALK_LISTEN_LIMIT} · 녹음 ${recordUsed}/${DAILY_TALK_RECORD_LIMIT}`}
                 </p>
                 <p
@@ -1700,9 +1700,9 @@ setAudioError("");
               >
                 <p>
                   {isPro
-                    ? "PRO는 발음듣기와 녹음을 제한 없이 이용할 수 있고, AI 스마트코치도 사용할 수 있습니다."
+                    ? "유료 플랜은 발음듣기와 녹음을 제한 없이 이용할 수 있고, AI 스마트코치도 사용할 수 있습니다."
                     : quotaMessage ||
-                      "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 PRO에서 이용할 수 있습니다."}
+                      "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 유료 플랜에서 이용할 수 있습니다."}
                 </p>
               </div>
             ) : null}
@@ -1713,7 +1713,7 @@ setAudioError("");
                   href={UPGRADE_URL}
                   className="inline-flex rounded-2xl bg-red-500 px-4 py-2 text-sm font-semibold text-white"
                 >
-                  Pro 업그레이드
+                  유료 플랜 보기
                 </a>
               </div>
             ) : null}
@@ -1728,11 +1728,11 @@ setAudioError("");
                   onChange={(e) => handleStageChange(e.target.value)}
                   className="w-full appearance-none rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-11 text-base font-medium text-gray-900 shadow-sm outline-none transition focus:border-gray-300 focus:ring-4 focus:ring-gray-100"
                 >
-                {stageOptions.map((stage) => (
-                  <option key={stage} value={stage}>
-                    LV{stage}: 말문 트기
-                  </option>
-                ))}
+                  {stageOptions.map((stage) => (
+                    <option key={stage} value={stage}>
+                      LV{stage}: 말문 트기
+                    </option>
+                  ))}
                 </select>
                 <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
                   <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -1750,11 +1750,11 @@ setAudioError("");
                   onChange={(e) => handleTagChange(e.target.value)}
                   className="w-full appearance-none rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-11 text-base font-medium text-gray-900 shadow-sm outline-none transition focus:border-gray-300 focus:ring-4 focus:ring-gray-100"
                 >
-                {tagOptions.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
+                  {tagOptions.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
                 </select>
                 <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
                   <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -1772,12 +1772,12 @@ setAudioError("");
                   onChange={(e) => setSelectedSub(e.target.value)}
                   className="w-full appearance-none rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-11 text-base font-medium text-gray-900 shadow-sm outline-none transition focus:border-gray-300 focus:ring-4 focus:ring-gray-100"
                 >
-                <option value="전체">전체</option>
-                {subOptions.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
+                  <option value="전체">전체</option>
+                  {subOptions.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
                 </select>
                 <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
                   <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -2119,7 +2119,7 @@ setAudioError("");
                       disabled={
                         listenLimitReached ||
                         audioLoadingKey ===
-                        `partner-dialog-${currentQuestion?.qid}`
+                          `partner-dialog-${currentQuestion?.qid}`
                       }
                       className="shrink-0 p-1 text-xl leading-none"
                     >
@@ -2155,7 +2155,7 @@ setAudioError("");
                       disabled={
                         listenLimitReached ||
                         audioLoadingKey ===
-                        `answer-dialog-${currentQuestion?.qid}`
+                          `answer-dialog-${currentQuestion?.qid}`
                       }
                       className="shrink-0 p-1 text-xl leading-none"
                     >
@@ -2232,12 +2232,12 @@ setAudioError("");
                         </>
                       ) : (
                         <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
-                          AI 스마트코치는 PRO에서 이용할 수 있습니다.
+                          AI 스마트코치는 유료 플랜에서 이용할 수 있습니다.
                           <a
                             href={UPGRADE_URL}
                             className="mt-3 inline-flex rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800"
                           >
-                            ✨ PRO 안내 보기
+                            ✨ 유료 플랜 보기
                           </a>
                         </div>
                       )}
@@ -2265,12 +2265,12 @@ setAudioError("");
                     "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다."}
 
                   <UpgradeHint
-                    title={listenLimitReached ? "오늘 FREE 발음듣기 사용이 모두 끝났어요." : recordLimitReached ? "오늘 FREE 녹음 사용이 모두 끝났어요." : "PRO에서는 더 편하게 이어갈 수 있어요."}
+                    title={listenLimitReached ? "오늘 FREE 발음듣기 사용이 모두 끝났어요." : recordLimitReached ? "오늘 FREE 녹음 사용이 모두 끝났어요." : "유료 플랜에서는 더 편하게 이어갈 수 있어요."}
                     body={listenLimitReached
-                      ? "오늘은 준비된 발음듣기 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 발음듣기를 제한 없이 이용할 수 있습니다."
+                      ? "오늘은 준비된 발음듣기 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 발음듣기를 제한 없이 이용할 수 있습니다."
                       : recordLimitReached
-                        ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, PRO에서는 녹음을 제한 없이 이용할 수 있습니다."
-                        : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. PRO에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."}
+                        ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 녹음을 제한 없이 이용할 수 있습니다."
+                        : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. 유료 플랜에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."}
                   />
                 </div>
               ) : null}
@@ -2399,7 +2399,6 @@ setAudioError("");
                     </p>
                   </div>
                 )}
-
 
                 <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <button

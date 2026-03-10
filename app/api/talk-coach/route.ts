@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { isPaidPlan, normalizePlan } from "@/lib/plans";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -55,11 +56,13 @@ export async function POST(req: Request) {
 
     const question = String(body.question || "").trim();
     const context = String(body.context || "").trim();
-    const plan = String(body.plan || "").trim().toLowerCase();
+    const plan = normalizePlan(body.plan);
 
     if (!question) {
       return Response.json({ error: "question is required" }, { status: 400 });
     }
+
+    const paidUser = isPaidPlan(plan);
 
     const systemPrompt = `
 너는 하테나 일본어 회화 훈련의 AI 스마트코치다.
@@ -94,7 +97,7 @@ ${context}
 - 둘째 문단은 이유 또는 더 자연스러운 대안
 - 너무 길게 쓰지 말 것
 - 학습자가 바로 이해할 수 있게 답할 것
-${plan === "pro" ? "- 현재 사용자는 PRO 플랜 사용자다." : ""}
+${paidUser ? `- 현재 사용자는 유료 플랜 사용자다. (plan: ${plan})` : `- 현재 사용자는 FREE 플랜 사용자다. (plan: ${plan})`}
 `.trim();
 
     const response = await client.responses.create({

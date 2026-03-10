@@ -3,6 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchAllAttempts, type QuizAttemptRow } from "@/lib/attempts";
+import {
+  getPlanBadge,
+  getPlanLabel,
+  getPlanOptions,
+  hasPlan,
+  normalizePlan,
+  type PlanCode,
+} from "@/lib/plans";
 
 type AdminTab = "members" | "stats" | "push" | "logs" | "app" | "backup";
 type LogFilter = "all" | "word" | "kanji" | "talk";
@@ -11,7 +19,7 @@ type AdminProfile = {
   id: string;
   email: string;
   full_name?: string;
-  plan: string;
+  plan: PlanCode;
   is_admin: boolean;
   created_at?: string | null;
   updated_at?: string | null;
@@ -44,13 +52,13 @@ type MenuSettings = {
   show_mypage: boolean;
   show_admin: boolean;
 
-  home_min_plan: "FREE" | "PRO";
-  word_min_plan: "FREE" | "PRO";
-  kanji_min_plan: "FREE" | "PRO";
-  katsuyou_min_plan: "FREE" | "PRO";
-  talk_min_plan: "FREE" | "PRO";
-  mypage_min_plan: "FREE" | "PRO";
-  admin_min_plan: "FREE" | "PRO";
+  home_min_plan: PlanCode;
+  word_min_plan: PlanCode;
+  kanji_min_plan: PlanCode;
+  katsuyou_min_plan: PlanCode;
+  talk_min_plan: PlanCode;
+  mypage_min_plan: PlanCode;
+  admin_min_plan: PlanCode;
 };
 
 const PLAN_DURATION_OPTIONS = [
@@ -59,6 +67,8 @@ const PLAN_DURATION_OPTIONS = [
   { value: 180, label: "6개월" },
   { value: 365, label: "1년" },
 ] as const;
+
+const PLAN_OPTIONS = getPlanOptions();
 
 function addDays(base: Date, days: number) {
   const next = new Date(base);
@@ -114,7 +124,7 @@ function buildRecentLogs(attempts: QuizAttemptRow[]) {
     .slice(0, 20);
 }
 
-function getMenuStatusLabel(show: boolean, minPlan: "FREE" | "PRO") {
+function getMenuStatusLabel(show: boolean, minPlan: PlanCode) {
   if (!show) {
     return {
       text: "숨김",
@@ -123,29 +133,59 @@ function getMenuStatusLabel(show: boolean, minPlan: "FREE" | "PRO") {
     };
   }
 
-  if (minPlan === "PRO") {
+  if (minPlan === "free") {
     return {
-      text: "PRO 전용",
+      text: "FREE 공개",
       className:
-        "rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700",
+        "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700",
     };
   }
 
   return {
-    text: "FREE 공개",
+    text: `${getPlanLabel(minPlan)} 이상`,
     className:
-      "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700",
-  };
+      "rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700",
+    };
 }
 
-function canUserSeeMenu(
-  userPlan: "FREE" | "PRO",
-  show: boolean,
-  minPlan: "FREE" | "PRO"
-) {
+function canUserSeeMenu(userPlan: PlanCode, show: boolean, minPlan: PlanCode) {
   if (!show) return false;
-  if (minPlan === "FREE") return true;
-  return userPlan === "PRO";
+  return hasPlan(userPlan, minPlan);
+}
+
+function getPlanTone(plan: PlanCode) {
+  switch (plan) {
+    case "free":
+      return {
+        pill: "border-gray-200 bg-gray-50 text-gray-700",
+        soft: "bg-gray-50 text-gray-700",
+      };
+    case "light":
+      return {
+        pill: "border-sky-200 bg-sky-50 text-sky-700",
+        soft: "bg-sky-50 text-sky-700",
+      };
+    case "standard":
+      return {
+        pill: "border-violet-200 bg-violet-50 text-violet-700",
+        soft: "bg-violet-50 text-violet-700",
+      };
+    case "pro":
+      return {
+        pill: "border-blue-200 bg-blue-50 text-blue-700",
+        soft: "bg-blue-50 text-blue-700",
+      };
+    case "vip":
+      return {
+        pill: "border-amber-200 bg-amber-50 text-amber-700",
+        soft: "bg-amber-50 text-amber-700",
+      };
+    default:
+      return {
+        pill: "border-gray-200 bg-gray-50 text-gray-700",
+        soft: "bg-gray-50 text-gray-700",
+      };
+  }
 }
 
 function TabButton({
@@ -213,9 +253,7 @@ export default function AdminPage() {
   const [attempts, setAttempts] = useState<QuizAttemptRow[]>([]);
   const [memberSearch, setMemberSearch] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState("");
-  const [planDrafts, setPlanDrafts] = useState<Record<string, "FREE" | "PRO">>(
-    {}
-  );
+  const [planDrafts, setPlanDrafts] = useState<Record<string, PlanCode>>({});
   const [durationDrafts, setDurationDrafts] = useState<Record<string, number>>(
     {}
   );
@@ -231,13 +269,13 @@ export default function AdminPage() {
     show_mypage: true,
     show_admin: true,
 
-    home_min_plan: "FREE",
-    word_min_plan: "FREE",
-    kanji_min_plan: "FREE",
-    katsuyou_min_plan: "FREE",
-    talk_min_plan: "FREE",
-    mypage_min_plan: "FREE",
-    admin_min_plan: "PRO",
+    home_min_plan: "free",
+    word_min_plan: "free",
+    kanji_min_plan: "free",
+    katsuyou_min_plan: "free",
+    talk_min_plan: "free",
+    mypage_min_plan: "free",
+    admin_min_plan: "pro",
   });
   const [menuSaving, setMenuSaving] = useState(false);
   const [menuMessage, setMenuMessage] = useState("");
@@ -280,7 +318,7 @@ export default function AdminPage() {
   const [memberMsgTarget, setMemberMsgTarget] = useState<"selected" | "plan">(
     "selected"
   );
-  const [memberMsgPlan, setMemberMsgPlan] = useState<"FREE" | "PRO">("PRO");
+  const [memberMsgPlan, setMemberMsgPlan] = useState<PlanCode>("standard");
   const [memberMsgConfirm, setMemberMsgConfirm] = useState(false);
   const [memberMsgBusy, setMemberMsgBusy] = useState(false);
   const [memberMsgStatus, setMemberMsgStatus] = useState("");
@@ -349,7 +387,7 @@ export default function AdminPage() {
             id: String(row.id || ""),
             email: String(row.email || ""),
             full_name: String(row.full_name || "").trim(),
-            plan: String(row.plan || "FREE").toUpperCase(),
+            plan: normalizePlan(row.plan),
             is_admin: Boolean(row.is_admin),
             created_at: row.created_at ?? null,
             updated_at: row.updated_at ?? null,
@@ -360,12 +398,7 @@ export default function AdminPage() {
 
         setProfiles(normalizedProfiles);
         setPlanDrafts(
-          Object.fromEntries(
-            normalizedProfiles.map((item) => [
-              item.id,
-              item.plan === "PRO" ? "PRO" : "FREE",
-            ])
-          )
+          Object.fromEntries(normalizedProfiles.map((item) => [item.id, item.plan]))
         );
         setDurationDrafts(
           Object.fromEntries(normalizedProfiles.map((item) => [item.id, 30]))
@@ -405,34 +438,13 @@ export default function AdminPage() {
             show_mypage: Boolean(menuRow.show_mypage),
             show_admin: Boolean(menuRow.show_admin),
 
-            home_min_plan:
-              String(menuRow.home_min_plan || "FREE").toUpperCase() === "PRO"
-                ? "PRO"
-                : "FREE",
-            word_min_plan:
-              String(menuRow.word_min_plan || "FREE").toUpperCase() === "PRO"
-                ? "PRO"
-                : "FREE",
-            kanji_min_plan:
-              String(menuRow.kanji_min_plan || "FREE").toUpperCase() === "PRO"
-                ? "PRO"
-                : "FREE",
-            katsuyou_min_plan:
-              String(menuRow.katsuyou_min_plan || "FREE").toUpperCase() === "PRO"
-                ? "PRO"
-                : "FREE",
-            talk_min_plan:
-              String(menuRow.talk_min_plan || "FREE").toUpperCase() === "PRO"
-                ? "PRO"
-                : "FREE",
-            mypage_min_plan:
-              String(menuRow.mypage_min_plan || "FREE").toUpperCase() === "PRO"
-                ? "PRO"
-                : "FREE",
-            admin_min_plan:
-              String(menuRow.admin_min_plan || "PRO").toUpperCase() === "FREE"
-                ? "FREE"
-                : "PRO",
+            home_min_plan: normalizePlan(menuRow.home_min_plan),
+            word_min_plan: normalizePlan(menuRow.word_min_plan),
+            kanji_min_plan: normalizePlan(menuRow.kanji_min_plan),
+            katsuyou_min_plan: normalizePlan(menuRow.katsuyou_min_plan),
+            talk_min_plan: normalizePlan(menuRow.talk_min_plan),
+            mypage_min_plan: normalizePlan(menuRow.mypage_min_plan),
+            admin_min_plan: normalizePlan(menuRow.admin_min_plan || "pro"),
           });
         }
 
@@ -517,17 +529,27 @@ export default function AdminPage() {
 
   const stats = useMemo(() => {
     const totalMembers = profiles.length;
-    const proMembers = profiles.filter((item) => item.plan === "PRO").length;
+    const paidMembers = profiles.filter((item) => item.plan !== "free").length;
     const adminMembers = profiles.filter((item) => item.is_admin).length;
     const todayKey = new Date().toISOString().slice(0, 10);
     const todayQuiz = attempts.filter(
       (item) => String(item.created_at || "").slice(0, 10) === todayKey
     ).length;
+
+    const planCounts: Record<PlanCode, number> = {
+      free: profiles.filter((item) => item.plan === "free").length,
+      light: profiles.filter((item) => item.plan === "light").length,
+      standard: profiles.filter((item) => item.plan === "standard").length,
+      pro: profiles.filter((item) => item.plan === "pro").length,
+      vip: profiles.filter((item) => item.plan === "vip").length,
+    };
+
     return {
       totalMembers,
-      proMembers,
+      paidMembers,
       adminMembers,
       todayQuiz,
+      planCounts,
       wordCount: countWhere(attempts, isWordAttempt),
       kanjiCount: countWhere(attempts, isKanjiAttempt),
       talkCount: countWhere(attempts, isTalkAttempt),
@@ -558,9 +580,9 @@ export default function AdminPage() {
     });
   }, [attempts, logType, logQuery, logOnlyWrong]);
 
-  const handlePlanDraftChange = (userId: string, value: "FREE" | "PRO") => {
+  const handlePlanDraftChange = (userId: string, value: PlanCode) => {
     setPlanDrafts((prev) => ({ ...prev, [userId]: value }));
-    if (value === "PRO") {
+    if (value !== "free") {
       setDurationDrafts((prev) => ({ ...prev, [userId]: prev[userId] || 30 }));
     }
     setMemberMessage("");
@@ -573,7 +595,7 @@ export default function AdminPage() {
 
   const handleMenuToggle = (
     key: keyof MenuSettings,
-    value: boolean | "FREE" | "PRO"
+    value: boolean | PlanCode
   ) => {
     setMenuSettings((prev) => ({
       ...prev,
@@ -673,8 +695,8 @@ export default function AdminPage() {
     const current = profiles.find((item) => item.id === userId);
     if (!current || !nextPlan) return;
 
-    const currentPlan = current.plan === "PRO" ? "PRO" : "FREE";
-    const changed = currentPlan !== nextPlan || nextPlan === "PRO";
+    const currentPlan = normalizePlan(current.plan);
+    const changed = currentPlan !== nextPlan || nextPlan !== "free";
 
     if (!changed) {
       setMemberMessage("변경된 플랜이 없습니다.");
@@ -701,17 +723,18 @@ export default function AdminPage() {
         body: JSON.stringify({
           userId,
           plan: nextPlan,
-          durationDays: nextPlan === "PRO" ? durationDays : 0,
+          durationDays: nextPlan !== "free" ? durationDays : 0,
         }),
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok)
+      if (!res.ok) {
         throw new Error(String(data?.error || "플랜 저장 중 오류가 발생했습니다."));
+      }
 
       const nowIso = new Date().toISOString();
       const expiresIso =
-        nextPlan === "PRO" ? addDays(new Date(), durationDays).toISOString() : null;
+        nextPlan !== "free" ? addDays(new Date(), durationDays).toISOString() : null;
 
       setProfiles((prev) =>
         prev.map((item) =>
@@ -719,7 +742,7 @@ export default function AdminPage() {
             ? {
                 ...item,
                 plan: nextPlan,
-                plan_started_at: nextPlan === "PRO" ? nowIso : null,
+                plan_started_at: nextPlan !== "free" ? nowIso : null,
                 plan_expires_at: expiresIso,
               }
             : item
@@ -727,9 +750,9 @@ export default function AdminPage() {
       );
 
       setMemberMessage(
-        nextPlan === "PRO"
-          ? `${current.email} 회원의 플랜을 ${durationDays}일 PRO로 저장했습니다.`
-          : `${current.email} 회원의 플랜을 FREE로 저장했습니다.`
+        nextPlan !== "free"
+          ? `${current.email} 회원의 플랜을 ${durationDays}일 ${getPlanBadge(nextPlan)}로 저장했습니다.`
+          : `${current.email} 회원의 플랜을 ${getPlanBadge(nextPlan)}로 저장했습니다.`
       );
     } catch (error) {
       console.error(error);
@@ -893,8 +916,9 @@ export default function AdminPage() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok)
+      if (!res.ok) {
         throw new Error(String(data?.error || "정리 미리보기 중 오류가 발생했습니다."));
+      }
 
       setCleanupPreview(data?.preview || null);
       setCleanupReadyToRun(true);
@@ -946,8 +970,9 @@ export default function AdminPage() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok)
+      if (!res.ok) {
         throw new Error(String(data?.error || "기록 정리 중 오류가 발생했습니다."));
+      }
 
       await reloadAttempts();
       setCleanupMessage(`기록 정리 완료 · ${Number(data?.deleted || 0)}건 삭제`);
@@ -1028,8 +1053,9 @@ export default function AdminPage() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok)
+      if (!res.ok) {
         throw new Error(String(data?.error || "대상 수 확인 중 오류가 발생했습니다."));
+      }
 
       setMemberMsgProbeResult(data?.debug || null);
       setMemberMsgStatus(
@@ -1113,10 +1139,8 @@ export default function AdminPage() {
 
       setMemberMsgStatus(
         memberMsgTarget === "plan"
-          ? `${memberMsgPlan} 전체 전송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
-          : `메시지 전송 완료 · ${
-              selectedMember?.email || "선택 회원"
-            } · 전송 ${sent}건 / 실패 ${failed}건`
+          ? `${getPlanBadge(memberMsgPlan)} 전체 전송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
+          : `메시지 전송 완료 · ${selectedMember?.email || "선택 회원"} · 전송 ${sent}건 / 실패 ${failed}건`
       );
       setMemberMsgConfirm(false);
     } catch (error) {
@@ -1227,11 +1251,11 @@ export default function AdminPage() {
           {[
             ["총 회원", stats.totalMembers, "현재 등록된 회원 수"],
             [
-              "PRO 회원",
-              stats.proMembers,
+              "유료 회원",
+              stats.paidMembers,
               `전체의 ${
                 stats.totalMembers
-                  ? Math.round((stats.proMembers / stats.totalMembers) * 100)
+                  ? Math.round((stats.paidMembers / stats.totalMembers) * 100)
                   : 0
               }%`,
             ],
@@ -1240,55 +1264,40 @@ export default function AdminPage() {
           ].map(([label, value, desc]) => (
             <div
               key={String(label)}
-              className="rounded-3xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm"
+              className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5"
             >
-              <p className="text-sm sm:text-base font-semibold text-gray-500">
-                {label}
-              </p>
-              <p className="mt-3 sm:mt-4 text-2xl sm:text-3xl font-bold">{value}</p>
-              <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-600">{desc}</p>
+              <p className="text-sm font-semibold text-gray-500 sm:text-base">{label}</p>
+              <p className="mt-3 text-2xl font-bold sm:mt-4 sm:text-3xl">{value}</p>
+              <p className="mt-2 text-xs text-gray-600 sm:mt-3 sm:text-sm">{desc}</p>
             </div>
           ))}
         </section>
 
+        <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-gray-900">플랜 분포</h2>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(["free", "light", "standard", "pro", "vip"] as PlanCode[]).map((plan) => {
+              const tone = getPlanTone(plan);
+              return (
+                <span
+                  key={plan}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${tone.pill}`}
+                >
+                  {getPlanBadge(plan)} {stats.planCounts[plan]}명
+                </span>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="mt-8 border-b border-gray-200">
           <div className="flex flex-wrap gap-5">
-            <TabButton
-              active={tab === "members"}
-              onClick={() => setTab("members")}
-              icon="👥"
-              label="회원"
-            />
-            <TabButton
-              active={tab === "stats"}
-              onClick={() => setTab("stats")}
-              icon="📊"
-              label="통계"
-            />
-            <TabButton
-              active={tab === "push"}
-              onClick={() => setTab("push")}
-              icon="🔔"
-              label="푸시"
-            />
-            <TabButton
-              active={tab === "logs"}
-              onClick={() => setTab("logs")}
-              icon="🕒"
-              label="기록"
-            />
-            <TabButton
-              active={tab === "app"}
-              onClick={() => setTab("app")}
-              icon="⚙️"
-              label="앱 설정"
-            />
-            <TabButton
-              active={tab === "backup"}
-              onClick={() => setTab("backup")}
-              icon="🗂️"
-              label="백업·버전"
-            />
+            <TabButton active={tab === "members"} onClick={() => setTab("members")} icon="👥" label="회원" />
+            <TabButton active={tab === "stats"} onClick={() => setTab("stats")} icon="📊" label="통계" />
+            <TabButton active={tab === "push"} onClick={() => setTab("push")} icon="🔔" label="푸시" />
+            <TabButton active={tab === "logs"} onClick={() => setTab("logs")} icon="🕒" label="기록" />
+            <TabButton active={tab === "app"} onClick={() => setTab("app")} icon="⚙️" label="앱 설정" />
+            <TabButton active={tab === "backup"} onClick={() => setTab("backup")} icon="🗂️" label="백업·버전" />
           </div>
         </section>
 
@@ -1297,7 +1306,7 @@ export default function AdminPage() {
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="text-2xl font-bold">회원 관리</h2>
               <p className="mt-3 text-sm text-gray-600">
-                기존 플랜 변경 UI는 유지하고, 하단 기록 정리와 메시지 발송까지 연결했습니다.
+                5단계 플랜 변경, 기록 정리, 학생 메시지 발송을 한 곳에서 관리합니다.
               </p>
             </div>
 
@@ -1324,12 +1333,11 @@ export default function AdminPage() {
 
             <div className="mt-6 space-y-4">
               {filteredProfiles.map((item) => {
-                const draft =
-                  planDrafts[item.id] || (item.plan === "PRO" ? "PRO" : "FREE");
+                const draft = planDrafts[item.id] || item.plan;
                 const durationDraft = durationDrafts[item.id] || 30;
-                const changed =
-                  draft !== (item.plan === "PRO" ? "PRO" : "FREE") || draft === "PRO";
+                const changed = draft !== item.plan || draft !== "free";
                 const saving = savingUserId === item.id;
+                const tone = getPlanTone(item.plan);
 
                 return (
                   <div
@@ -1355,17 +1363,14 @@ export default function AdminPage() {
                           최근 학습: {memberRecentMap.get(item.id) || "-"}
                         </p>
                         <p className="mt-1 text-sm text-gray-600">
-                          만료: {item.plan === "PRO" ? formatDateTime(item.plan_expires_at) : "-"}
+                          만료: {item.plan !== "free" ? formatDateTime(item.plan_expires_at) : "-"}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <span
-                            className={
-                              item.plan === "PRO"
-                                ? "rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-gray-700"
-                                : "rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700"
-                            }
-                          >
-                            {item.plan.toLowerCase()}
+                          <span className={`rounded-full border px-4 py-2 text-sm font-semibold ${tone.pill}`}>
+                            {getPlanBadge(item.plan)}
+                          </span>
+                          <span className={`rounded-full px-4 py-2 text-sm font-semibold ${tone.soft}`}>
+                            {getPlanLabel(item.plan)}
                           </span>
                           {item.is_admin ? (
                             <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
@@ -1384,15 +1389,15 @@ export default function AdminPage() {
                             <select
                               value={draft}
                               onChange={(e) =>
-                                handlePlanDraftChange(
-                                  item.id,
-                                  e.target.value === "PRO" ? "PRO" : "FREE"
-                                )
+                                handlePlanDraftChange(item.id, e.target.value as PlanCode)
                               }
                               className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
                             >
-                              <option value="FREE">FREE</option>
-                              <option value="PRO">PRO</option>
+                              {PLAN_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.badge}
+                                </option>
+                              ))}
                             </select>
                           </div>
 
@@ -1405,9 +1410,9 @@ export default function AdminPage() {
                               onChange={(e) =>
                                 handleDurationDraftChange(item.id, Number(e.target.value))
                               }
-                              disabled={draft !== "PRO"}
+                              disabled={draft === "free"}
                               className={
-                                draft !== "PRO"
+                                draft === "free"
                                   ? "mt-2 w-full rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-base text-gray-400 outline-none"
                                   : "mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
                               }
@@ -1421,7 +1426,7 @@ export default function AdminPage() {
                           </div>
                         </div>
 
-                        {draft === "PRO" ? (
+                        {draft !== "free" ? (
                           <p className="text-xs text-gray-500">
                             만료 예정일:{" "}
                             {formatDateTime(addDays(new Date(), durationDraft).toISOString())}
@@ -1451,7 +1456,7 @@ export default function AdminPage() {
               })}
             </div>
 
-            <div className="mt-10 rounded-3xl border border-red-100 bg-red-50/50 p-6 shadow-sm space-y-5">
+            <div className="mt-10 space-y-5 rounded-3xl border border-red-100 bg-red-50/50 p-6 shadow-sm">
               <div>
                 <h3 className="text-2xl font-bold">기록 정리</h3>
                 <p className="mt-2 text-sm text-gray-600">
@@ -1616,7 +1621,7 @@ export default function AdminPage() {
               {cleanupMessage ? <p className="text-sm text-gray-600">{cleanupMessage}</p> : null}
             </div>
 
-            <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
+            <div className="mt-10 space-y-5 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <div>
                 <h3 className="text-2xl font-bold">학생에게 메시지 보내기</h3>
                 <p className="mt-2 text-sm text-gray-600">
@@ -1703,28 +1708,31 @@ export default function AdminPage() {
                 <div>
                   <label className="text-base font-semibold text-gray-800">플랜 선택</label>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <PillButton
-                      active={memberMsgPlan === "PRO"}
-                      onClick={() => {
-                        setMemberMsgPlan("PRO");
-                        setMemberMsgStatus("");
-                        setMemberMsgProbeResult(null);
-                      }}
-                      label="PRO"
-                    />
-                    <PillButton
-                      active={memberMsgPlan === "FREE"}
-                      onClick={() => {
-                        setMemberMsgPlan("FREE");
-                        setMemberMsgStatus("");
-                        setMemberMsgProbeResult(null);
-                      }}
-                      label="FREE"
-                    />
+                    {PLAN_OPTIONS.map((option) => {
+                      const tone = getPlanTone(option.value);
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setMemberMsgPlan(option.value);
+                            setMemberMsgStatus("");
+                            setMemberMsgProbeResult(null);
+                          }}
+                          className={
+                            memberMsgPlan === option.value
+                              ? `rounded-full border px-4 py-2 text-sm font-semibold ${tone.pill}`
+                              : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                          }
+                        >
+                          {option.badge}
+                        </button>
+                      );
+                    })}
                   </div>
                   {memberMsgTarget === "plan" ? (
                     <p className="mt-3 text-sm text-gray-600">
-                      현재 선택: {memberMsgPlan} 전체
+                      현재 선택: {getPlanBadge(memberMsgPlan)} 전체
                     </p>
                   ) : null}
                 </div>
@@ -1751,7 +1759,7 @@ export default function AdminPage() {
 
               {memberMsgProbeResult ? (
                 <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-                  <p>발송 방식: {memberMsgTarget === "plan" ? `${memberMsgPlan} 전체` : "선택 회원"}</p>
+                  <p>발송 방식: {memberMsgTarget === "plan" ? `${getPlanBadge(memberMsgPlan)} 전체` : "선택 회원"}</p>
                   <p>대상 구독 수: {memberMsgProbeResult.total ?? "-"}</p>
                   <p>매칭 행 수: {memberMsgProbeResult.matchedRows ?? "-"}</p>
                   <p>상세: {memberMsgProbeResult.detail || memberMsgProbeResult.note || "-"}</p>
@@ -1833,7 +1841,7 @@ export default function AdminPage() {
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="text-2xl font-bold">🔔 푸시 알림 보내기</h2>
               <p className="mt-3 text-sm text-gray-600">
-                테스트 발송 또는 전체 발송을 선택해 바로 알림을 보낼 수 있습니다.
+                테스트, 선택 회원, 전체 발송으로 나누어 알림을 보낼 수 있습니다.
               </p>
             </div>
             <div className="space-y-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -1919,7 +1927,7 @@ export default function AdminPage() {
                       <option value="">회원 선택</option>
                       {filteredPushProfiles.map((item) => (
                         <option key={item.id} value={item.id}>
-                          {item.email} · {item.plan}
+                          {item.email} · {getPlanBadge(item.plan)}
                         </option>
                       ))}
                     </select>
@@ -2017,8 +2025,7 @@ export default function AdminPage() {
                 <p className="text-sm text-gray-600">{pushMessage}</p>
               ) : (
                 <p className="text-sm text-gray-500">
-                  테스트 발송은 현재 관리자 계정의 구독만, 선택 회원 발송은 지정 회원의
-                  구독만, 전체 발송은 저장된 전체 구독을 대상으로 합니다.
+                  테스트 발송은 현재 관리자 계정의 구독만, 선택 회원 발송은 지정 회원의 구독만, 전체 발송은 저장된 전체 구독을 대상으로 합니다.
                 </p>
               )}
 
@@ -2046,7 +2053,7 @@ export default function AdminPage() {
               </p>
             </div>
 
-            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+            <div className="space-y-4 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap gap-3">
                 {[
                   ["all", "전체"],
@@ -2150,7 +2157,7 @@ export default function AdminPage() {
                   홈 카드 + 상단 메뉴 연동
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700">
-                  FREE / PRO 노출 제어
+                  5등급 노출 제어
                 </span>
               </div>
 
@@ -2159,7 +2166,7 @@ export default function AdminPage() {
                   표시/숨김은 메뉴 자체를 감추고, 최소 플랜은 보이는 대상을 나눕니다.
                 </p>
                 <p className="mt-2 text-sm text-blue-800">
-                  예: 회화를 표시 + PRO로 설정하면, FREE에게는 숨겨지고 PRO에게만 보입니다.
+                  예: 회화를 표시 + standard로 설정하면, standard/pro/vip에게만 보입니다.
                 </p>
               </div>
 
@@ -2216,9 +2223,9 @@ export default function AdminPage() {
                 const showValue = Boolean(
                   menuSettings[item.showKey as keyof MenuSettings]
                 );
-                const minPlanValue = String(
-                  menuSettings[item.planKey as keyof MenuSettings]
-                ) as "FREE" | "PRO";
+                const minPlanValue = menuSettings[
+                  item.planKey as keyof MenuSettings
+                ] as PlanCode;
 
                 const status = getMenuStatusLabel(showValue, minPlanValue);
 
@@ -2237,7 +2244,7 @@ export default function AdminPage() {
                       </div>
 
                       <div className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700">
-                        현재 최소 플랜: {minPlanValue}
+                        현재 최소 플랜: {getPlanBadge(minPlanValue)}
                       </div>
                     </div>
 
@@ -2277,32 +2284,22 @@ export default function AdminPage() {
                       <div>
                         <p className="text-sm font-semibold text-gray-700">최소 플랜</p>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleMenuToggle(item.planKey as keyof MenuSettings, "FREE")
-                            }
-                            className={
-                              minPlanValue === "FREE"
-                                ? "rounded-full bg-green-600 px-4 py-2 text-sm font-semibold text-white"
-                                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                            }
-                          >
-                            FREE
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleMenuToggle(item.planKey as keyof MenuSettings, "PRO")
-                            }
-                            className={
-                              minPlanValue === "PRO"
-                                ? "rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white"
-                                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                            }
-                          >
-                            PRO
-                          </button>
+                          {PLAN_OPTIONS.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() =>
+                                handleMenuToggle(item.planKey as keyof MenuSettings, option.value)
+                              }
+                              className={
+                                minPlanValue === option.value
+                                  ? "rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white"
+                                  : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                              }
+                            >
+                              {option.badge}
+                            </button>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -2405,56 +2402,43 @@ export default function AdminPage() {
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="text-xl font-bold">미리보기</h3>
               <p className="mt-3 text-sm text-gray-600">
-                현재 설정 기준으로 FREE / PRO 사용자에게 어떤 메뉴가 보이는지 요약합니다.
+                현재 설정 기준으로 사용자 등급별로 어떤 메뉴가 보이는지 요약합니다.
               </p>
 
-              <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                  <p className="text-base font-semibold text-gray-900">FREE 사용자에게 보임</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {[
-                      ["홈", canUserSeeMenu("FREE", menuSettings.show_home, menuSettings.home_min_plan)],
-                      ["단어", canUserSeeMenu("FREE", menuSettings.show_word, menuSettings.word_min_plan)],
-                      ["한자", canUserSeeMenu("FREE", menuSettings.show_kanji, menuSettings.kanji_min_plan)],
-                      ["활용", canUserSeeMenu("FREE", menuSettings.show_katsuyou, menuSettings.katsuyou_min_plan)],
-                      ["회화", canUserSeeMenu("FREE", menuSettings.show_talk, menuSettings.talk_min_plan)],
-                      ["MY", canUserSeeMenu("FREE", menuSettings.show_mypage, menuSettings.mypage_min_plan)],
-                    ]
-                      .filter(([, visible]) => Boolean(visible))
-                      .map(([label]) => (
-                        <span
-                          key={String(label)}
-                          className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700"
-                        >
-                          {label}
-                        </span>
-                      ))}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                  <p className="text-base font-semibold text-gray-900">PRO 사용자에게 보임</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {[
-                      ["홈", canUserSeeMenu("PRO", menuSettings.show_home, menuSettings.home_min_plan)],
-                      ["단어", canUserSeeMenu("PRO", menuSettings.show_word, menuSettings.word_min_plan)],
-                      ["한자", canUserSeeMenu("PRO", menuSettings.show_kanji, menuSettings.kanji_min_plan)],
-                      ["활용", canUserSeeMenu("PRO", menuSettings.show_katsuyou, menuSettings.katsuyou_min_plan)],
-                      ["회화", canUserSeeMenu("PRO", menuSettings.show_talk, menuSettings.talk_min_plan)],
-                      ["MY", canUserSeeMenu("PRO", menuSettings.show_mypage, menuSettings.mypage_min_plan)],
-                      ["관리자", canUserSeeMenu("PRO", menuSettings.show_admin, menuSettings.admin_min_plan)],
-                    ]
-                      .filter(([, visible]) => Boolean(visible))
-                      .map(([label]) => (
-                        <span
-                          key={String(label)}
-                          className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700"
-                        >
-                          {label}
-                        </span>
-                      ))}
-                  </div>
-                </div>
+              <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+                {(["free", "light", "standard", "pro", "vip"] as PlanCode[]).map((previewPlan) => {
+                  const tone = getPlanTone(previewPlan);
+                  return (
+                    <div
+                      key={previewPlan}
+                      className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+                    >
+                      <p className={`inline-flex rounded-full border px-3 py-1.5 text-base font-semibold ${tone.pill}`}>
+                        {getPlanBadge(previewPlan)} 사용자에게 보임
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {[
+                          ["홈", canUserSeeMenu(previewPlan, menuSettings.show_home, menuSettings.home_min_plan)],
+                          ["단어", canUserSeeMenu(previewPlan, menuSettings.show_word, menuSettings.word_min_plan)],
+                          ["한자", canUserSeeMenu(previewPlan, menuSettings.show_kanji, menuSettings.kanji_min_plan)],
+                          ["활용", canUserSeeMenu(previewPlan, menuSettings.show_katsuyou, menuSettings.katsuyou_min_plan)],
+                          ["회화", canUserSeeMenu(previewPlan, menuSettings.show_talk, menuSettings.talk_min_plan)],
+                          ["MY", canUserSeeMenu(previewPlan, menuSettings.show_mypage, menuSettings.mypage_min_plan)],
+                          ["관리자", canUserSeeMenu(previewPlan, menuSettings.show_admin, menuSettings.admin_min_plan)],
+                        ]
+                          .filter(([, visible]) => Boolean(visible))
+                          .map(([label]) => (
+                            <span
+                              key={String(label)}
+                              className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700"
+                            >
+                              {label}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="mt-6">

@@ -10,14 +10,19 @@ import {
   isTalkAttempt,
   isWordAttempt,
 } from "@/lib/labels";
-
-type PlanType = "FREE" | "PRO";
+import {
+  getPlanBadge,
+  getPlanLabel,
+  hasPlan,
+  normalizePlan,
+  type PlanCode,
+} from "@/lib/plans";
 
 type HomeProfile = {
   id: string;
   email: string;
   full_name: string;
-  plan: PlanType;
+  plan: PlanCode;
   is_admin: boolean;
 };
 
@@ -30,13 +35,13 @@ type MenuSettings = {
   show_mypage: boolean;
   show_admin: boolean;
 
-  home_min_plan: PlanType;
-  word_min_plan: PlanType;
-  kanji_min_plan: PlanType;
-  katsuyou_min_plan: PlanType;
-  talk_min_plan: PlanType;
-  mypage_min_plan: PlanType;
-  admin_min_plan: PlanType;
+  home_min_plan: PlanCode;
+  word_min_plan: PlanCode;
+  kanji_min_plan: PlanCode;
+  katsuyou_min_plan: PlanCode;
+  talk_min_plan: PlanCode;
+  mypage_min_plan: PlanCode;
+  admin_min_plan: PlanCode;
 };
 
 type DayBucket = {
@@ -47,14 +52,13 @@ type DayBucket = {
 
 const DAILY_GOAL_SETS = 3;
 
-function normalizePlan(value?: string | null): PlanType {
-  return String(value || "FREE").toUpperCase() === "PRO" ? "PRO" : "FREE";
-}
-
-function canAccess(userPlan: PlanType, minPlan: PlanType, show: boolean): boolean {
+function canAccess(
+  userPlan: string | null | undefined,
+  minPlan: PlanCode,
+  show: boolean
+): boolean {
   if (!show) return false;
-  if (minPlan === "FREE") return true;
-  return userPlan === "PRO";
+  return hasPlan(userPlan, minPlan);
 }
 
 function calcCount(
@@ -180,6 +184,53 @@ function getTodayAttemptCount(attempts: QuizAttemptRow[]) {
   }).length;
 }
 
+function getPlanTone(plan: PlanCode) {
+  switch (plan) {
+    case "free":
+      return {
+        badgeWrap: "border-gray-200 bg-gray-50 text-gray-700",
+        messageWrap: "border-gray-200 bg-gray-50 text-gray-900",
+        progressMain: "#6b7280",
+        progressRest: "#e5e7eb",
+      };
+    case "light":
+      return {
+        badgeWrap: "border-sky-200 bg-sky-50 text-sky-700",
+        messageWrap: "border-sky-200 bg-sky-50 text-slate-900",
+        progressMain: "#38bdf8",
+        progressRest: "#e0f2fe",
+      };
+    case "standard":
+      return {
+        badgeWrap: "border-violet-200 bg-violet-50 text-violet-700",
+        messageWrap: "border-violet-200 bg-violet-50 text-slate-900",
+        progressMain: "#8b5cf6",
+        progressRest: "#ede9fe",
+      };
+    case "pro":
+      return {
+        badgeWrap: "border-blue-200 bg-blue-50 text-blue-700",
+        messageWrap: "border-blue-200 bg-blue-50 text-slate-900",
+        progressMain: "#3b82f6",
+        progressRest: "#dbeafe",
+      };
+    case "vip":
+      return {
+        badgeWrap: "border-amber-200 bg-amber-50 text-amber-700",
+        messageWrap: "border-amber-200 bg-amber-50 text-slate-900",
+        progressMain: "#f59e0b",
+        progressRest: "#fef3c7",
+      };
+    default:
+      return {
+        badgeWrap: "border-gray-200 bg-gray-50 text-gray-700",
+        messageWrap: "border-gray-200 bg-gray-50 text-gray-900",
+        progressMain: "#6b7280",
+        progressRest: "#e5e7eb",
+      };
+  }
+}
+
 export default function HomePage() {
   const router = useRouter();
 
@@ -194,13 +245,13 @@ export default function HomePage() {
     show_mypage: true,
     show_admin: true,
 
-    home_min_plan: "FREE",
-    word_min_plan: "FREE",
-    kanji_min_plan: "FREE",
-    katsuyou_min_plan: "FREE",
-    talk_min_plan: "FREE",
-    mypage_min_plan: "FREE",
-    admin_min_plan: "PRO",
+    home_min_plan: "free",
+    word_min_plan: "free",
+    kanji_min_plan: "free",
+    katsuyou_min_plan: "free",
+    talk_min_plan: "free",
+    mypage_min_plan: "free",
+    admin_min_plan: "pro",
   });
 
   const [loading, setLoading] = useState(true);
@@ -298,7 +349,7 @@ export default function HomePage() {
             katsuyou_min_plan: normalizePlan(menuRow.katsuyou_min_plan),
             talk_min_plan: normalizePlan(menuRow.talk_min_plan),
             mypage_min_plan: normalizePlan(menuRow.mypage_min_plan),
-            admin_min_plan: normalizePlan(menuRow.admin_min_plan || "PRO"),
+            admin_min_plan: normalizePlan(menuRow.admin_min_plan || "pro"),
           });
         }
 
@@ -392,7 +443,8 @@ export default function HomePage() {
     );
   }
 
-  const userPlan = profile?.plan || "FREE";
+  const userPlan = profile?.plan || "free";
+  const planTone = getPlanTone(userPlan);
 
   const canWord = canAccess(userPlan, menuSettings.word_min_plan, menuSettings.show_word);
   const canKanji = canAccess(userPlan, menuSettings.kanji_min_plan, menuSettings.show_kanji);
@@ -473,7 +525,17 @@ export default function HomePage() {
             {profile?.full_name ? `${profile.full_name}님,` : "하테나일본어"}
           </p>
 
-          <div className="mt-4 inline-flex rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-base font-medium text-gray-900">
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span
+              className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTone.badgeWrap}`}
+            >
+              {getPlanBadge(userPlan)}
+            </span>
+          </div>
+
+          <div
+            className={`mt-4 inline-flex rounded-2xl border px-4 py-3 text-base font-medium ${planTone.messageWrap}`}
+          >
             • {todayMessage}
           </div>
 
@@ -485,8 +547,10 @@ export default function HomePage() {
         <div className="mt-10 grid grid-cols-1 gap-6">
           <div className="flex flex-col items-center">
             <div
-              className="flex h-44 w-44 items-center justify-center rounded-full bg-[conic-gradient(#3b82f6_var(--p),#e5e7eb_0)] shadow-sm"
-              style={{ ["--p" as string]: `${(stats.goalPercent / 100) * 360}deg` }}
+              className="flex h-44 w-44 items-center justify-center rounded-full shadow-sm"
+              style={{
+                background: `conic-gradient(${planTone.progressMain} ${(stats.goalPercent / 100) * 360}deg, ${planTone.progressRest} 0deg)`,
+              }}
             >
               <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
                 <p className="text-3xl font-bold">{stats.goalPercent}%</p>

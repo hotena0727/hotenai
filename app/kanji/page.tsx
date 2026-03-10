@@ -7,6 +7,7 @@ import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/app/types/kanji";
 import { loadKanjiRows } from "@/lib/kanji-loader";
 import { buildKanjiQuiz } from "@/lib/kanji-quiz";
 import { buildKanjiAttemptPayload } from "@/lib/kanji-payload";
+import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
 
 const LEVEL_OPTIONS = ["N5", "N4", "N3", "N2", "N1"] as const;
 
@@ -72,7 +73,7 @@ export default function KanjiPage() {
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
 
-  const [userPlan, setUserPlan] = useState<"FREE" | "PRO">("FREE");
+  const [userPlan, setUserPlan] = useState<PlanCode>("free");
   const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
   const [limitMessage, setLimitMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
@@ -88,7 +89,7 @@ export default function KanjiPage() {
   const isPerfect = submitted && questions.length > 0 && score === questions.length;
 
   const isDailyLimitReached =
-    userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
+    !isPaidPlan(userPlan) && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
   const remainingSets = Math.max(DAILY_FREE_SET_LIMIT - todayWordKanjiSets, 0);
 
   const playResultSfx = (kind: "perfect" | "correct" | "wrong") => {
@@ -171,7 +172,7 @@ export default function KanjiPage() {
 
         const user = session?.user;
         if (!user) {
-          setUserPlan("FREE");
+          setUserPlan("free");
           setTodayWordKanjiSets(0);
           setLimitMessage("");
           return;
@@ -187,14 +188,13 @@ export default function KanjiPage() {
           console.error(profileError);
         }
 
-        const plan =
-          String(profileRow?.plan || "FREE").toUpperCase() === "PRO" ? "PRO" : "FREE";
+        const plan = normalizePlan(profileRow?.plan);
         setUserPlan(plan);
 
         const used = await fetchTodayWordKanjiSetCount(user.id);
         setTodayWordKanjiSets(used);
 
-        if (plan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
+        if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
           setLimitMessage(
             "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
           );
@@ -471,7 +471,7 @@ export default function KanjiPage() {
       const used = await fetchTodayWordKanjiSetCount(user.id);
       setTodayWordKanjiSets(used);
 
-      if (userPlan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
+      if (!isPaidPlan(userPlan) && used >= DAILY_FREE_SET_LIMIT) {
         setLimitMessage(
           "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
         );
@@ -577,8 +577,8 @@ export default function KanjiPage() {
                     : "text-xs sm:text-sm font-semibold text-gray-800"
                 }
               >
-                {userPlan === "PRO"
-                  ? "PRO · 단어·한자 무제한"
+                {isPaidPlan(userPlan)
+                  ? `${userPlan.toUpperCase()} · 단어·한자 무제한`
                   : `FREE · 오늘 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
               </p>
               <p
@@ -588,7 +588,7 @@ export default function KanjiPage() {
                     : "mt-1 text-xs text-gray-500"
                 }
               >
-                {userPlan === "PRO"
+                {isPaidPlan(userPlan)
                   ? "자세한 이용 안내 보기"
                   : isDailyLimitReached
                     ? "오늘 이용 완료"
@@ -597,7 +597,13 @@ export default function KanjiPage() {
                       : `오늘 ${remainingSets}세트 남음`}
               </p>
             </div>
-            <span className={isDailyLimitReached ? "shrink-0 text-sm sm:text-base text-red-500" : "shrink-0 text-sm sm:text-base text-gray-500"}>
+            <span
+              className={
+                isDailyLimitReached
+                  ? "shrink-0 text-sm sm:text-base text-red-500"
+                  : "shrink-0 text-sm sm:text-base text-gray-500"
+              }
+            >
               {planInfoOpen ? "⌄" : "›"}
             </span>
           </button>
@@ -611,8 +617,8 @@ export default function KanjiPage() {
               }
             >
               <p>
-                {userPlan === "PRO"
-                  ? "PRO는 단어와 한자를 제한 없이 이용할 수 있습니다."
+                {isPaidPlan(userPlan)
+                  ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
                   : isDailyLimitReached
                     ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
                     : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
@@ -638,7 +644,11 @@ export default function KanjiPage() {
               type="button"
               onClick={makeNewQuiz}
               disabled={isDailyLimitReached}
-              className={isDailyLimitReached ? "rounded-2xl border border-red-200 bg-red-50 px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-red-600" : "rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"}
+              className={
+                isDailyLimitReached
+                  ? "rounded-2xl border border-red-200 bg-red-50 px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-red-600"
+                  : "rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"
+              }
             >
               {isDailyLimitReached ? "오늘 이용 완료" : "🔄 새문제(랜덤 10문항)"}
             </button>
@@ -905,7 +915,11 @@ export default function KanjiPage() {
             </div>
           </div>
         ) : (
-          <div className={`mt-6 rounded-2xl border p-5 ${isDailyLimitReached ? "border-red-200 bg-red-50" : "border-gray-300 bg-white"}`}>
+          <div
+            className={`mt-6 rounded-2xl border p-5 ${
+              isDailyLimitReached ? "border-red-200 bg-red-50" : "border-gray-300 bg-white"
+            }`}
+          >
             <p className={`text-sm ${isDailyLimitReached ? "text-red-700" : "text-gray-500"}`}>
               {isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."

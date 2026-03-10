@@ -9,6 +9,7 @@ import { buildWordQuiz } from "@/lib/word-quiz";
 import { buildWordAttemptPayload } from "@/lib/word-payload";
 import { loadPatternRows, filterPatternRows } from "@/lib/pattern-loader";
 import type { PatternRow } from "@/app/types/pattern";
+import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
 
 const POS_GROUP_OPTIONS = [
   { value: "noun", label: "명사" },
@@ -119,7 +120,7 @@ export default function WordPage() {
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
 
-  const [userPlan, setUserPlan] = useState<"FREE" | "PRO">("FREE");
+  const [userPlan, setUserPlan] = useState<PlanCode>("free");
   const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
   const [limitMessage, setLimitMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
@@ -142,8 +143,8 @@ export default function WordPage() {
   const visibleQtypes =
     selectedPosGroup === "other"
       ? QTYPE_OPTIONS.filter(
-        (item) => item.value === "meaning" || item.value === "kr2jp"
-      )
+          (item) => item.value === "meaning" || item.value === "kr2jp"
+        )
       : QTYPE_OPTIONS;
 
   const wrongItems = questions
@@ -158,7 +159,7 @@ export default function WordPage() {
   const showWrongNote = submitted && wrongItems.length > 0;
 
   const isDailyLimitReached =
-    userPlan === "FREE" && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
+    !isPaidPlan(userPlan) && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
   const remainingSets = Math.max(DAILY_FREE_SET_LIMIT - todayWordKanjiSets, 0);
 
   const playResultSfx = (kind: "perfect" | "correct" | "wrong") => {
@@ -257,7 +258,7 @@ export default function WordPage() {
 
         const user = session?.user;
         if (!user) {
-          setUserPlan("FREE");
+          setUserPlan("free");
           setTodayWordKanjiSets(0);
           setLimitMessage("");
           return;
@@ -273,14 +274,13 @@ export default function WordPage() {
           console.error(profileError);
         }
 
-        const plan =
-          String(profileRow?.plan || "FREE").toUpperCase() === "PRO" ? "PRO" : "FREE";
+        const plan = normalizePlan(profileRow?.plan);
         setUserPlan(plan);
 
         const used = await fetchTodayWordKanjiSetCount(user.id);
         setTodayWordKanjiSets(used);
 
-        if (plan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
+        if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
           setLimitMessage(
             "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
           );
@@ -571,7 +571,7 @@ export default function WordPage() {
       const used = await fetchTodayWordKanjiSetCount(user.id);
       setTodayWordKanjiSets(used);
 
-      if (userPlan === "FREE" && used >= DAILY_FREE_SET_LIMIT) {
+      if (!isPaidPlan(userPlan) && used >= DAILY_FREE_SET_LIMIT) {
         setLimitMessage(
           "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
         );
@@ -732,8 +732,8 @@ export default function WordPage() {
                     : "text-xs sm:text-sm font-semibold text-gray-800"
                 }
               >
-                {userPlan === "PRO"
-                  ? "PRO · 단어·한자 무제한"
+                {isPaidPlan(userPlan)
+                  ? `${userPlan.toUpperCase()} · 단어·한자 무제한`
                   : `FREE · 오늘 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
               </p>
               <p
@@ -743,7 +743,7 @@ export default function WordPage() {
                     : "mt-1 text-xs text-gray-500"
                 }
               >
-                {userPlan === "PRO"
+                {isPaidPlan(userPlan)
                   ? "자세한 이용 안내 보기"
                   : isDailyLimitReached
                     ? "오늘 이용 완료"
@@ -766,8 +766,8 @@ export default function WordPage() {
               }
             >
               <p>
-                {userPlan === "PRO"
-                  ? "PRO는 단어와 한자를 제한 없이 이용할 수 있습니다."
+                {isPaidPlan(userPlan)
+                  ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
                   : isDailyLimitReached
                     ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
                     : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}

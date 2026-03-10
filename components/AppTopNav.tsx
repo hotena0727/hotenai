@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { hasPlan, normalizePlan, type PlanCode } from "@/lib/plans";
 
 type ActiveKey =
   | "home"
@@ -13,10 +14,8 @@ type ActiveKey =
   | "mypage"
   | "none";
 
-type PlanType = "FREE" | "PRO";
-
 type ProfileLite = {
-  plan: PlanType;
+  plan: PlanCode;
   is_admin: boolean;
 };
 
@@ -29,18 +28,14 @@ type MenuSettings = {
   show_mypage: boolean;
   show_admin: boolean;
 
-  home_min_plan: PlanType;
-  word_min_plan: PlanType;
-  kanji_min_plan: PlanType;
-  katsuyou_min_plan: PlanType;
-  talk_min_plan: PlanType;
-  mypage_min_plan: PlanType;
-  admin_min_plan: PlanType;
+  home_min_plan: PlanCode;
+  word_min_plan: PlanCode;
+  kanji_min_plan: PlanCode;
+  katsuyou_min_plan: PlanCode;
+  talk_min_plan: PlanCode;
+  mypage_min_plan: PlanCode;
+  admin_min_plan: PlanCode;
 };
-
-function normalizePlan(value?: string | null): PlanType {
-  return String(value || "FREE").toUpperCase() === "PRO" ? "PRO" : "FREE";
-}
 
 function getActiveKey(pathname: string): ActiveKey {
   if (pathname === "/") return "home";
@@ -60,36 +55,96 @@ function shouldHideNav(pathname: string): boolean {
   );
 }
 
-function hasMenuAccess(userPlan: PlanType, minPlan: PlanType): boolean {
-  if (minPlan === "FREE") return true;
-  return userPlan === "PRO";
+function hasMenuAccess(userPlan: PlanCode, minPlan: PlanCode): boolean {
+  return hasPlan(userPlan, minPlan);
 }
+
+function getPlanNavTheme(plan: PlanCode) {
+  switch (plan) {
+    case "free":
+      return {
+        wrap: "border-b border-gray-200 bg-white",
+        active: "border-b-2 border-gray-900 text-gray-900",
+        inactive: "text-gray-500 hover:text-gray-700",
+        adminBtn:
+          "border border-gray-200 bg-white/90 text-gray-600 hover:bg-gray-50",
+      };
+
+    case "light":
+      return {
+        wrap: "border-b border-sky-100 bg-sky-50/80",
+        active: "border-b-2 border-sky-500 text-sky-900",
+        inactive: "text-sky-700/80 hover:text-sky-900",
+        adminBtn:
+          "border border-sky-200 bg-white/90 text-sky-700 hover:bg-sky-50",
+      };
+
+    case "standard":
+      return {
+        wrap: "border-b border-violet-100 bg-violet-50/80",
+        active: "border-b-2 border-violet-500 text-violet-900",
+        inactive: "text-violet-700/80 hover:text-violet-900",
+        adminBtn:
+          "border border-violet-200 bg-white/90 text-violet-700 hover:bg-violet-50",
+      };
+
+    case "pro":
+      return {
+        wrap: "border-b border-blue-100 bg-blue-50/80",
+        active: "border-b-2 border-blue-500 text-blue-900",
+        inactive: "text-blue-700/80 hover:text-blue-900",
+        adminBtn:
+          "border border-blue-200 bg-white/90 text-blue-700 hover:bg-blue-50",
+      };
+
+    case "vip":
+      return {
+        wrap: "border-b border-amber-200 bg-amber-50/90",
+        active: "border-b-2 border-amber-500 text-amber-900",
+        inactive: "text-amber-700/90 hover:text-amber-900",
+        adminBtn:
+          "border border-amber-200 bg-white/90 text-amber-700 hover:bg-amber-50",
+      };
+
+    default:
+      return {
+        wrap: "border-b border-gray-200 bg-white",
+        active: "border-b-2 border-gray-900 text-gray-900",
+        inactive: "text-gray-500 hover:text-gray-700",
+        adminBtn:
+          "border border-gray-200 bg-white/90 text-gray-600 hover:bg-gray-50",
+      };
+  }
+}
+
+const DEFAULT_MENU_SETTINGS: MenuSettings = {
+  show_home: true,
+  show_word: true,
+  show_kanji: true,
+  show_katsuyou: true,
+  show_talk: true,
+  show_mypage: true,
+  show_admin: true,
+
+  home_min_plan: "free",
+  word_min_plan: "free",
+  kanji_min_plan: "free",
+  katsuyou_min_plan: "free",
+  talk_min_plan: "free",
+  mypage_min_plan: "free",
+  admin_min_plan: "pro",
+};
 
 export default function AppTopNav() {
   const pathname = usePathname();
 
   const [profile, setProfile] = useState<ProfileLite>({
-    plan: "FREE",
+    plan: "free",
     is_admin: false,
   });
 
-  const [menuSettings, setMenuSettings] = useState<MenuSettings>({
-    show_home: true,
-    show_word: true,
-    show_kanji: true,
-    show_katsuyou: true,
-    show_talk: true,
-    show_mypage: true,
-    show_admin: true,
-
-    home_min_plan: "FREE",
-    word_min_plan: "FREE",
-    kanji_min_plan: "FREE",
-    katsuyou_min_plan: "FREE",
-    talk_min_plan: "FREE",
-    mypage_min_plan: "FREE",
-    admin_min_plan: "PRO",
-  });
+  const [menuSettings, setMenuSettings] =
+    useState<MenuSettings>(DEFAULT_MENU_SETTINGS);
 
   useEffect(() => {
     const loadProfileAndMenu = async () => {
@@ -100,7 +155,7 @@ export default function AppTopNav() {
 
         if (!user) {
           setProfile({
-            plan: "FREE",
+            plan: "free",
             is_admin: false,
           });
         } else {
@@ -162,15 +217,16 @@ export default function AppTopNav() {
             katsuyou_min_plan: normalizePlan(menuRow.katsuyou_min_plan),
             talk_min_plan: normalizePlan(menuRow.talk_min_plan),
             mypage_min_plan: normalizePlan(menuRow.mypage_min_plan),
-            admin_min_plan: normalizePlan(menuRow.admin_min_plan || "PRO"),
+            admin_min_plan: normalizePlan(menuRow.admin_min_plan || "pro"),
           });
         }
       } catch (error) {
         console.error(error);
         setProfile({
-          plan: "FREE",
+          plan: "free",
           is_admin: false,
         });
+        setMenuSettings(DEFAULT_MENU_SETTINGS);
       }
     };
 
@@ -178,6 +234,58 @@ export default function AppTopNav() {
   }, []);
 
   const active = useMemo(() => getActiveKey(pathname), [pathname]);
+  const theme = useMemo(() => getPlanNavTheme(profile.plan), [profile.plan]);
+
+  const visibleMenus = useMemo(
+    () => [
+      menuSettings.show_home &&
+      hasMenuAccess(profile.plan, menuSettings.home_min_plan) && {
+        key: "home" as ActiveKey,
+        href: "/",
+        label: "홈",
+      },
+
+      menuSettings.show_word &&
+      hasMenuAccess(profile.plan, menuSettings.word_min_plan) && {
+        key: "word" as ActiveKey,
+        href: "/word",
+        label: "단어",
+      },
+
+      menuSettings.show_kanji &&
+      hasMenuAccess(profile.plan, menuSettings.kanji_min_plan) && {
+        key: "kanji" as ActiveKey,
+        href: "/kanji",
+        label: "한자",
+      },
+
+      menuSettings.show_katsuyou &&
+      hasMenuAccess(profile.plan, menuSettings.katsuyou_min_plan) && {
+        key: "katsuyou" as ActiveKey,
+        href: "/katsuyou",
+        label: "활용",
+      },
+
+      menuSettings.show_talk &&
+      hasMenuAccess(profile.plan, menuSettings.talk_min_plan) && {
+        key: "talk" as ActiveKey,
+        href: "/talk",
+        label: "회화",
+      },
+
+      menuSettings.show_mypage &&
+      hasMenuAccess(profile.plan, menuSettings.mypage_min_plan) && {
+        key: "mypage" as ActiveKey,
+        href: "/mypage",
+        label: "MY",
+      },
+    ].filter(Boolean) as Array<{
+      key: ActiveKey;
+      href: string;
+      label: string;
+    }>,
+    [menuSettings, profile.plan]
+  );
 
   if (shouldHideNav(pathname)) {
     return null;
@@ -185,67 +293,27 @@ export default function AppTopNav() {
 
   const linkClass = (key: ActiveKey) =>
     active === key
-      ? "border-b-2 border-blue-500 px-2 py-5 text-sm font-semibold text-gray-900 sm:text-base"
-      : "px-2 py-5 text-sm font-semibold text-gray-500 sm:text-base";
+      ? `shrink-0 px-2 py-5 text-sm font-semibold sm:text-base ${theme.active}`
+      : `shrink-0 px-2 py-5 text-sm font-semibold sm:text-base transition ${theme.inactive}`;
 
   return (
-    <div
-      className={
-        profile.plan === "PRO"
-          ? "border-b border-blue-100 bg-blue-50/60"
-          : "border-b border-gray-200 bg-white"
-      }
-    >
+    <div className={theme.wrap}>
       <div className="mx-auto max-w-3xl px-4">
-        <nav className="flex items-center justify-between gap-2">
-          {menuSettings.show_home &&
-          hasMenuAccess(profile.plan, menuSettings.home_min_plan) ? (
-            <a href="/" className={linkClass("home")}>
-              홈
-            </a>
-          ) : null}
-
-          {menuSettings.show_word &&
-          hasMenuAccess(profile.plan, menuSettings.word_min_plan) ? (
-            <a href="/word" className={linkClass("word")}>
-              단어
-            </a>
-          ) : null}
-
-          {menuSettings.show_kanji &&
-          hasMenuAccess(profile.plan, menuSettings.kanji_min_plan) ? (
-            <a href="/kanji" className={linkClass("kanji")}>
-              한자
-            </a>
-          ) : null}
-
-          {menuSettings.show_katsuyou &&
-          hasMenuAccess(profile.plan, menuSettings.katsuyou_min_plan) ? (
-            <a href="/katsuyou" className={linkClass("katsuyou")}>
-              활용
-            </a>
-          ) : null}
-
-          {menuSettings.show_talk &&
-          hasMenuAccess(profile.plan, menuSettings.talk_min_plan) ? (
-            <a href="/talk" className={linkClass("talk")}>
-              회화
-            </a>
-          ) : null}
-
-          {menuSettings.show_mypage &&
-          hasMenuAccess(profile.plan, menuSettings.mypage_min_plan) ? (
-            <a href="/mypage" className={linkClass("mypage")}>
-              MY
-            </a>
-          ) : null}
+        <nav className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap scrollbar-hide">
+            {visibleMenus.map((menu) => (
+              <a key={menu.key} href={menu.href} className={linkClass(menu.key)}>
+                {menu.label}
+              </a>
+            ))}
+          </div>
 
           {profile.is_admin &&
           menuSettings.show_admin &&
           hasMenuAccess(profile.plan, menuSettings.admin_min_plan) ? (
             <a
               href="/admin"
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80 text-sm text-gray-600 transition hover:bg-white"
+              className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm transition ${theme.adminBtn}`}
               aria-label="관리자"
               title="관리자"
             >
