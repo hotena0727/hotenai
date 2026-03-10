@@ -767,26 +767,59 @@ const VERB_KR_OVERRIDE: Record<string, Partial<VerbKrFormSet>> = {
     causative: "하게 하다",
     causative_passive: "하게 하다",
   },
+  들어가다: {
+    passive: "들어가게 되다",
+  },
+  빌리다: {
+    plain_past: "빌렸다",
+  },
+  가지다: {
+    passive: "가지게 되다",
+  },
+  샤워하다: {
+    potential: "샤워할 수 있다",
+  },
+  조사하다: {
+    passive: "조사되다",
+  },
 };
 
 function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
   const baseKr = row.kr;
   const root = baseKr.endsWith("다") ? baseKr.slice(0, -1) : baseKr;
 
-  const base: VerbKrFormSet = {
-    plain_present: baseKr,
-    polite_present: `${root}습니다`,
-    plain_negative: `${root}지 않다`,
-    plain_past: `${root}었다`,
-    plain_negative_past: `${root}지 않았다`,
-    te_form: `${root}고`,
-    potential: `${root}을 수 있다`,
-    imperative: `${root}라`,
-    volitional: `${root}자`,
-    passive: `${root}되다`,
-    causative: `${root}게 하다`,
-    causative_passive: `${root}게 하다`,
-  };
+  const isHada = baseKr.endsWith("하다");
+  const stem = isHada ? baseKr.slice(0, -2) : root;
+
+  const base: VerbKrFormSet = isHada
+    ? {
+        plain_present: baseKr,
+        polite_present: `${stem}합니다`,
+        plain_negative: `${stem}하지 않다`,
+        plain_past: `${stem}했다`,
+        plain_negative_past: `${stem}하지 않았다`,
+        te_form: `${stem}하고`,
+        potential: `${stem}할 수 있다`,
+        imperative: `${stem}해라`,
+        volitional: `${stem}하자`,
+        passive: `${stem}되다`,
+        causative: `${stem}하게 하다`,
+        causative_passive: `${stem}하게 하다`,
+      }
+    : {
+        plain_present: baseKr,
+        polite_present: `${root}습니다`,
+        plain_negative: `${root}지 않다`,
+        plain_past: `${root}었다`,
+        plain_negative_past: `${root}지 않았다`,
+        te_form: `${root}고`,
+        potential: `${root}을 수 있다`,
+        imperative: `${root}라`,
+        volitional: `${root}자`,
+        passive: `${root}되다`,
+        causative: `${root}게 하다`,
+        causative_passive: `${root}게 하다`,
+      };
 
   return {
     ...base,
