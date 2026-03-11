@@ -136,60 +136,83 @@ export default function ClassroomPage() {
 
     const load = async () => {
       try {
+        setLoading(true);
+        setCoursesLoading(true);
+        setCoursesError("");
+
         const {
           data: { user },
         } = await supabase.auth.getUser();
 
-        if (user) {
-          const [{ data: profileData }, { data: enrollmentsData, error: enrollmentsError }] =
-            await Promise.all([
-              supabase
-                .from("profiles")
-                .select("id, email, full_name, plan")
-                .eq("id", user.id)
-                .maybeSingle(),
-              supabase
-                .from("course_enrollments")
-                .select("course_id, progress, last_lesson_title, last_studied_at, is_completed")
-                .eq("user_id", user.id)
-                .order("last_studied_at", { ascending: false }),
-            ]);
-
-          if (enrollmentsError) {
-            throw enrollmentsError;
-          }
-
+        if (!user) {
           if (mounted) {
-            setProfile({
-              id: user.id,
-              email: user.email ?? "",
-              full_name: profileData?.full_name ?? "",
-              plan: profileData?.plan ?? "FREE",
-            });
-            setEnrollmentRows((enrollmentsData as EnrollmentRow[] | null) ?? []);
+            setCoursesError("로그인 후 나의 강의실을 이용할 수 있습니다.");
+            setProfile(null);
+            setEnrollmentRows([]);
+            setCourseRows([]);
           }
+          return;
         }
 
-        const { data: coursesData, error: coursesFetchError } = await supabase
-          .from("courses")
-          .select("id, slug, title, level, description, status, sort_order, thumbnail_url, is_visible")
-          .eq("is_visible", true)
-          .neq("status", "draft")
-          .order("sort_order", { ascending: true })
-          .order("created_at", { ascending: true });
+        const [{ data: profileData }, { data: enrollmentsData, error: enrollmentsError }] =
+          await Promise.all([
+            supabase
+              .from("profiles")
+              .select("id, email, full_name, plan")
+              .eq("id", user.id)
+              .maybeSingle(),
+            supabase
+              .from("course_enrollments")
+              .select("course_id, progress, last_lesson_title, last_studied_at, is_completed")
+              .eq("user_id", user.id)
+              .order("last_studied_at", { ascending: false }),
+          ]);
 
-        if (coursesFetchError) {
-          throw coursesFetchError;
+        if (enrollmentsError) {
+          throw enrollmentsError;
+        }
+
+        const safeEnrollments = (enrollmentsData as EnrollmentRow[] | null) ?? [];
+        const enrolledCourseIds = safeEnrollments.map((row) => row.course_id).filter(Boolean);
+
+        let assignedCourses: CourseRow[] = [];
+
+        if (enrolledCourseIds.length > 0) {
+          const { data: coursesData, error: coursesFetchError } = await supabase
+            .from("courses")
+            .select(
+              "id, slug, title, level, description, status, sort_order, thumbnail_url, is_visible"
+            )
+            .in("id", enrolledCourseIds)
+            .eq("is_visible", true)
+            .neq("status", "draft")
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true });
+
+          if (coursesFetchError) {
+            throw coursesFetchError;
+          }
+
+          assignedCourses = (coursesData as CourseRow[] | null) ?? [];
         }
 
         if (mounted) {
-          setCourseRows((coursesData as CourseRow[] | null) ?? []);
+          setProfile({
+            id: user.id,
+            email: user.email ?? "",
+            full_name: profileData?.full_name ?? "",
+            plan: profileData?.plan ?? "FREE",
+          });
+          setEnrollmentRows(safeEnrollments);
+          setCourseRows(assignedCourses);
           setCoursesError("");
         }
       } catch (error) {
         console.error(error);
         if (mounted) {
           setCoursesError("강의실 데이터를 불러오지 못했습니다.");
+          setCourseRows([]);
+          setEnrollmentRows([]);
         }
       } finally {
         if (mounted) {
@@ -294,12 +317,22 @@ export default function ClassroomPage() {
   }, [courseRows, enrollmentMap]);
 
   const continueCourse = courses.find((course) => course.status === "continue") ?? null;
-  const openCoursesCount = courseRows.filter((course) => course.status === "open").length;
+  const firstAssignedCourse = courses[0] ?? null;
   const enrolledCoursesCount = enrollmentRows.length;
   const completedCoursesCount = enrollmentRows.filter(
     (row) => row.is_completed || row.progress === 100
   ).length;
+  const inProgressCoursesCount = enrollmentRows.filter(
+    (row) => !row.is_completed && Number(row.progress || 0) > 0
+  ).length;
   const planLabel = (profile?.plan ?? "FREE").toUpperCase();
+
+  const primaryHref = continueCourse?.href ?? firstAssignedCourse?.href ?? "/courses";
+  const primaryLabel = continueCourse
+    ? "▶ 이어서 학습"
+    : firstAssignedCourse
+    ? "내 강의 보기"
+    : "강의 카탈로그 보기";
 
   return (
     <main className="min-h-screen bg-[#f7f8fa] px-4 pb-12 pt-6 text-gray-900 sm:px-6">
@@ -316,8 +349,8 @@ export default function ClassroomPage() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
-                이제 강의실은 공개 강의 목록뿐 아니라, 회원님의 진도와 최근 학습 기록까지 함께 보여주는 구조로
-                바뀌었습니다.
+                이제 강의실은 공개 강의 전체가 아니라, 회원님에게 실제로 배정된 강의와
+                최근 학습 기록을 중심으로 보여주는 구조입니다.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-3">
@@ -325,10 +358,10 @@ export default function ClassroomPage() {
                   현재 플랜 {planLabel}
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  공개 강의 {openCoursesCount}개
+                  배정 강의 {enrolledCoursesCount}개
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  수강 기록 {enrolledCoursesCount}개
+                  학습 중 {inProgressCoursesCount}개
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
                   완료 강의 {completedCoursesCount}개
@@ -338,16 +371,16 @@ export default function ClassroomPage() {
 
             <div className="grid min-w-[260px] gap-3 sm:grid-cols-2 lg:w-[340px] lg:grid-cols-1">
               <Link
-                href={continueCourse?.href ?? "/classroom"}
+                href={primaryHref}
                 className="rounded-2xl bg-black px-5 py-4 text-center text-base font-semibold text-white transition hover:opacity-90"
               >
-                {continueCourse ? "▶ 이어서 학습" : "강의 목록 보기"}
+                {primaryLabel}
               </Link>
               <Link
-                href="/mypage"
+                href="/courses"
                 className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-center text-base font-semibold text-gray-900 transition hover:bg-gray-50"
               >
-                마이페이지로 돌아가기
+                강의 카탈로그 보기
               </Link>
             </div>
           </div>
@@ -357,19 +390,27 @@ export default function ClassroomPage() {
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-semibold text-gray-500">이어서 보기</p>
             <p className="mt-2 text-lg font-bold text-gray-900">
-              {continueCourse ? continueCourse.title : "아직 이어볼 강의가 없습니다."}
+              {continueCourse
+                ? continueCourse.title
+                : firstAssignedCourse
+                ? firstAssignedCourse.title
+                : "아직 배정된 강의가 없습니다."}
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
               {continueCourse
                 ? `${continueCourse.progress}% 진행 중 · ${continueCourse.lastLessonTitle ?? "최근 기록"}`
-                : "수강 기록이 생기면 이곳에 가장 먼저 이어볼 강의가 표시됩니다."}
+                : firstAssignedCourse
+                ? "배정된 강의가 있습니다. 첫 강의부터 시작해 보세요."
+                : "강의를 배정받으면 이곳에 이어볼 강의가 표시됩니다."}
             </p>
           </div>
 
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-semibold text-gray-500">최근 학습일</p>
             <p className="mt-2 text-lg font-bold text-gray-900">
-              {continueCourse?.lastStudiedAt ? formatDateTime(continueCourse.lastStudiedAt) : "기록 없음"}
+              {continueCourse?.lastStudiedAt
+                ? formatDateTime(continueCourse.lastStudiedAt)
+                : "기록 없음"}
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
               실제 학습 버튼과 연결하면 마지막 학습 시점이 자동으로 더 정확하게 반영됩니다.
@@ -379,10 +420,10 @@ export default function ClassroomPage() {
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-semibold text-gray-500">강의실 운영 상태</p>
             <p className="mt-2 text-lg font-bold text-gray-900">
-              {coursesLoading ? "불러오는 중" : coursesError ? "점검 필요" : "진도 연결 완료"}
+              {coursesLoading ? "불러오는 중" : coursesError ? "점검 필요" : "배정 강의 기준 표시 중"}
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              {coursesError || "이제 course_enrollments 테이블을 통해 사용자별 진도를 표시합니다."}
+              {coursesError || "이제 나의 강의실은 배정된 강의만 표시하도록 연결되어 있습니다."}
             </p>
           </div>
         </section>
@@ -390,8 +431,8 @@ export default function ClassroomPage() {
         <section className="mt-6 rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-gray-500">강의 목록</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">사용자 진도 연동형 카드 레이아웃</h2>
+              <p className="text-sm font-semibold text-gray-500">내 강의 목록</p>
+              <h2 className="mt-2 text-2xl font-bold text-gray-900">배정 강의 중심 강의실</h2>
             </div>
             <p className="text-sm text-gray-500">내 수강 기록에 따라 카드 상태가 달라집니다.</p>
           </div>
@@ -405,8 +446,25 @@ export default function ClassroomPage() {
               {coursesError}
             </div>
           ) : courses.length === 0 ? (
-            <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
-              아직 표시할 강의가 없습니다. courses 테이블에 공개 강의를 추가해 주세요.
+            <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-6">
+              <p className="text-sm text-gray-700">아직 배정된 강의가 없습니다.</p>
+              <p className="mt-2 text-sm text-gray-500">
+                강의 카탈로그에서 어떤 강의가 있는지 먼저 확인하거나, 관리자에게 강의 배정을 요청해 주세요.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href="/courses"
+                  className="rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
+                >
+                  강의 카탈로그 보기
+                </Link>
+                <Link
+                  href="/mypage"
+                  className="rounded-2xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-900"
+                >
+                  마이페이지로 돌아가기
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="mt-6 grid gap-4 xl:grid-cols-3">
