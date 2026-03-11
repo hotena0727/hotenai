@@ -231,8 +231,8 @@ function TabButton({
       onClick={onClick}
       className={
         active
-          ? "border-b-2 border-red-400 px-1 pb-3 text-base font-semibold text-red-400"
-          : "px-1 pb-3 text-base font-semibold text-gray-700"
+          ? "border-b-2 border-red-400 px-1 pb-3 text-sm font-semibold text-red-400"
+          : "px-1 pb-3 text-sm font-semibold text-gray-700"
       }
     >
       {icon} {label}
@@ -264,7 +264,7 @@ function PillButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-4 py-2 text-sm font-semibold ${active ? activeCls : inactiveCls}`}
+      className={`rounded-full border px-4 py-2 text-xs font-semibold ${active ? activeCls : inactiveCls}`}
     >
       {label}
     </button>
@@ -306,6 +306,8 @@ export default function AdminPage() {
   const [menuSaving, setMenuSaving] = useState(false);
   const [menuMessage, setMenuMessage] = useState("");
   const [showMyClassroomSection, setShowMyClassroomSection] = useState(false);
+  const [showCoursesSectionOnHome, setShowCoursesSectionOnHome] =
+    useState(false);
   const [pageSettingsSaving, setPageSettingsSaving] = useState(false);
   const [pageSettingsMessage, setPageSettingsMessage] = useState("");
 
@@ -317,7 +319,9 @@ export default function AdminPage() {
   const [pushMessage, setPushMessage] = useState("");
   const [pushMemberQuery, setPushMemberQuery] = useState("");
   const [selectedPushUserId, setSelectedPushUserId] = useState("");
-  const [pushDebugInfo, setPushDebugInfo] = useState<PushDebugInfo | null>(null);
+  const [pushDebugInfo, setPushDebugInfo] = useState<PushDebugInfo | null>(
+    null
+  );
   const [pushProbeBusy, setPushProbeBusy] = useState(false);
 
   const [backupTag, setBackupTag] = useState("stable");
@@ -413,7 +417,6 @@ export default function AdminPage() {
   const [newLessonAttachmentUrl, setNewLessonAttachmentUrl] = useState("");
   const [newLessonPosterUrl, setNewLessonPosterUrl] = useState("");
 
-  // 회원 강의 배정
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(false);
   const [enrollmentMessage, setEnrollmentMessage] = useState("");
   const [memberCourseQuery, setMemberCourseQuery] = useState("");
@@ -492,7 +495,9 @@ export default function AdminPage() {
 
         setProfiles(normalizedProfiles);
         setPlanDrafts(
-          Object.fromEntries(normalizedProfiles.map((item) => [item.id, item.plan]))
+          Object.fromEntries(
+            normalizedProfiles.map((item) => [item.id, item.plan])
+          )
         );
         setDurationDrafts(
           Object.fromEntries(normalizedProfiles.map((item) => [item.id, 30]))
@@ -548,7 +553,7 @@ export default function AdminPage() {
 
         const { data: pageRow, error: pageError } = await supabase
           .from("app_page_settings")
-          .select("show_my_classroom_section")
+          .select("show_my_classroom_section, show_courses_section_on_home")
           .eq("id", 1)
           .maybeSingle();
 
@@ -556,6 +561,9 @@ export default function AdminPage() {
           console.error(pageError);
         } else if (pageRow) {
           setShowMyClassroomSection(Boolean(pageRow.show_my_classroom_section));
+          setShowCoursesSectionOnHome(
+            Boolean(pageRow.show_courses_section_on_home)
+          );
         }
 
         const allAttempts = await fetchAllAttempts(user.id, 300);
@@ -688,10 +696,10 @@ export default function AdminPage() {
         logType === "all"
           ? true
           : logType === "word"
-            ? isWordAttempt(item)
-            : logType === "kanji"
-              ? isKanjiAttempt(item)
-              : isTalkAttempt(item);
+          ? isWordAttempt(item)
+          : logType === "kanji"
+          ? isKanjiAttempt(item)
+          : isTalkAttempt(item);
 
       const queryOk = !q
         ? true
@@ -1506,19 +1514,20 @@ export default function AdminPage() {
           {
             id: 1,
             show_my_classroom_section: showMyClassroomSection,
+            show_courses_section_on_home: showCoursesSectionOnHome,
           },
           { onConflict: "id" }
         );
 
       if (error) throw error;
 
-      setPageSettingsMessage("마이페이지 영역 설정을 저장했습니다.");
+      setPageSettingsMessage("페이지 영역 설정을 저장했습니다.");
     } catch (error) {
       console.error(error);
       setPageSettingsMessage(
         error instanceof Error
           ? error.message
-          : "마이페이지 영역 설정 저장 중 오류가 발생했습니다."
+          : "페이지 영역 설정 저장 중 오류가 발생했습니다."
       );
     } finally {
       setPageSettingsSaving(false);
@@ -1716,8 +1725,8 @@ export default function AdminPage() {
         pushMode === "test"
           ? `테스트 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건`
           : pushMode === "selected"
-            ? `선택 회원 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
-            : `전체 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
+          ? `선택 회원 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
+          : `전체 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
       );
     } catch (error) {
       console.error(error);
@@ -2070,7 +2079,7 @@ export default function AdminPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-white text-gray-900">
-        <div className="mx-auto max-w-3xl px-4 py-6">
+        <div className="mx-auto max-w-4xl px-4 py-6">
           <p className="text-sm text-gray-600">불러오는 중...</p>
         </div>
       </main>
@@ -2080,7 +2089,7 @@ export default function AdminPage() {
   if (errorMsg) {
     return (
       <main className="min-h-screen bg-white text-gray-900">
-        <div className="mx-auto max-w-3xl px-4 py-6">
+        <div className="mx-auto max-w-4xl px-4 py-6">
           <p className="text-sm text-red-500">{errorMsg}</p>
         </div>
       </main>
@@ -2089,13 +2098,13 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
-      <div className="mx-auto max-w-3xl px-4 py-6">
+      <div className="mx-auto max-w-4xl px-4 py-6">
         <section className="mt-4">
-          <h1 className="text-3xl font-bold">🛠️ 관리자 대시보드</h1>
-          <p className="mt-3 text-base text-gray-600">회원/구독 관리 · 통계 · 기록</p>
+          <h1 className="text-2xl font-bold">🛠️ 관리자 대시보드</h1>
+          <p className="mt-2 text-sm text-gray-600">회원/구독 관리 · 통계 · 기록</p>
         </section>
 
-        <section className="mt-8 grid grid-cols-2 gap-4">
+        <section className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {[
             ["총 회원", stats.totalMembers, "현재 등록된 회원 수"],
             [
@@ -2112,29 +2121,31 @@ export default function AdminPage() {
           ].map(([label, value, desc]) => (
             <div
               key={String(label)}
-              className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5"
+              className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
             >
-              <p className="text-sm font-semibold text-gray-500 sm:text-base">{label}</p>
-              <p className="mt-3 text-2xl font-bold sm:mt-4 sm:text-3xl">{value}</p>
-              <p className="mt-2 text-xs text-gray-600 sm:mt-3 sm:text-sm">{desc}</p>
+              <p className="text-xs font-semibold text-gray-500">{label}</p>
+              <p className="mt-3 text-xl font-bold">{value}</p>
+              <p className="mt-2 text-xs text-gray-600">{desc}</p>
             </div>
           ))}
         </section>
 
         <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900">플랜 분포</h2>
+          <h2 className="text-base font-bold text-gray-900">플랜 분포</h2>
           <div className="mt-4 flex flex-wrap gap-2">
-            {(["free", "light", "standard", "pro", "vip"] as PlanCode[]).map((plan) => {
-              const theme = getPlanTheme(plan);
-              return (
-                <span
-                  key={plan}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${theme.badge}`}
-                >
-                  {getPlanBadge(plan)} {stats.planCounts[plan]}명
-                </span>
-              );
-            })}
+            {(["free", "light", "standard", "pro", "vip"] as PlanCode[]).map(
+              (plan) => {
+                const theme = getPlanTheme(plan);
+                return (
+                  <span
+                    key={plan}
+                    className={`rounded-full border px-4 py-2 text-xs font-semibold ${theme.badge}`}
+                  >
+                    {getPlanBadge(plan)} {stats.planCounts[plan]}명
+                  </span>
+                );
+              }
+            )}
           </div>
         </section>
 
@@ -2153,14 +2164,14 @@ export default function AdminPage() {
         {tab === "members" ? (
           <section className="mt-8">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-bold">회원 관리</h2>
-              <p className="mt-3 text-sm text-gray-600">
+              <h2 className="text-xl font-bold">회원 관리</h2>
+              <p className="mt-2 text-sm text-gray-600">
                 5단계 플랜 변경, 기록 정리, 학생 메시지 발송을 한 곳에서 관리합니다.
               </p>
             </div>
 
             <div className="mt-8">
-              <label className="text-base font-semibold text-gray-800">회원 검색</label>
+              <label className="text-sm font-semibold text-gray-800">회원 검색</label>
               <input
                 value={memberSearch}
                 onChange={(e) => {
@@ -2168,7 +2179,7 @@ export default function AdminPage() {
                   setMemberMessage("");
                 }}
                 placeholder="이름/이메일/ID/플랜으로 검색"
-                className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
               />
             </div>
 
@@ -2195,13 +2206,13 @@ export default function AdminPage() {
                       selectedMemberId === item.id ? "border-red-300" : "border-gray-200"
                     }`}
                   >
-                    <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                       <button
                         type="button"
                         onClick={() => setSelectedMemberId(item.id)}
                         className="text-left"
                       >
-                        <p className="text-xl font-bold">{item.email || "-"}</p>
+                        <p className="text-lg font-bold">{item.email || "-"}</p>
                         <p className="mt-2 text-sm text-gray-600">
                           이름: {item.full_name?.trim() || "-"}
                         </p>
@@ -2215,14 +2226,14 @@ export default function AdminPage() {
                           만료: {item.plan !== "free" ? formatDateTime(item.plan_expires_at) : "-"}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <span className={`rounded-full border px-4 py-2 text-sm font-semibold ${theme.badge}`}>
+                          <span className={`rounded-full border px-4 py-2 text-xs font-semibold ${theme.badge}`}>
                             {getPlanBadge(item.plan)}
                           </span>
-                          <span className={`rounded-full border px-4 py-2 text-sm font-semibold ${theme.soft}`}>
+                          <span className={`rounded-full border px-4 py-2 text-xs font-semibold ${theme.soft}`}>
                             {getPlanLabel(item.plan)}
                           </span>
                           {item.is_admin ? (
-                            <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                            <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-semibold text-gray-700">
                               관리자
                             </span>
                           ) : null}
@@ -2240,7 +2251,7 @@ export default function AdminPage() {
                               onChange={(e) =>
                                 handlePlanDraftChange(item.id, e.target.value as PlanCode)
                               }
-                              className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                              className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                             >
                               {PLAN_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>
@@ -2262,8 +2273,8 @@ export default function AdminPage() {
                               disabled={draft === "free"}
                               className={
                                 draft === "free"
-                                  ? "mt-2 w-full rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4 text-base text-gray-400 outline-none"
-                                  : "mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                                  ? "mt-2 w-full rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm text-gray-400 outline-none"
+                                  : "mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                               }
                             >
                               {PLAN_DURATION_OPTIONS.map((option) => (
@@ -2292,8 +2303,8 @@ export default function AdminPage() {
                           disabled={saving || !changed}
                           className={
                             saving || !changed
-                              ? "inline-flex w-full items-center justify-center rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-base font-semibold text-gray-400"
-                              : "inline-flex w-full items-center justify-center rounded-2xl bg-black px-5 py-4 text-base font-semibold text-white"
+                              ? "inline-flex w-full items-center justify-center rounded-2xl border border-gray-200 bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-400"
+                              : "inline-flex w-full items-center justify-center rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
                           }
                         >
                           {saving ? "저장 중..." : "플랜 저장"}
@@ -2307,14 +2318,14 @@ export default function AdminPage() {
 
             <div className="mt-10 space-y-5 rounded-3xl border border-red-100 bg-red-50/50 p-6 shadow-sm">
               <div>
-                <h3 className="text-2xl font-bold">기록 정리</h3>
+                <h3 className="text-xl font-bold">기록 정리</h3>
                 <p className="mt-2 text-sm text-gray-600">
                   선택한 회원의 오래된 학습 기록을 정리합니다. 먼저 미리보기를 확인한 뒤 실행해 주세요.
                 </p>
               </div>
 
               <div>
-                <label className="text-base font-semibold text-gray-800">선택 회원</label>
+                <label className="text-sm font-semibold text-gray-800">선택 회원</label>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {profiles.slice(0, 8).map((item) => (
                     <PillButton
@@ -2339,7 +2350,7 @@ export default function AdminPage() {
                       setCleanupPreview(null);
                       setCleanupReadyToRun(false);
                     }}
-                    className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-base outline-none"
+                    className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
                   >
                     <option value="">회원 선택</option>
                     {profiles.map((item) => (
@@ -2358,7 +2369,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="text-base font-semibold text-gray-800">정리 기간</label>
+                <label className="text-sm font-semibold text-gray-800">정리 기간</label>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {[7, 30, 90].map((days) => (
                     <PillButton
@@ -2389,7 +2400,7 @@ export default function AdminPage() {
                 </div>
 
                 <div className="mt-4">
-                  <label className="text-sm font-semibold text-gray-700">직접 입력</label>
+                  <label className="text-xs font-semibold text-gray-700">직접 입력</label>
                   <div className="mt-2 flex items-center gap-3">
                     <input
                       type="number"
@@ -2402,7 +2413,7 @@ export default function AdminPage() {
                         setCleanupPreview(null);
                         setCleanupReadyToRun(false);
                       }}
-                      className="w-32 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-base outline-none"
+                      className="w-32 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
                     />
                     <span className="text-sm text-gray-600">일 이전 기록 정리</span>
                   </div>
@@ -2410,7 +2421,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="text-base font-semibold text-gray-800">정리 대상</label>
+                <label className="text-sm font-semibold text-gray-800">정리 대상</label>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <PillButton
                     active={cleanupScope === "mine"}
@@ -2440,7 +2451,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={handleCleanupPreview}
                   disabled={cleanupBusy}
-                  className="inline-flex rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800"
+                  className="inline-flex rounded-2xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-800"
                 >
                   {cleanupBusy ? "확인 중..." : "정리 미리보기"}
                 </button>
@@ -2451,8 +2462,8 @@ export default function AdminPage() {
                   disabled={cleanupBusy || !cleanupReadyToRun}
                   className={
                     cleanupBusy || !cleanupReadyToRun
-                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
-                      : "inline-flex rounded-2xl bg-black px-6 py-4 text-base font-semibold text-white"
+                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
+                      : "inline-flex rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white"
                   }
                 >
                   정리 실행
@@ -2472,7 +2483,7 @@ export default function AdminPage() {
 
             <div className="mt-10 space-y-5 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <div>
-                <h3 className="text-2xl font-bold">학생에게 메시지 보내기</h3>
+                <h3 className="text-xl font-bold">학생에게 메시지 보내기</h3>
                 <p className="mt-2 text-sm text-gray-600">
                   선택 회원 또는 특정 플랜 전체에게 메시지를 보낼 수 있습니다.
                 </p>
@@ -2497,7 +2508,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="text-base font-semibold text-gray-800">제목</label>
+                <label className="text-sm font-semibold text-gray-800">제목</label>
                 <input
                   value={memberMsgTitle}
                   onChange={(e) => {
@@ -2505,12 +2516,12 @@ export default function AdminPage() {
                     setMemberMsgStatus("");
                     setMemberMsgProbeResult(null);
                   }}
-                  className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-base font-semibold text-gray-800">내용</label>
+                <label className="text-sm font-semibold text-gray-800">내용</label>
                 <textarea
                   value={memberMsgBody}
                   onChange={(e) => {
@@ -2520,13 +2531,13 @@ export default function AdminPage() {
                   }}
                   rows={4}
                   placeholder="학생에게 보낼 메시지를 입력하세요."
-                  className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 lg:grid-cols-2">
                 <div>
-                  <label className="text-base font-semibold text-gray-800">전송 대상</label>
+                  <label className="text-sm font-semibold text-gray-800">전송 대상</label>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <PillButton
                       active={memberMsgTarget === "selected"}
@@ -2555,7 +2566,7 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <label className="text-base font-semibold text-gray-800">플랜 선택</label>
+                  <label className="text-sm font-semibold text-gray-800">플랜 선택</label>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {PLAN_OPTIONS.map((option) => {
                       const theme = getPlanTheme(option.value);
@@ -2570,8 +2581,8 @@ export default function AdminPage() {
                           }}
                           className={
                             memberMsgPlan === option.value
-                              ? `rounded-full border px-4 py-2 text-sm font-semibold ${theme.badge}`
-                              : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                              ? `rounded-full border px-4 py-2 text-xs font-semibold ${theme.badge}`
+                              : "rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
                           }
                         >
                           {option.badge}
@@ -2598,8 +2609,8 @@ export default function AdminPage() {
                   className={
                     memberMsgProbeBusy ||
                     (memberMsgTarget === "selected" && !selectedMemberId)
-                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-base font-semibold text-gray-400"
-                      : "inline-flex rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800"
+                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-400"
+                      : "inline-flex rounded-2xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-800"
                   }
                 >
                   {memberMsgProbeBusy ? "대상 확인 중..." : "대상 수 미리보기"}
@@ -2642,8 +2653,8 @@ export default function AdminPage() {
                   !memberMsgTitle.trim() ||
                   !memberMsgBody.trim() ||
                   (memberMsgTarget === "selected" && !selectedMemberId)
-                    ? "inline-flex w-full items-center justify-center rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
-                    : "inline-flex w-full items-center justify-center rounded-2xl bg-black px-6 py-4 text-base font-semibold text-white"
+                    ? "inline-flex w-full items-center justify-center rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
+                    : "inline-flex w-full items-center justify-center rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white"
                 }
               >
                 {memberMsgBusy ? "메시지 전송 중..." : "메시지 전송"}
@@ -2663,23 +2674,23 @@ export default function AdminPage() {
         {tab === "stats" ? (
           <section className="mt-8 space-y-8">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-bold">회원별 통계</h2>
-              <p className="mt-3 text-sm text-gray-600">
+              <h2 className="text-xl font-bold">회원별 통계</h2>
+              <p className="mt-2 text-sm text-gray-600">
                 현재 기록을 기준으로 앱 사용 패턴을 간단히 봅니다.
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <p className="text-xl font-bold">단어 시도</p>
-                <p className="mt-4 text-3xl font-bold text-blue-600">{stats.wordCount}</p>
+                <p className="text-lg font-bold">단어 시도</p>
+                <p className="mt-4 text-2xl font-bold text-blue-600">{stats.wordCount}</p>
               </div>
               <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <p className="text-xl font-bold">한자 시도</p>
-                <p className="mt-4 text-3xl font-bold text-blue-600">{stats.kanjiCount}</p>
+                <p className="text-lg font-bold">한자 시도</p>
+                <p className="mt-4 text-2xl font-bold text-blue-600">{stats.kanjiCount}</p>
               </div>
               <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <p className="text-xl font-bold">회화 시도</p>
-                <p className="mt-4 text-3xl font-bold text-blue-600">{stats.talkCount}</p>
+                <p className="text-lg font-bold">회화 시도</p>
+                <p className="mt-4 text-2xl font-bold text-blue-600">{stats.talkCount}</p>
               </div>
             </div>
           </section>
@@ -2688,14 +2699,14 @@ export default function AdminPage() {
         {tab === "push" ? (
           <section className="mt-8 space-y-8">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-bold">🔔 푸시 알림 보내기</h2>
-              <p className="mt-3 text-sm text-gray-600">
+              <h2 className="text-xl font-bold">🔔 푸시 알림 보내기</h2>
+              <p className="mt-2 text-sm text-gray-600">
                 테스트, 선택 회원, 전체 발송으로 나누어 알림을 보낼 수 있습니다.
               </p>
             </div>
             <div className="space-y-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <div>
-                <label className="text-base font-semibold text-gray-800">발송 방식</label>
+                <label className="text-sm font-semibold text-gray-800">발송 방식</label>
                 <div className="mt-3 flex flex-wrap gap-3">
                   <button
                     type="button"
@@ -2706,8 +2717,8 @@ export default function AdminPage() {
                     }}
                     className={
                       pushMode === "test"
-                        ? "rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white"
-                        : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
+                        ? "rounded-2xl bg-black px-4 py-3 text-xs font-semibold text-white"
+                        : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-xs font-semibold text-gray-800"
                     }
                   >
                     테스트 발송
@@ -2721,8 +2732,8 @@ export default function AdminPage() {
                     }}
                     className={
                       pushMode === "selected"
-                        ? "rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white"
-                        : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
+                        ? "rounded-2xl bg-black px-4 py-3 text-xs font-semibold text-white"
+                        : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-xs font-semibold text-gray-800"
                     }
                   >
                     선택 회원 발송
@@ -2736,8 +2747,8 @@ export default function AdminPage() {
                     }}
                     className={
                       pushMode === "all"
-                        ? "rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white"
-                        : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
+                        ? "rounded-2xl bg-black px-4 py-3 text-xs font-semibold text-white"
+                        : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-xs font-semibold text-gray-800"
                     }
                   >
                     전체 발송
@@ -2748,7 +2759,7 @@ export default function AdminPage() {
               {pushMode === "selected" ? (
                 <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
                   <div>
-                    <label className="text-base font-semibold text-gray-800">회원 검색</label>
+                    <label className="text-sm font-semibold text-gray-800">회원 검색</label>
                     <input
                       value={pushMemberQuery}
                       onChange={(e) => {
@@ -2757,11 +2768,11 @@ export default function AdminPage() {
                         setPushDebugInfo(null);
                       }}
                       placeholder="이름/이메일/ID/플랜으로 검색"
-                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-base outline-none"
+                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-base font-semibold text-gray-800">
+                    <label className="text-sm font-semibold text-gray-800">
                       발송할 회원
                     </label>
                     <select
@@ -2771,7 +2782,7 @@ export default function AdminPage() {
                         setPushMessage("");
                         setPushDebugInfo(null);
                       }}
-                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-base outline-none"
+                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
                     >
                       <option value="">회원 선택</option>
                       {filteredPushProfiles.map((item) => (
@@ -2790,7 +2801,7 @@ export default function AdminPage() {
               ) : null}
 
               <div>
-                <label className="text-base font-semibold text-gray-800">제목</label>
+                <label className="text-sm font-semibold text-gray-800">제목</label>
                 <input
                   value={pushTitle}
                   onChange={(e) => {
@@ -2798,11 +2809,11 @@ export default function AdminPage() {
                     setPushMessage("");
                     setPushDebugInfo(null);
                   }}
-                  className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
               </div>
               <div>
-                <label className="text-base font-semibold text-gray-800">내용</label>
+                <label className="text-sm font-semibold text-gray-800">내용</label>
                 <textarea
                   value={pushBody}
                   onChange={(e) => {
@@ -2811,11 +2822,11 @@ export default function AdminPage() {
                     setPushDebugInfo(null);
                   }}
                   rows={4}
-                  className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
               </div>
               <div>
-                <label className="text-base font-semibold text-gray-800">
+                <label className="text-sm font-semibold text-gray-800">
                   클릭 이동 URL (선택)
                 </label>
                 <input
@@ -2825,7 +2836,7 @@ export default function AdminPage() {
                     setPushMessage("");
                     setPushDebugInfo(null);
                   }}
-                  className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
               </div>
 
@@ -2836,8 +2847,8 @@ export default function AdminPage() {
                   disabled={pushProbeBusy || (pushMode === "selected" && !selectedPushUserId)}
                   className={
                     pushProbeBusy || (pushMode === "selected" && !selectedPushUserId)
-                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-base font-semibold text-gray-400"
-                      : "inline-flex rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800"
+                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-400"
+                      : "inline-flex rounded-2xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-800"
                   }
                 >
                   {pushProbeBusy ? "대상 확인 중..." : "대상 확인"}
@@ -2856,17 +2867,17 @@ export default function AdminPage() {
                     !pushTitle.trim() ||
                     !pushBody.trim() ||
                     (pushMode === "selected" && !selectedPushUserId)
-                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
-                      : "inline-flex rounded-2xl bg-black px-6 py-4 text-base font-semibold text-white"
+                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
+                      : "inline-flex rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white"
                   }
                 >
                   {pushBusy
                     ? "푸시 발송 중..."
                     : pushMode === "test"
-                      ? "🚀 테스트 발송"
-                      : pushMode === "selected"
-                        ? "🚀 선택 회원 발송"
-                        : "🚀 전체 발송"}
+                    ? "🚀 테스트 발송"
+                    : pushMode === "selected"
+                    ? "🚀 선택 회원 발송"
+                    : "🚀 전체 발송"}
                 </button>
               </div>
 
@@ -2896,8 +2907,8 @@ export default function AdminPage() {
         {tab === "logs" ? (
           <section className="mt-8 space-y-8">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-bold">기록</h2>
-              <p className="mt-3 text-sm text-gray-600">
+              <h2 className="text-xl font-bold">기록</h2>
+              <p className="mt-2 text-sm text-gray-600">
                 최근 시도 기록을 카드형으로 확인하고 필터로 빠르게 찾을 수 있습니다.
               </p>
             </div>
@@ -2916,8 +2927,8 @@ export default function AdminPage() {
                     onClick={() => setLogType(value as LogFilter)}
                     className={
                       logType === value
-                        ? "rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white"
-                        : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
+                        ? "rounded-2xl bg-black px-4 py-3 text-xs font-semibold text-white"
+                        : "rounded-2xl border border-gray-300 bg-white px-4 py-3 text-xs font-semibold text-gray-800"
                     }
                   >
                     {label}
@@ -2925,14 +2936,14 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+              <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
                 <input
                   value={logQuery}
                   onChange={(e) => setLogQuery(e.target.value)}
                   placeholder="이메일 / 레벨 / 유형 검색"
-                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
-                <label className="inline-flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm font-medium text-gray-700">
+                <label className="inline-flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700">
                   <input
                     type="checkbox"
                     checked={logOnlyWrong}
@@ -2954,19 +2965,19 @@ export default function AdminPage() {
                   key={`${item.user_id || "log"}-${idx}-${item.created_at || ""}`}
                   className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
                 >
-                  <p className="text-xl font-bold">{item.user_email || "(이메일 없음)"}</p>
+                  <p className="text-lg font-bold">{item.user_email || "(이메일 없음)"}</p>
                   <p className="mt-2 text-sm text-gray-600">🕒 {formatDateTime(item.created_at)}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700">
+                    <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
                       {item.level || "-"}
                     </span>
-                    <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700">
+                    <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
                       {item.pos_mode || "-"}
                     </span>
-                    <span className="rounded-full border border-green-200 bg-green-50 px-3 py-2 text-sm font-semibold text-gray-700">
+                    <span className="rounded-full border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-gray-700">
                       ✅ {item.score}/{item.quiz_len}
                     </span>
-                    <span className="rounded-full border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-gray-700">
+                    <span className="rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-gray-700">
                       ❌ {item.wrong_count || 0}
                     </span>
                   </div>
@@ -2981,8 +2992,8 @@ export default function AdminPage() {
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-bold">앱 설정</h2>
-                  <p className="mt-3 text-sm text-gray-600">
+                  <h2 className="text-xl font-bold">앱 설정</h2>
+                  <p className="mt-2 text-sm text-gray-600">
                     상단 메뉴와 홈 화면 카드에 노출되는 메뉴를 한 번에 관리합니다.
                   </p>
                 </div>
@@ -3002,10 +3013,10 @@ export default function AdminPage() {
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">
-                <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700">
+                <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700">
                   홈 카드 + 상단 메뉴 연동
                 </span>
-                <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700">
+                <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700">
                   5등급 노출 제어
                 </span>
               </div>
@@ -3086,7 +3097,7 @@ export default function AdminPage() {
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-xl font-bold text-gray-900">{item.label}</h3>
+                          <h3 className="text-lg font-bold text-gray-900">{item.label}</h3>
                           <span className={status.className}>{status.text}</span>
                         </div>
                         <p className="mt-3 text-sm text-gray-600">{item.desc}</p>
@@ -3097,7 +3108,7 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[180px_1fr]">
+                    <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[160px_1fr]">
                       <div>
                         <p className="text-sm font-semibold text-gray-700">노출 여부</p>
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -3108,8 +3119,8 @@ export default function AdminPage() {
                             }
                             className={
                               showValue
-                                ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
-                                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                                ? "rounded-full bg-black px-4 py-2 text-xs font-semibold text-white"
+                                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
                             }
                           >
                             표시
@@ -3121,8 +3132,8 @@ export default function AdminPage() {
                             }
                             className={
                               !showValue
-                                ? "rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
-                                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                                ? "rounded-full bg-red-500 px-4 py-2 text-xs font-semibold text-white"
+                                : "rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
                             }
                           >
                             숨김
@@ -3144,8 +3155,8 @@ export default function AdminPage() {
                                 }
                                 className={
                                   minPlanValue === option.value
-                                    ? `rounded-full border px-4 py-2 text-sm font-semibold ${theme.badge}`
-                                    : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+                                    ? `rounded-full border px-4 py-2 text-xs font-semibold ${theme.badge}`
+                                    : "rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
                                 }
                               >
                                 {option.badge}
@@ -3163,9 +3174,9 @@ export default function AdminPage() {
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-xl font-bold">마이페이지 영역 공개 설정</h3>
-                  <p className="mt-3 text-sm text-gray-600">
-                    마이페이지에서 아직 공개하지 않을 영역을 미리 만들어 두고, 준비가 끝났을 때만 노출할 수 있습니다.
+                  <h3 className="text-lg font-bold">페이지 영역 공개 설정</h3>
+                  <p className="mt-2 text-sm text-gray-600">
+                    마이페이지와 홈에서 아직 공개하지 않을 영역을 미리 만들어 두고, 준비가 끝났을 때만 노출할 수 있습니다.
                   </p>
                 </div>
 
@@ -3183,81 +3194,140 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-lg font-bold text-gray-900">나의 강의실</h4>
-                      <span
-                        className={
-                          showMyClassroomSection
-                            ? "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
-                            : "rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600"
-                        }
-                      >
-                        {showMyClassroomSection ? "표시 중" : "숨김 중"}
-                      </span>
+              <div className="mt-5 space-y-4">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-base font-bold text-gray-900">나의 강의실</h4>
+                        <span
+                          className={
+                            showMyClassroomSection
+                              ? "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
+                              : "rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600"
+                          }
+                        >
+                          {showMyClassroomSection ? "표시 중" : "숨김 중"}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm text-gray-600">
+                        마이페이지의 현재 플랜 아래에 ‘나의 강의실’ 안내 블록을 노출합니다.
+                      </p>
                     </div>
-                    <p className="mt-3 text-sm text-gray-600">
-                      마이페이지의 현재 플랜 아래에 ‘나의 강의실’ 안내 블록을 노출합니다.
-                    </p>
+
+                    <div className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700">
+                      대상 페이지: MY
+                    </div>
                   </div>
 
-                  <div className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700">
-                    대상 페이지: MY
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMyClassroomSection(true);
+                        setPageSettingsMessage("");
+                      }}
+                      className={
+                        showMyClassroomSection
+                          ? "rounded-full bg-black px-4 py-2 text-xs font-semibold text-white"
+                          : "rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
+                      }
+                    >
+                      표시
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMyClassroomSection(false);
+                        setPageSettingsMessage("");
+                      }}
+                      className={
+                        !showMyClassroomSection
+                          ? "rounded-full bg-red-500 px-4 py-2 text-xs font-semibold text-white"
+                          : "rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
+                      }
+                    >
+                      숨김
+                    </button>
                   </div>
                 </div>
 
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMyClassroomSection(true);
-                      setPageSettingsMessage("");
-                    }}
-                    className={
-                      showMyClassroomSection
-                        ? "rounded-full bg-black px-4 py-2 text-sm font-semibold text-white"
-                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                    }
-                  >
-                    표시
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMyClassroomSection(false);
-                      setPageSettingsMessage("");
-                    }}
-                    className={
-                      !showMyClassroomSection
-                        ? "rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
-                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                    }
-                  >
-                    숨김
-                  </button>
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-base font-bold text-gray-900">강의 카탈로그</h4>
+                        <span
+                          className={
+                            showCoursesSectionOnHome
+                              ? "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
+                              : "rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600"
+                          }
+                        >
+                          {showCoursesSectionOnHome ? "표시 중" : "숨김 중"}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm text-gray-600">
+                        홈 화면에 강의 카탈로그 이동 블록을 노출합니다.
+                      </p>
+                    </div>
+
+                    <div className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700">
+                      대상 페이지: HOME
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCoursesSectionOnHome(true);
+                        setPageSettingsMessage("");
+                      }}
+                      className={
+                        showCoursesSectionOnHome
+                          ? "rounded-full bg-black px-4 py-2 text-xs font-semibold text-white"
+                          : "rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
+                      }
+                    >
+                      표시
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCoursesSectionOnHome(false);
+                        setPageSettingsMessage("");
+                      }}
+                      className={
+                        !showCoursesSectionOnHome
+                          ? "rounded-full bg-red-500 px-4 py-2 text-xs font-semibold text-white"
+                          : "rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
+                      }
+                    >
+                      숨김
+                    </button>
+                  </div>
                 </div>
 
-                <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
                   <p className="text-sm font-semibold text-blue-900">
                     지금은 숨김으로 두고 내부 테스트만 한 뒤, 준비가 끝났을 때 표시로 바꾸면 됩니다.
                   </p>
                 </div>
 
                 {pageSettingsMessage ? (
-                  <p className="mt-4 text-sm text-gray-600">{pageSettingsMessage}</p>
+                  <p className="text-sm text-gray-600">{pageSettingsMessage}</p>
                 ) : null}
               </div>
             </div>
 
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-bold">미리보기</h3>
-              <p className="mt-3 text-sm text-gray-600">
+              <h3 className="text-lg font-bold">미리보기</h3>
+              <p className="mt-2 text-sm text-gray-600">
                 현재 설정 기준으로 사용자 등급별로 어떤 메뉴가 보이는지 요약합니다.
               </p>
 
-              <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
                 {(["free", "light", "standard", "pro", "vip"] as PlanCode[]).map((previewPlan) => {
                   const theme = getPlanTheme(previewPlan);
                   return (
@@ -3265,7 +3335,7 @@ export default function AdminPage() {
                       key={previewPlan}
                       className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
                     >
-                      <p className={`inline-flex rounded-full border px-3 py-1.5 text-base font-semibold ${theme.badge}`}>
+                      <p className={`inline-flex rounded-full border px-3 py-1.5 text-sm font-semibold ${theme.badge}`}>
                         {getPlanBadge(previewPlan)} 사용자에게 보임
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -3282,7 +3352,7 @@ export default function AdminPage() {
                           .map(([label]) => (
                             <span
                               key={String(label)}
-                              className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700"
+                              className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
                             >
                               {label}
                             </span>
@@ -3300,8 +3370,8 @@ export default function AdminPage() {
                   disabled={menuSaving}
                   className={
                     menuSaving
-                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
-                      : "inline-flex rounded-2xl bg-black px-6 py-4 text-base font-semibold text-white"
+                      ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
+                      : "inline-flex rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white"
                   }
                 >
                   {menuSaving ? "저장 중..." : "메뉴 설정 저장"}
@@ -3314,8 +3384,8 @@ export default function AdminPage() {
         {tab === "classroom" ? (
           <section className="mt-8 space-y-8">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-bold">강의실 관리</h2>
-              <p className="mt-3 text-sm text-gray-600">
+              <h2 className="text-xl font-bold">강의실 관리</h2>
+              <p className="mt-2 text-sm text-gray-600">
                 강의와 레슨을 직접 등록하고 관리합니다.
               </p>
               {classroomMessage ? (
@@ -3324,15 +3394,15 @@ export default function AdminPage() {
             </div>
 
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-bold">회원 강의 배정</h3>
+              <h3 className="text-lg font-bold">회원 강의 배정</h3>
               <p className="mt-2 text-sm text-gray-600">
                 특정 회원에게 강의를 붙이거나 해제할 수 있습니다.
               </p>
 
-              <div className="mt-4 grid gap-6 lg:grid-cols-[320px_1fr]">
+              <div className="mt-4 grid gap-6 xl:grid-cols-[300px_1fr]">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-base font-semibold text-gray-800">회원 검색</label>
+                    <label className="text-sm font-semibold text-gray-800">회원 검색</label>
                     <input
                       value={memberCourseQuery}
                       onChange={(e) => {
@@ -3340,19 +3410,19 @@ export default function AdminPage() {
                         setEnrollmentMessage("");
                       }}
                       placeholder="이름 / 이메일 / ID 검색"
-                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-base font-semibold text-gray-800">회원 선택</label>
+                    <label className="text-sm font-semibold text-gray-800">회원 선택</label>
                     <select
                       value={selectedEnrollmentUserId}
                       onChange={(e) => {
                         setSelectedEnrollmentUserId(e.target.value);
                         setEnrollmentMessage("");
                       }}
-                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-base outline-none"
+                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
                     >
                       <option value="">회원 선택</option>
                       {filteredEnrollmentProfiles.map((item) => (
@@ -3380,7 +3450,7 @@ export default function AdminPage() {
 
                 <div className="space-y-6">
                   <div>
-                    <h4 className="text-lg font-bold text-gray-900">현재 배정된 강의</h4>
+                    <h4 className="text-base font-bold text-gray-900">현재 배정된 강의</h4>
 
                     <div className="mt-3 space-y-3">
                       {!selectedEnrollmentUserId ? (
@@ -3405,7 +3475,7 @@ export default function AdminPage() {
                             >
                               <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                  <p className="text-base font-bold text-gray-900">
+                                  <p className="text-sm font-bold text-gray-900">
                                     {course?.title || enrollment.course_id}
                                   </p>
                                   <p className="mt-1 text-sm text-gray-600">
@@ -3423,8 +3493,8 @@ export default function AdminPage() {
                                   disabled={removingEnrollmentId === enrollment.id}
                                   className={
                                     removingEnrollmentId === enrollment.id
-                                      ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400"
-                                      : "rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                                      ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-xs font-semibold text-gray-400"
+                                      : "rounded-2xl border border-red-300 bg-white px-4 py-3 text-xs font-semibold text-red-600"
                                   }
                                 >
                                   {removingEnrollmentId === enrollment.id ? "해제 중..." : "배정 해제"}
@@ -3438,7 +3508,7 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <h4 className="text-lg font-bold text-gray-900">강의 배정하기</h4>
+                    <h4 className="text-base font-bold text-gray-900">강의 배정하기</h4>
 
                     <div className="mt-3 space-y-3">
                       {courses.length === 0 ? (
@@ -3456,7 +3526,7 @@ export default function AdminPage() {
                             >
                               <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                  <p className="text-base font-bold text-gray-900">{course.title}</p>
+                                  <p className="text-sm font-bold text-gray-900">{course.title}</p>
                                   <p className="mt-1 text-sm text-gray-600">
                                     {course.level} · {course.status}
                                   </p>
@@ -3472,15 +3542,15 @@ export default function AdminPage() {
                                   }
                                   className={
                                     !selectedEnrollmentUserId || already || assigningCourseId === course.id
-                                      ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400"
-                                      : "rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white"
+                                      ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-xs font-semibold text-gray-400"
+                                      : "rounded-2xl bg-black px-4 py-3 text-xs font-semibold text-white"
                                   }
                                 >
                                   {already
                                     ? "배정됨"
                                     : assigningCourseId === course.id
-                                      ? "배정 중..."
-                                      : "강의 배정"}
+                                    ? "배정 중..."
+                                    : "강의 배정"}
                                 </button>
                               </div>
                             </div>
@@ -3493,48 +3563,48 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+            <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
               <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h3 className="text-xl font-bold">강의 추가</h3>
+                <h3 className="text-lg font-bold">강의 추가</h3>
 
                 <div className="mt-4 space-y-4">
                   <input
                     value={newCourseTitle}
                     onChange={(e) => setNewCourseTitle(e.target.value)}
                     placeholder="강의 제목"
-                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                   />
                   <input
                     value={newCourseSlug}
                     onChange={(e) => setNewCourseSlug(e.target.value)}
                     placeholder="slug 예: starter-patterns"
-                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                   />
                   <input
                     value={newCourseLevel}
                     onChange={(e) => setNewCourseLevel(e.target.value)}
                     placeholder="레벨 예: 입문 / N3~N2"
-                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                   />
                   <textarea
                     value={newCourseDescription}
                     onChange={(e) => setNewCourseDescription(e.target.value)}
                     rows={4}
                     placeholder="강의 설명"
-                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                   />
                   <input
                     value={newCourseThumbnailUrl}
                     onChange={(e) => setNewCourseThumbnailUrl(e.target.value)}
                     placeholder="썸네일 이미지 URL"
-                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                   />
                   <select
                     value={newCourseStatus}
                     onChange={(e) =>
                       setNewCourseStatus(e.target.value as "draft" | "open" | "coming")
                     }
-                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                   >
                     <option value="draft">draft</option>
                     <option value="open">open</option>
@@ -3547,8 +3617,8 @@ export default function AdminPage() {
                     disabled={classroomLoading}
                     className={
                       classroomLoading
-                        ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
-                        : "inline-flex rounded-2xl bg-black px-6 py-4 text-base font-semibold text-white"
+                        ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
+                        : "inline-flex rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white"
                     }
                   >
                     {classroomLoading ? "처리 중..." : "강의 추가"}
@@ -3557,7 +3627,7 @@ export default function AdminPage() {
               </div>
 
               <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h3 className="text-xl font-bold">강의 목록</h3>
+                <h3 className="text-lg font-bold">강의 목록</h3>
 
                 <div className="mt-4 space-y-3">
                   {courses.length === 0 ? (
@@ -3648,8 +3718,8 @@ export default function AdminPage() {
                                   disabled={savingCourseId === course.id || deletingCourseId === course.id}
                                   className={
                                     savingCourseId === course.id
-                                      ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400"
-                                      : "rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white"
+                                      ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-xs font-semibold text-gray-400"
+                                      : "rounded-2xl bg-black px-4 py-3 text-xs font-semibold text-white"
                                   }
                                 >
                                   {savingCourseId === course.id ? "저장 중..." : "저장"}
@@ -3659,7 +3729,7 @@ export default function AdminPage() {
                                   type="button"
                                   onClick={() => setEditingCourseId("")}
                                   disabled={deletingCourseId === course.id}
-                                  className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700"
+                                  className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-xs font-semibold text-gray-700"
                                 >
                                   취소
                                 </button>
@@ -3671,8 +3741,8 @@ export default function AdminPage() {
                                     disabled={deletingCourseId === course.id}
                                     className={
                                       deletingCourseId === course.id
-                                        ? "rounded-2xl border border-red-200 bg-red-100 px-4 py-3 text-sm font-semibold text-red-300"
-                                        : "rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white"
+                                        ? "rounded-2xl border border-red-200 bg-red-100 px-4 py-3 text-xs font-semibold text-red-300"
+                                        : "rounded-2xl bg-red-500 px-4 py-3 text-xs font-semibold text-white"
                                     }
                                   >
                                     {deletingCourseId === course.id ? "삭제 중..." : "정말 삭제"}
@@ -3682,7 +3752,7 @@ export default function AdminPage() {
                                     type="button"
                                     onClick={() => setDeleteConfirmCourseId(course.id)}
                                     disabled={deletingCourseId === course.id}
-                                    className="rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                                    className="rounded-2xl border border-red-300 bg-white px-4 py-3 text-xs font-semibold text-red-600"
                                   >
                                     삭제
                                   </button>
@@ -3704,7 +3774,7 @@ export default function AdminPage() {
                                   />
                                 ) : null}
 
-                                <p className="text-base font-bold text-gray-900">{course.title}</p>
+                                <p className="text-sm font-bold text-gray-900">{course.title}</p>
                                 <p className="mt-1 text-sm text-gray-600">
                                   {course.slug} · {course.level}
                                 </p>
@@ -3805,7 +3875,7 @@ export default function AdminPage() {
             </div>
 
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-bold">레슨 추가</h3>
+              <h3 className="text-lg font-bold">레슨 추가</h3>
               <p className="mt-2 text-sm text-gray-600">
                 선택한 강의에 레슨을 추가합니다.
               </p>
@@ -3813,33 +3883,33 @@ export default function AdminPage() {
                 현재 선택 강의: {selectedCourse?.title || "-"}
               </p>
 
-              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
                 <input
                   value={newLessonTitle}
                   onChange={(e) => setNewLessonTitle(e.target.value)}
                   placeholder="레슨 제목"
-                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
                 <input
                   type="number"
                   value={newLessonSortOrder}
                   onChange={(e) => setNewLessonSortOrder(Number(e.target.value || 1))}
                   placeholder="정렬 순서"
-                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
                 <textarea
                   value={newLessonDescription}
                   onChange={(e) => setNewLessonDescription(e.target.value)}
                   rows={3}
                   placeholder="레슨 설명"
-                  className="lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="xl:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
                 <select
                   value={newLessonVideoSource}
                   onChange={(e) =>
                     setNewLessonVideoSource(e.target.value as "youtube" | "vimeo" | "server")
                   }
-                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 >
                   <option value="youtube">youtube</option>
                   <option value="vimeo">vimeo</option>
@@ -3849,32 +3919,32 @@ export default function AdminPage() {
                   value={newLessonVideoUrl}
                   onChange={(e) => setNewLessonVideoUrl(e.target.value)}
                   placeholder="원본 영상 URL"
-                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
                 <input
                   value={newLessonEmbedUrl}
                   onChange={(e) => setNewLessonEmbedUrl(e.target.value)}
                   placeholder="embed URL"
-                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
                 <input
                   type="number"
                   value={newLessonVideoSeconds}
                   onChange={(e) => setNewLessonVideoSeconds(Number(e.target.value || 0))}
                   placeholder="영상 길이(초)"
-                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
                 <input
                   value={newLessonAttachmentUrl}
                   onChange={(e) => setNewLessonAttachmentUrl(e.target.value)}
                   placeholder="첨부자료 URL"
-                  className="lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="xl:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
                 <input
                   value={newLessonPosterUrl}
                   onChange={(e) => setNewLessonPosterUrl(e.target.value)}
                   placeholder="포스터 이미지 URL"
-                  className="lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  className="xl:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
 
                 <label className="inline-flex items-center gap-3 text-sm font-medium text-gray-700">
@@ -3894,8 +3964,8 @@ export default function AdminPage() {
                 disabled={classroomLoading || !selectedCourseId}
                 className={
                   classroomLoading || !selectedCourseId
-                    ? "mt-5 inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
-                    : "mt-5 inline-flex rounded-2xl bg-black px-6 py-4 text-base font-semibold text-white"
+                    ? "mt-5 inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
+                    : "mt-5 inline-flex rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white"
                 }
               >
                 {classroomLoading ? "처리 중..." : "레슨 추가"}
@@ -3903,7 +3973,7 @@ export default function AdminPage() {
             </div>
 
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-bold">선택 강의의 레슨 목록</h3>
+              <h3 className="text-lg font-bold">선택 강의의 레슨 목록</h3>
 
               <div className="mt-4 space-y-3">
                 {lessons.length === 0 ? (
@@ -3956,7 +4026,7 @@ export default function AdminPage() {
                               className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
                             />
 
-                            <div className="grid gap-3 md:grid-cols-2">
+                            <div className="grid gap-3 lg:grid-cols-2">
                               <input
                                 type="number"
                                 value={draft.sort_order}
@@ -4071,8 +4141,8 @@ export default function AdminPage() {
                                 disabled={savingLessonId === lesson.id}
                                 className={
                                   lesson.is_visible
-                                    ? "rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
-                                    : "rounded-2xl border border-green-300 bg-white px-4 py-3 text-sm font-semibold text-green-700"
+                                    ? "rounded-2xl border border-red-300 bg-white px-4 py-3 text-xs font-semibold text-red-600"
+                                    : "rounded-2xl border border-green-300 bg-white px-4 py-3 text-xs font-semibold text-green-700"
                                 }
                               >
                                 {lesson.is_visible ? "숨김으로 변경" : "표시로 변경"}
@@ -4084,8 +4154,8 @@ export default function AdminPage() {
                                 disabled={savingLessonId === lesson.id || deletingLessonId === lesson.id}
                                 className={
                                   savingLessonId === lesson.id
-                                    ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400"
-                                    : "rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white"
+                                    ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-xs font-semibold text-gray-400"
+                                    : "rounded-2xl bg-black px-4 py-3 text-xs font-semibold text-white"
                                 }
                               >
                                 {savingLessonId === lesson.id ? "저장 중..." : "저장"}
@@ -4095,7 +4165,7 @@ export default function AdminPage() {
                                 type="button"
                                 onClick={() => setEditingLessonId("")}
                                 disabled={deletingLessonId === lesson.id}
-                                className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700"
+                                className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-xs font-semibold text-gray-700"
                               >
                                 취소
                               </button>
@@ -4107,8 +4177,8 @@ export default function AdminPage() {
                                   disabled={deletingLessonId === lesson.id}
                                   className={
                                     deletingLessonId === lesson.id
-                                      ? "rounded-2xl border border-red-200 bg-red-100 px-4 py-3 text-sm font-semibold text-red-300"
-                                      : "rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white"
+                                      ? "rounded-2xl border border-red-200 bg-red-100 px-4 py-3 text-xs font-semibold text-red-300"
+                                      : "rounded-2xl bg-red-500 px-4 py-3 text-xs font-semibold text-white"
                                   }
                                 >
                                   {deletingLessonId === lesson.id ? "삭제 중..." : "정말 삭제"}
@@ -4118,7 +4188,7 @@ export default function AdminPage() {
                                   type="button"
                                   onClick={() => setDeleteConfirmLessonId(lesson.id)}
                                   disabled={deletingLessonId === lesson.id}
-                                  className="rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                                  className="rounded-2xl border border-red-300 bg-white px-4 py-3 text-xs font-semibold text-red-600"
                                 >
                                   삭제
                                 </button>
@@ -4136,7 +4206,7 @@ export default function AdminPage() {
                             ) : null}
 
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-base font-bold text-gray-900">{lesson.title}</p>
+                              <p className="text-sm font-bold text-gray-900">{lesson.title}</p>
                               <span
                                 className={
                                   lesson.is_visible
@@ -4161,7 +4231,7 @@ export default function AdminPage() {
                                   setEditingLessonId(lesson.id);
                                   setDeleteConfirmLessonId("");
                                 }}
-                                className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700"
+                                className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-xs font-semibold text-gray-700"
                               >
                                 수정
                               </button>
@@ -4174,8 +4244,8 @@ export default function AdminPage() {
                                 disabled={savingLessonId === lesson.id || deletingLessonId === lesson.id}
                                 className={
                                   lesson.is_visible
-                                    ? "rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
-                                    : "rounded-2xl border border-green-300 bg-white px-4 py-3 text-sm font-semibold text-green-700"
+                                    ? "rounded-2xl border border-red-300 bg-white px-4 py-3 text-xs font-semibold text-red-600"
+                                    : "rounded-2xl border border-green-300 bg-white px-4 py-3 text-xs font-semibold text-green-700"
                                 }
                               >
                                 {savingLessonId === lesson.id
@@ -4192,8 +4262,8 @@ export default function AdminPage() {
                                   disabled={deletingLessonId === lesson.id}
                                   className={
                                     deletingLessonId === lesson.id
-                                      ? "rounded-2xl border border-red-200 bg-red-100 px-4 py-3 text-sm font-semibold text-red-300"
-                                      : "rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white"
+                                      ? "rounded-2xl border border-red-200 bg-red-100 px-4 py-3 text-xs font-semibold text-red-300"
+                                      : "rounded-2xl bg-red-500 px-4 py-3 text-xs font-semibold text-white"
                                   }
                                 >
                                   {deletingLessonId === lesson.id ? "삭제 중..." : "정말 삭제"}
@@ -4203,7 +4273,7 @@ export default function AdminPage() {
                                   type="button"
                                   onClick={() => setDeleteConfirmLessonId(lesson.id)}
                                   disabled={deletingLessonId === lesson.id}
-                                  className="rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                                  className="rounded-2xl border border-red-300 bg-white px-4 py-3 text-xs font-semibold text-red-600"
                                 >
                                   삭제
                                 </button>
@@ -4223,20 +4293,20 @@ export default function AdminPage() {
         {tab === "backup" ? (
           <section className="mt-8 space-y-8">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-bold">백업·버전</h2>
-              <p className="mt-3 text-sm text-gray-600">
+              <h2 className="text-xl font-bold">백업·버전</h2>
+              <p className="mt-2 text-sm text-gray-600">
                 현재 핵심 파일을 ZIP으로 백업하는 흐름을 정리하는 자리입니다.
               </p>
             </div>
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <label className="text-base font-semibold text-gray-800">버전 태그</label>
+              <label className="text-sm font-semibold text-gray-800">버전 태그</label>
               <input
                 value={backupTag}
                 onChange={(e) => {
                   setBackupTag(e.target.value);
                   setBackupMessage("");
                 }}
-                className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
               />
               <label className="mt-5 flex items-center gap-3 text-sm font-medium text-gray-700">
                 <input
@@ -4256,8 +4326,8 @@ export default function AdminPage() {
                 disabled={!backupTag.trim() || !backupConfirm || backupBusy}
                 className={
                   !backupTag.trim() || !backupConfirm || backupBusy
-                    ? "mt-6 inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
-                    : "mt-6 inline-flex rounded-2xl bg-red-500 px-6 py-4 text-base font-semibold text-white"
+                    ? "mt-6 inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
+                    : "mt-6 inline-flex rounded-2xl bg-red-500 px-6 py-3 text-sm font-semibold text-white"
                 }
               >
                 {backupBusy ? "백업 ZIP 생성 중..." : "백업 ZIP 만들기"}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { notFound, useParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -85,6 +85,7 @@ function getProgressTone(progress: number, isCompleted: boolean) {
 
 function getLessonState(index: number, total: number, progress: number) {
   if (total <= 0) return "locked" as const;
+
   const unit = 100 / total;
   const thresholdDone = unit * (index + 1);
   const thresholdOpen = unit * index;
@@ -142,6 +143,8 @@ export default function ClassroomCourseDetailPage() {
     const load = async () => {
       try {
         setLoading(true);
+        setNotFoundState(false);
+        setActionMessage("");
 
         const {
           data: { user },
@@ -155,12 +158,19 @@ export default function ClassroomCourseDetailPage() {
           .maybeSingle();
 
         if (courseError) throw courseError;
+
         if (!courseData || courseData.status === "draft") {
-          if (mounted) setNotFoundState(true);
+          if (mounted) {
+            setNotFoundState(true);
+            setCourse(null);
+            setEnrollment(null);
+            setLessonRows([]);
+          }
           return;
         }
 
         let enrollmentData: EnrollmentRow | null = null;
+
         if (user) {
           const { data, error } = await supabase
             .from("course_enrollments")
@@ -188,7 +198,6 @@ export default function ClassroomCourseDetailPage() {
         setCourse(courseData as CourseRow);
         setEnrollment(enrollmentData);
         setLessonRows((lessonsData as LessonRow[] | null) ?? []);
-        setActionMessage("");
       } catch (error) {
         console.error(error);
         if (mounted) {
@@ -199,7 +208,9 @@ export default function ClassroomCourseDetailPage() {
       }
     };
 
-    if (slug) void load();
+    if (slug) {
+      void load();
+    }
 
     return () => {
       mounted = false;
@@ -208,8 +219,11 @@ export default function ClassroomCourseDetailPage() {
 
   const lessons: LessonWithState[] = useMemo(() => {
     const progress = enrollment?.progress ?? 0;
+
     return lessonRows.map((lesson, index, arr) => {
-      const targetProgress = Math.round(((index + 1) / arr.length) * 100);
+      const targetProgress =
+        arr.length > 0 ? Math.round(((index + 1) / arr.length) * 100) : 0;
+
       return {
         ...lesson,
         state: getLessonState(index, arr.length, progress),
@@ -224,10 +238,8 @@ export default function ClassroomCourseDetailPage() {
 
   const primaryHref = useMemo(() => {
     if (!course) return "/classroom";
-    const firstOpenLesson = lessons.find((lesson) => lesson.state !== "locked");
-    if (!firstOpenLesson) return `/classroom/${course.slug}/lesson`;
     return `/classroom/${course.slug}/lesson`;
-  }, [lessons, course]);
+  }, [course]);
 
   const handleLessonStart = async (lesson: LessonWithState) => {
     if (!course) return;
@@ -257,6 +269,7 @@ export default function ClassroomCourseDetailPage() {
 
       setEnrollment((prev) => {
         const nextProgress = Math.max(prev?.progress ?? 0, lesson.targetProgress);
+
         return {
           course_id: course.id,
           progress: nextProgress,
@@ -278,15 +291,38 @@ export default function ClassroomCourseDetailPage() {
 
   const handlePrimaryStart = async () => {
     const lesson = lessons.find((item) => item.state !== "locked");
+
     if (!lesson) {
       router.push(primaryHref);
       return;
     }
+
     await handleLessonStart(lesson);
   };
 
   if (notFoundState) {
-    notFound();
+    return (
+      <main className="min-h-screen bg-[#f7f8fa] px-4 pb-12 pt-6 text-gray-900 sm:px-6">
+        <div className="mx-auto w-full max-w-6xl rounded-[28px] border border-gray-200 bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold text-gray-500">강의실</p>
+          <h1 className="mt-3 text-2xl font-bold text-gray-900">
+            해당 강의를 찾을 수 없습니다.
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            비공개 상태이거나 존재하지 않는 강의일 수 있습니다.
+          </p>
+
+          <div className="mt-5">
+            <Link
+              href="/classroom"
+              className="inline-flex rounded-2xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50"
+            >
+              강의실로 돌아가기
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   if (loading || !course) {
@@ -294,7 +330,9 @@ export default function ClassroomCourseDetailPage() {
       <main className="min-h-screen bg-[#f7f8fa] px-4 pb-12 pt-6 text-gray-900 sm:px-6">
         <div className="mx-auto w-full max-w-6xl rounded-[28px] border border-gray-200 bg-white p-8 shadow-sm">
           <p className="text-sm font-semibold text-gray-500">강의실</p>
-          <h1 className="mt-3 text-2xl font-bold text-gray-900">강의 정보를 불러오는 중입니다.</h1>
+          <h1 className="mt-3 text-2xl font-bold text-gray-900">
+            강의 정보를 불러오는 중입니다.
+          </h1>
         </div>
       </main>
     );
@@ -354,6 +392,7 @@ export default function ClassroomCourseDetailPage() {
                 >
                   강의실로 돌아가기
                 </Link>
+
                 <button
                   type="button"
                   onClick={handlePrimaryStart}
@@ -418,7 +457,9 @@ export default function ClassroomCourseDetailPage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-500">레슨 구성</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">레슨 클릭 시 진도 자동 저장</h2>
+              <h2 className="mt-2 text-2xl font-bold text-gray-900">
+                레슨 클릭 시 진도 자동 저장
+              </h2>
             </div>
             <p className="text-sm text-gray-500">course_lessons + course_enrollments 연동</p>
           </div>
@@ -434,15 +475,15 @@ export default function ClassroomCourseDetailPage() {
                   lesson.state === "done"
                     ? "학습 완료"
                     : lesson.state === "doing"
-                    ? "학습 가능"
-                    : "잠금";
+                      ? "학습 가능"
+                      : "잠금";
 
                 const badgeClass =
                   lesson.state === "done"
                     ? "bg-green-100 text-green-700"
                     : lesson.state === "doing"
-                    ? "bg-black text-white"
-                    : "bg-white text-gray-500 ring-1 ring-gray-200";
+                      ? "bg-black text-white"
+                      : "bg-white text-gray-500 ring-1 ring-gray-200";
 
                 return (
                   <article
@@ -488,8 +529,8 @@ export default function ClassroomCourseDetailPage() {
                         {activeLessonId === lesson.id
                           ? "저장 중..."
                           : lesson.state === "locked"
-                          ? "준비 중"
-                          : "학습하러 가기"}
+                            ? "준비 중"
+                            : "학습하러 가기"}
                       </button>
 
                       <button

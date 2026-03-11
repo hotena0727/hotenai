@@ -205,6 +205,8 @@ export default function HomePage() {
 
   const [profile, setProfile] = useState<HomeProfile | null>(null);
   const [attempts, setAttempts] = useState<QuizAttemptRow[]>([]);
+  const [showCoursesSection, setShowCoursesSection] = useState(false);
+
   const [menuSettings, setMenuSettings] = useState<MenuSettings>({
     show_home: true,
     show_word: true,
@@ -323,6 +325,18 @@ export default function HomePage() {
           });
         }
 
+        const { data: pageRow, error: pageError } = await supabase
+          .from("app_page_settings")
+          .select("show_courses_section_on_home")
+          .eq("id", 1)
+          .maybeSingle();
+
+        if (pageError) {
+          console.error(pageError);
+        } else {
+          setShowCoursesSection(Boolean(pageRow?.show_courses_section_on_home));
+        }
+
         const all = await fetchAllAttempts(user.id, 300);
         setAttempts(all);
       } catch (error) {
@@ -436,59 +450,59 @@ export default function HomePage() {
   const recommendedMainHref = canTalk
     ? "/talk"
     : canWord
-      ? "/word"
-      : canKanji
-        ? "/kanji"
-        : canKatsuyou
-          ? "/katsuyou"
-          : null;
+    ? "/word"
+    : canKanji
+    ? "/kanji"
+    : canKatsuyou
+    ? "/katsuyou"
+    : null;
 
   const recommendedMainLabel = canTalk
     ? "🗣️ 회화 시작"
     : canWord
-      ? "📝 단어 시작"
-      : canKanji
-        ? "🈯 한자 시작"
-        : canKatsuyou
-          ? "🔄 활용 시작"
-          : null;
+    ? "📝 단어 시작"
+    : canKanji
+    ? "🈯 한자 시작"
+    : canKatsuyou
+    ? "🔄 활용 시작"
+    : null;
 
   const recommendedWrongHref = canMyPage
     ? canTalk
       ? "/mypage/wrong-talk"
       : canWord
-        ? "/mypage/wrong-word"
-        : canKanji
-          ? "/mypage/wrong-kanji"
-          : canKatsuyou
-            ? "/mypage/wrong-katsuyou"
-            : null
+      ? "/mypage/wrong-word"
+      : canKanji
+      ? "/mypage/wrong-kanji"
+      : canKatsuyou
+      ? "/mypage/wrong-katsuyou"
+      : null
     : null;
 
   const recommendedWrongLabel = canMyPage
     ? canTalk
       ? "↪️ 반복오답 루틴"
       : canWord
-        ? "↪️ 단어 오답 루틴"
-        : canKanji
-          ? "↪️ 한자 오답 루틴"
-          : canKatsuyou
-            ? "↪️ 활용 오답 루틴"
-            : null
+      ? "↪️ 단어 오답 루틴"
+      : canKanji
+      ? "↪️ 한자 오답 루틴"
+      : canKatsuyou
+      ? "↪️ 활용 오답 루틴"
+      : null
     : null;
 
   const recommendationText =
     stats.goalPercent >= 100
       ? "오늘 목표 달성! 내일도 1세트부터 가볍게 이어가요."
       : canTalk
-        ? "오늘은 회화 1세트부터 가볍게 이어가보세요."
-        : canWord
-          ? "오늘은 단어 1세트부터 가볍게 이어가보세요."
-          : canKanji
-            ? "오늘은 한자 1세트부터 가볍게 이어가보세요."
-            : canKatsuyou
-              ? "오늘은 활용 1세트부터 가볍게 이어가보세요."
-              : "오늘 이용 가능한 학습 메뉴를 관리자 설정에서 확인해 주세요.";
+      ? "오늘은 회화 1세트부터 가볍게 이어가보세요."
+      : canWord
+      ? "오늘은 단어 1세트부터 가볍게 이어가보세요."
+      : canKanji
+      ? "오늘은 한자 1세트부터 가볍게 이어가보세요."
+      : canKatsuyou
+      ? "오늘은 활용 1세트부터 가볍게 이어가보세요."
+      : "오늘 이용 가능한 학습 메뉴를 관리자 설정에서 확인해 주세요.";
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
@@ -746,6 +760,50 @@ export default function HomePage() {
                   {recommendedWrongLabel}
                 </a>
               ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {showCoursesSection ? (
+          <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-lg font-semibold">강의 카탈로그</p>
+                <p className="mt-2 text-sm text-gray-600">
+                  지금 열려 있는 강의를 한눈에 보고, 원하는 강의를 골라 들어가 보세요.
+                </p>
+              </div>
+
+              <a
+                href="/courses"
+                className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+              >
+                전체 강의 보기
+              </a>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-base font-medium text-gray-900">
+                입문 강의부터 패턴, 회화, 실전 강의까지 카탈로그형으로 정리해 두었습니다.
+              </p>
+              <p className="mt-2 text-sm text-gray-600">
+                아직 수강 등록 전이어도 어떤 강의가 있는지 먼저 둘러볼 수 있습니다.
+              </p>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <a
+                href="/courses"
+                className="rounded-2xl bg-black px-5 py-4 text-center text-base font-semibold text-white"
+              >
+                📚 강의 카탈로그 보기
+              </a>
+              <a
+                href="/classroom"
+                className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
+              >
+                🎓 나의 강의실로 이동
+              </a>
             </div>
           </div>
         ) : null}
