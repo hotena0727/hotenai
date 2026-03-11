@@ -327,14 +327,14 @@ export default function HomePage() {
 
         const { data: pageRow, error: pageError } = await supabase
           .from("app_page_settings")
-          .select("show_courses_section_on_home")
+          .select("show_courses_section")
           .eq("id", 1)
           .maybeSingle();
 
         if (pageError) {
           console.error(pageError);
         } else {
-          setShowCoursesSection(Boolean(pageRow?.show_courses_section_on_home));
+          setShowCoursesSection(Boolean(pageRow?.show_courses_section));
         }
 
         const all = await fetchAllAttempts(user.id, 300);
@@ -450,59 +450,59 @@ export default function HomePage() {
   const recommendedMainHref = canTalk
     ? "/talk"
     : canWord
-    ? "/word"
-    : canKanji
-    ? "/kanji"
-    : canKatsuyou
-    ? "/katsuyou"
-    : null;
+      ? "/word"
+      : canKanji
+        ? "/kanji"
+        : canKatsuyou
+          ? "/katsuyou"
+          : null;
 
   const recommendedMainLabel = canTalk
     ? "🗣️ 회화 시작"
     : canWord
-    ? "📝 단어 시작"
-    : canKanji
-    ? "🈯 한자 시작"
-    : canKatsuyou
-    ? "🔄 활용 시작"
-    : null;
+      ? "📝 단어 시작"
+      : canKanji
+        ? "🈯 한자 시작"
+        : canKatsuyou
+          ? "🔄 활용 시작"
+          : null;
 
   const recommendedWrongHref = canMyPage
     ? canTalk
       ? "/mypage/wrong-talk"
       : canWord
-      ? "/mypage/wrong-word"
-      : canKanji
-      ? "/mypage/wrong-kanji"
-      : canKatsuyou
-      ? "/mypage/wrong-katsuyou"
-      : null
+        ? "/mypage/wrong-word"
+        : canKanji
+          ? "/mypage/wrong-kanji"
+          : canKatsuyou
+            ? "/mypage/wrong-katsuyou"
+            : null
     : null;
 
   const recommendedWrongLabel = canMyPage
     ? canTalk
       ? "↪️ 반복오답 루틴"
       : canWord
-      ? "↪️ 단어 오답 루틴"
-      : canKanji
-      ? "↪️ 한자 오답 루틴"
-      : canKatsuyou
-      ? "↪️ 활용 오답 루틴"
-      : null
+        ? "↪️ 단어 오답 루틴"
+        : canKanji
+          ? "↪️ 한자 오답 루틴"
+          : canKatsuyou
+            ? "↪️ 활용 오답 루틴"
+            : null
     : null;
 
   const recommendationText =
     stats.goalPercent >= 100
       ? "오늘 목표 달성! 내일도 1세트부터 가볍게 이어가요."
       : canTalk
-      ? "오늘은 회화 1세트부터 가볍게 이어가보세요."
-      : canWord
-      ? "오늘은 단어 1세트부터 가볍게 이어가보세요."
-      : canKanji
-      ? "오늘은 한자 1세트부터 가볍게 이어가보세요."
-      : canKatsuyou
-      ? "오늘은 활용 1세트부터 가볍게 이어가보세요."
-      : "오늘 이용 가능한 학습 메뉴를 관리자 설정에서 확인해 주세요.";
+        ? "오늘은 회화 1세트부터 가볍게 이어가보세요."
+        : canWord
+          ? "오늘은 단어 1세트부터 가볍게 이어가보세요."
+          : canKanji
+            ? "오늘은 한자 1세트부터 가볍게 이어가보세요."
+            : canKatsuyou
+              ? "오늘은 활용 1세트부터 가볍게 이어가보세요."
+              : "오늘 이용 가능한 학습 메뉴를 관리자 설정에서 확인해 주세요.";
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
