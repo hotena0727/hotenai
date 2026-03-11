@@ -23,16 +23,37 @@ type CourseRow = {
   is_visible: boolean;
 };
 
+type EnrollmentRow = {
+  course_id: string;
+  progress: number;
+  last_lesson_title?: string | null;
+  last_studied_at?: string | null;
+  is_completed: boolean;
+};
+
 type CourseCard = {
   id: string;
   title: string;
   level: string;
   description: string;
   progress: number;
-  status: "continue" | "ready" | "coming";
+  status: "continue" | "ready" | "coming" | "completed";
   ctaLabel: string;
   href: string;
+  lastLessonTitle?: string | null;
+  lastStudiedAt?: string | null;
 };
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "기록 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "기록 없음";
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
 
 export default function ClassroomPage() {
   const [profile, setProfile] = useState<MyProfile | null>(null);
@@ -40,6 +61,7 @@ export default function ClassroomPage() {
   const [coursesLoading, setCoursesLoading] = useState(true);
   const [coursesError, setCoursesError] = useState("");
   const [courseRows, setCourseRows] = useState<CourseRow[]>([]);
+  const [enrollmentRows, setEnrollmentRows] = useState<EnrollmentRow[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -51,19 +73,32 @@ export default function ClassroomPage() {
         } = await supabase.auth.getUser();
 
         if (user) {
-          const { data } = await supabase
-            .from("profiles")
-            .select("id, email, full_name, plan")
-            .eq("id", user.id)
-            .maybeSingle();
+          const [{ data: profileData }, { data: enrollmentsData, error: enrollmentsError }] =
+            await Promise.all([
+              supabase
+                .from("profiles")
+                .select("id, email, full_name, plan")
+                .eq("id", user.id)
+                .maybeSingle(),
+              supabase
+                .from("course_enrollments")
+                .select("course_id, progress, last_lesson_title, last_studied_at, is_completed")
+                .eq("user_id", user.id)
+                .order("last_studied_at", { ascending: false }),
+            ]);
+
+          if (enrollmentsError) {
+            throw enrollmentsError;
+          }
 
           if (mounted) {
             setProfile({
               id: user.id,
               email: user.email ?? "",
-              full_name: data?.full_name ?? "",
-              plan: data?.plan ?? "FREE",
+              full_name: profileData?.full_name ?? "",
+              plan: profileData?.plan ?? "FREE",
             });
+            setEnrollmentRows((enrollmentsData as EnrollmentRow[] | null) ?? []);
           }
         }
 
@@ -86,7 +121,7 @@ export default function ClassroomPage() {
       } catch (error) {
         console.error(error);
         if (mounted) {
-          setCoursesError("강의 목록을 불러오지 못했습니다.");
+          setCoursesError("강의실 데이터를 불러오지 못했습니다.");
         }
       } finally {
         if (mounted) {
@@ -109,26 +144,89 @@ export default function ClassroomPage() {
     return "회원";
   }, [profile]);
 
+  const enrollmentMap = useMemo(() => {
+    return new Map(enrollmentRows.map((row) => [row.course_id, row]));
+  }, [enrollmentRows]);
+
   const courses: CourseCard[] = useMemo(() => {
-    return courseRows.map((course, index) => {
-      const isOpen = course.status === "open";
-      const isContinue = isOpen && index === 0;
+    const mapped = courseRows.map((course) => {
+      const enrollment = enrollmentMap.get(course.id);
+
+      if (course.status === "coming") {
+        return {
+          id: course.id,
+          title: course.title,
+          level: course.level,
+          description: course.description,
+          progress: 0,
+          status: "coming" as const,
+          ctaLabel: "곧 공개",
+          href: "/classroom",
+          lastLessonTitle: null,
+          lastStudiedAt: null,
+        };
+      }
+
+      if (enrollment?.is_completed || enrollment?.progress === 100) {
+        return {
+          id: course.id,
+          title: course.title,
+          level: course.level,
+          description: course.description,
+          progress: 100,
+          status: "completed" as const,
+          ctaLabel: "복습하러 가기",
+          href: `/classroom/${course.slug}`,
+          lastLessonTitle: enrollment.last_lesson_title ?? "완료한 강의",
+          lastStudiedAt: enrollment.last_studied_at ?? null,
+        };
+      }
+
+      if (enrollment && enrollment.progress > 0) {
+        return {
+          id: course.id,
+          title: course.title,
+          level: course.level,
+          description: course.description,
+          progress: enrollment.progress,
+          status: "continue" as const,
+          ctaLabel: "이어서 학습",
+          href: `/classroom/${course.slug}`,
+          lastLessonTitle: enrollment.last_lesson_title ?? "최근 학습 기록",
+          lastStudiedAt: enrollment.last_studied_at ?? null,
+        };
+      }
 
       return {
         id: course.id,
         title: course.title,
         level: course.level,
         description: course.description,
-        progress: isContinue ? 35 : 0,
-        status: isContinue ? "continue" : isOpen ? "ready" : "coming",
-        ctaLabel: isContinue ? "이어서 학습" : isOpen ? "강의 보기" : "곧 공개",
-        href: isOpen ? `/classroom/${course.slug}` : "/classroom",
+        progress: 0,
+        status: "ready" as const,
+        ctaLabel: "강의 보기",
+        href: `/classroom/${course.slug}`,
+        lastLessonTitle: null,
+        lastStudiedAt: null,
       };
     });
-  }, [courseRows]);
+
+    const priority = {
+      continue: 0,
+      ready: 1,
+      completed: 2,
+      coming: 3,
+    } as const;
+
+    return mapped.sort((a, b) => priority[a.status] - priority[b.status]);
+  }, [courseRows, enrollmentMap]);
 
   const continueCourse = courses.find((course) => course.status === "continue") ?? null;
   const openCoursesCount = courseRows.filter((course) => course.status === "open").length;
+  const enrolledCoursesCount = enrollmentRows.length;
+  const completedCoursesCount = enrollmentRows.filter(
+    (row) => row.is_completed || row.progress === 100
+  ).length;
   const planLabel = (profile?.plan ?? "FREE").toUpperCase();
 
   return (
@@ -146,8 +244,8 @@ export default function ClassroomPage() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
-                이제 강의실은 예시 카드가 아니라 실제 강의 데이터 기반으로 보이도록 연결해 두었습니다.
-                공개 강의와 공개 예정 강의를 이 화면에서 함께 관리할 수 있습니다.
+                이제 강의실은 공개 강의 목록뿐 아니라, 회원님의 진도와 최근 학습 기록까지 함께 보여주는 구조로
+                바뀌었습니다.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-3">
@@ -158,7 +256,10 @@ export default function ClassroomPage() {
                   공개 강의 {openCoursesCount}개
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  전체 노출 강의 {courseRows.length}개
+                  수강 기록 {enrolledCoursesCount}개
+                </span>
+                <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                  완료 강의 {completedCoursesCount}개
                 </span>
               </div>
             </div>
@@ -182,32 +283,34 @@ export default function ClassroomPage() {
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-gray-500">이어보기</p>
+            <p className="text-sm font-semibold text-gray-500">이어서 보기</p>
             <p className="mt-2 text-lg font-bold text-gray-900">
               {continueCourse ? continueCourse.title : "아직 이어볼 강의가 없습니다."}
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
               {continueCourse
-                ? `${continueCourse.progress}%까지 진행된 것으로 표시했습니다. 이후에는 실제 진도 테이블과 연결하면 됩니다.`
-                : "공개된 강의가 생기면 이곳에 가장 먼저 이어볼 강의가 표시됩니다."}
+                ? `${continueCourse.progress}% 진행 중 · ${continueCourse.lastLessonTitle ?? "최근 기록"}`
+                : "수강 기록이 생기면 이곳에 가장 먼저 이어볼 강의가 표시됩니다."}
+            </p>
+          </div>
+
+          <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-semibold text-gray-500">최근 학습일</p>
+            <p className="mt-2 text-lg font-bold text-gray-900">
+              {continueCourse?.lastStudiedAt ? formatDateTime(continueCourse.lastStudiedAt) : "기록 없음"}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              실제 학습 버튼과 연결하면 마지막 학습 시점이 자동으로 더 정확하게 반영됩니다.
             </p>
           </div>
 
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-semibold text-gray-500">강의실 운영 상태</p>
             <p className="mt-2 text-lg font-bold text-gray-900">
-              {coursesLoading ? "불러오는 중" : coursesError ? "점검 필요" : "DB 연결 완료"}
+              {coursesLoading ? "불러오는 중" : coursesError ? "점검 필요" : "진도 연결 완료"}
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              {coursesError || "이제 courses 테이블만 수정해도 강의 카드가 함께 바뀝니다."}
-            </p>
-          </div>
-
-          <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-gray-500">다음 확장 포인트</p>
-            <p className="mt-2 text-lg font-bold text-gray-900">수강 진도 연결</p>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
-              다음에는 course_enrollments 테이블을 붙여서 사용자별 이어보기와 완료율을 진짜 데이터로 바꾸면 됩니다.
+              {coursesError || "이제 course_enrollments 테이블을 통해 사용자별 진도를 표시합니다."}
             </p>
           </div>
         </section>
@@ -216,9 +319,9 @@ export default function ClassroomPage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-500">강의 목록</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">DB 연결형 카드 레이아웃</h2>
+              <h2 className="mt-2 text-2xl font-bold text-gray-900">사용자 진도 연동형 카드 레이아웃</h2>
             </div>
-            <p className="text-sm text-gray-500">courses 테이블의 공개 강의와 공개 예정 강의를 표시합니다.</p>
+            <p className="text-sm text-gray-500">내 수강 기록에 따라 카드 상태가 달라집니다.</p>
           </div>
 
           {coursesLoading ? (
@@ -254,18 +357,32 @@ export default function ClassroomPage() {
                           ? "bg-black text-white"
                           : course.status === "ready"
                           ? "bg-gray-200 text-gray-800"
+                          : course.status === "completed"
+                          ? "bg-green-100 text-green-700"
                           : "bg-white text-gray-500 ring-1 ring-gray-200"
                       }`}
                     >
                       {course.status === "continue"
                         ? "학습 중"
                         : course.status === "ready"
-                        ? "공개 중"
+                        ? "시작 가능"
+                        : course.status === "completed"
+                        ? "완료"
                         : "공개 예정"}
                     </span>
                   </div>
 
                   <p className="mt-3 text-sm leading-6 text-gray-600">{course.description}</p>
+
+                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-gray-200">
+                    <p className="text-xs font-semibold text-gray-500">최근 학습</p>
+                    <p className="mt-1 text-sm font-semibold text-gray-900">
+                      {course.lastLessonTitle ?? "아직 학습 기록이 없습니다."}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {course.lastStudiedAt ? formatDateTime(course.lastStudiedAt) : "기록 없음"}
+                    </p>
+                  </div>
 
                   <div className="mt-5">
                     <div className="mb-2 flex items-center justify-between text-sm font-semibold text-gray-600">
@@ -288,6 +405,8 @@ export default function ClassroomPage() {
                           ? "bg-black text-white hover:opacity-90"
                           : course.status === "ready"
                           ? "border border-gray-300 bg-white text-gray-900 hover:bg-gray-100"
+                          : course.status === "completed"
+                          ? "border border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
                           : "border border-gray-200 bg-white text-gray-500"
                       }`}
                     >
