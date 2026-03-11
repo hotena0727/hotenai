@@ -306,8 +306,7 @@ export default function AdminPage() {
   const [menuSaving, setMenuSaving] = useState(false);
   const [menuMessage, setMenuMessage] = useState("");
   const [showMyClassroomSection, setShowMyClassroomSection] = useState(false);
-  const [showCoursesSectionOnHome, setShowCoursesSectionOnHome] =
-    useState(false);
+  const [showCoursesSection, setShowCoursesSection] = useState(false);
   const [pageSettingsSaving, setPageSettingsSaving] = useState(false);
   const [pageSettingsMessage, setPageSettingsMessage] = useState("");
 
@@ -553,17 +552,15 @@ export default function AdminPage() {
 
         const { data: pageRow, error: pageError } = await supabase
           .from("app_page_settings")
-          .select("show_my_classroom_section, show_courses_section_on_home")
+          .select("show_my_classroom_section, show_courses_section")
           .eq("id", 1)
           .maybeSingle();
 
         if (pageError) {
           console.error(pageError);
-        } else if (pageRow) {
-          setShowMyClassroomSection(Boolean(pageRow.show_my_classroom_section));
-          setShowCoursesSectionOnHome(
-            Boolean(pageRow.show_courses_section_on_home)
-          );
+        } else {
+          setShowMyClassroomSection(Boolean(pageRow?.show_my_classroom_section));
+          setShowCoursesSection(Boolean(pageRow?.show_courses_section));
         }
 
         const allAttempts = await fetchAllAttempts(user.id, 300);
@@ -696,16 +693,16 @@ export default function AdminPage() {
         logType === "all"
           ? true
           : logType === "word"
-          ? isWordAttempt(item)
-          : logType === "kanji"
-          ? isKanjiAttempt(item)
-          : isTalkAttempt(item);
+            ? isWordAttempt(item)
+            : logType === "kanji"
+              ? isKanjiAttempt(item)
+              : isTalkAttempt(item);
 
       const queryOk = !q
         ? true
         : String(item.user_email || "").toLowerCase().includes(q) ||
-          String(item.level || "").toLowerCase().includes(q) ||
-          String(item.pos_mode || "").toLowerCase().includes(q);
+        String(item.level || "").toLowerCase().includes(q) ||
+        String(item.pos_mode || "").toLowerCase().includes(q);
 
       const wrongOk = !logOnlyWrong ? true : Number(item.wrong_count || 0) > 0;
       return typeOk && queryOk && wrongOk;
@@ -1110,14 +1107,14 @@ export default function AdminPage() {
         prev.map((course) =>
           course.id === courseId
             ? {
-                ...course,
-                title: draft.title.trim(),
-                slug: draft.slug.trim(),
-                level: draft.level.trim() || "입문",
-                description: draft.description.trim(),
-                status: draft.status,
-                thumbnail_url: draft.thumbnail_url.trim() || null,
-              }
+              ...course,
+              title: draft.title.trim(),
+              slug: draft.slug.trim(),
+              level: draft.level.trim() || "입문",
+              description: draft.description.trim(),
+              status: draft.status,
+              thumbnail_url: draft.thumbnail_url.trim() || null,
+            }
             : course
         )
       );
@@ -1264,18 +1261,18 @@ export default function AdminPage() {
         prev.map((lesson) =>
           lesson.id === lessonId
             ? {
-                ...lesson,
-                title: draft.title.trim(),
-                description: draft.description.trim(),
-                sort_order: Number(draft.sort_order || 1),
-                is_preview: Boolean(draft.is_preview),
-                video_source: draft.video_source,
-                video_url: draft.video_url.trim() || null,
-                video_embed_url: draft.video_embed_url.trim() || null,
-                video_seconds: Number(draft.video_seconds || 0) || null,
-                attachment_url: draft.attachment_url.trim() || null,
-                poster_url: draft.poster_url.trim() || null,
-              }
+              ...lesson,
+              title: draft.title.trim(),
+              description: draft.description.trim(),
+              sort_order: Number(draft.sort_order || 1),
+              is_preview: Boolean(draft.is_preview),
+              video_source: draft.video_source,
+              video_url: draft.video_url.trim() || null,
+              video_embed_url: draft.video_embed_url.trim() || null,
+              video_seconds: Number(draft.video_seconds || 0) || null,
+              attachment_url: draft.attachment_url.trim() || null,
+              poster_url: draft.poster_url.trim() || null,
+            }
             : lesson
         )
       );
@@ -1320,9 +1317,9 @@ export default function AdminPage() {
         prev.map((lesson) =>
           lesson.id === lessonId
             ? {
-                ...lesson,
-                is_visible: nextVisible,
-              }
+              ...lesson,
+              is_visible: nextVisible,
+            }
             : lesson
         )
       );
@@ -1514,7 +1511,7 @@ export default function AdminPage() {
           {
             id: 1,
             show_my_classroom_section: showMyClassroomSection,
-            show_courses_section_on_home: showCoursesSectionOnHome,
+            show_courses_section: showCoursesSection,
           },
           { onConflict: "id" }
         );
@@ -1597,11 +1594,11 @@ export default function AdminPage() {
         prev.map((item) =>
           item.id === userId
             ? {
-                ...item,
-                plan: nextPlan,
-                plan_started_at: nextPlan !== "free" ? nowIso : null,
-                plan_expires_at: expiresIso,
-              }
+              ...item,
+              plan: nextPlan,
+              plan_started_at: nextPlan !== "free" ? nowIso : null,
+              plan_expires_at: expiresIso,
+            }
             : item
         )
       );
@@ -1725,8 +1722,8 @@ export default function AdminPage() {
         pushMode === "test"
           ? `테스트 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건`
           : pushMode === "selected"
-          ? `선택 회원 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
-          : `전체 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
+            ? `선택 회원 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
+            : `전체 발송 완료 · 전송 ${sent}건 / 실패 ${failed}건 / 대상 ${total}건`
       );
     } catch (error) {
       console.error(error);
@@ -1890,15 +1887,15 @@ export default function AdminPage() {
       const payload =
         memberMsgTarget === "plan"
           ? {
-              mode: "plan",
-              plan: memberMsgPlan,
-              probeOnly: true,
-            }
+            mode: "plan",
+            plan: memberMsgPlan,
+            probeOnly: true,
+          }
           : {
-              mode: "selected",
-              userId: selectedMemberId,
-              probeOnly: true,
-            };
+            mode: "selected",
+            userId: selectedMemberId,
+            probeOnly: true,
+          };
 
       const res = await fetch("/api/admin/push", {
         method: "POST",
@@ -1962,19 +1959,19 @@ export default function AdminPage() {
       const payload =
         memberMsgTarget === "plan"
           ? {
-              mode: "plan",
-              plan: memberMsgPlan,
-              title: memberMsgTitle.trim(),
-              body: memberMsgBody.trim(),
-              url: pushUrl.trim(),
-            }
+            mode: "plan",
+            plan: memberMsgPlan,
+            title: memberMsgTitle.trim(),
+            body: memberMsgBody.trim(),
+            url: pushUrl.trim(),
+          }
           : {
-              mode: "selected",
-              title: memberMsgTitle.trim(),
-              body: memberMsgBody.trim(),
-              url: pushUrl.trim(),
-              userId: selectedMemberId,
-            };
+            mode: "selected",
+            title: memberMsgTitle.trim(),
+            body: memberMsgBody.trim(),
+            url: pushUrl.trim(),
+            userId: selectedMemberId,
+          };
 
       const res = await fetch("/api/admin/push", {
         method: "POST",
@@ -2110,10 +2107,9 @@ export default function AdminPage() {
             [
               "유료 회원",
               stats.paidMembers,
-              `전체의 ${
-                stats.totalMembers
-                  ? Math.round((stats.paidMembers / stats.totalMembers) * 100)
-                  : 0
+              `전체의 ${stats.totalMembers
+                ? Math.round((stats.paidMembers / stats.totalMembers) * 100)
+                : 0
               }%`,
             ],
             ["관리자", stats.adminMembers, "권한 보유 계정"],
@@ -2202,9 +2198,8 @@ export default function AdminPage() {
                 return (
                   <div
                     key={item.id}
-                    className={`rounded-3xl border bg-white p-5 shadow-sm ${
-                      selectedMemberId === item.id ? "border-red-300" : "border-gray-200"
-                    }`}
+                    className={`rounded-3xl border bg-white p-5 shadow-sm ${selectedMemberId === item.id ? "border-red-300" : "border-gray-200"
+                      }`}
                   >
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                       <button
@@ -2608,7 +2603,7 @@ export default function AdminPage() {
                   }
                   className={
                     memberMsgProbeBusy ||
-                    (memberMsgTarget === "selected" && !selectedMemberId)
+                      (memberMsgTarget === "selected" && !selectedMemberId)
                       ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-400"
                       : "inline-flex rounded-2xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-800"
                   }
@@ -2650,9 +2645,9 @@ export default function AdminPage() {
                 }
                 className={
                   memberMsgBusy ||
-                  !memberMsgTitle.trim() ||
-                  !memberMsgBody.trim() ||
-                  (memberMsgTarget === "selected" && !selectedMemberId)
+                    !memberMsgTitle.trim() ||
+                    !memberMsgBody.trim() ||
+                    (memberMsgTarget === "selected" && !selectedMemberId)
                     ? "inline-flex w-full items-center justify-center rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
                     : "inline-flex w-full items-center justify-center rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white"
                 }
@@ -2864,9 +2859,9 @@ export default function AdminPage() {
                   }
                   className={
                     pushBusy ||
-                    !pushTitle.trim() ||
-                    !pushBody.trim() ||
-                    (pushMode === "selected" && !selectedPushUserId)
+                      !pushTitle.trim() ||
+                      !pushBody.trim() ||
+                      (pushMode === "selected" && !selectedPushUserId)
                       ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
                       : "inline-flex rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white"
                   }
@@ -2874,10 +2869,10 @@ export default function AdminPage() {
                   {pushBusy
                     ? "푸시 발송 중..."
                     : pushMode === "test"
-                    ? "🚀 테스트 발송"
-                    : pushMode === "selected"
-                    ? "🚀 선택 회원 발송"
-                    : "🚀 전체 발송"}
+                      ? "🚀 테스트 발송"
+                      : pushMode === "selected"
+                        ? "🚀 선택 회원 발송"
+                        : "🚀 전체 발송"}
                 </button>
               </div>
 
@@ -3259,12 +3254,12 @@ export default function AdminPage() {
                         <h4 className="text-base font-bold text-gray-900">강의 카탈로그</h4>
                         <span
                           className={
-                            showCoursesSectionOnHome
+                            showCoursesSection
                               ? "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
                               : "rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600"
                           }
                         >
-                          {showCoursesSectionOnHome ? "표시 중" : "숨김 중"}
+                          {showCoursesSection ? "표시 중" : "숨김 중"}
                         </span>
                       </div>
                       <p className="mt-3 text-sm text-gray-600">
@@ -3281,11 +3276,11 @@ export default function AdminPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setShowCoursesSectionOnHome(true);
+                        setShowCoursesSection(true);
                         setPageSettingsMessage("");
                       }}
                       className={
-                        showCoursesSectionOnHome
+                        showCoursesSection
                           ? "rounded-full bg-black px-4 py-2 text-xs font-semibold text-white"
                           : "rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
                       }
@@ -3295,11 +3290,11 @@ export default function AdminPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setShowCoursesSectionOnHome(false);
+                        setShowCoursesSection(false);
                         setPageSettingsMessage("");
                       }}
                       className={
-                        !showCoursesSectionOnHome
+                        !showCoursesSection
                           ? "rounded-full bg-red-500 px-4 py-2 text-xs font-semibold text-white"
                           : "rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
                       }
@@ -3549,8 +3544,8 @@ export default function AdminPage() {
                                   {already
                                     ? "배정됨"
                                     : assigningCourseId === course.id
-                                    ? "배정 중..."
-                                    : "강의 배정"}
+                                      ? "배정 중..."
+                                      : "강의 배정"}
                                 </button>
                               </div>
                             </div>
@@ -3641,11 +3636,10 @@ export default function AdminPage() {
                       return (
                         <div
                           key={course.id}
-                          className={`rounded-2xl border p-4 ${
-                            selectedCourseId === course.id
-                              ? "border-red-300 bg-red-50"
-                              : "border-gray-200 bg-gray-50"
-                          }`}
+                          className={`rounded-2xl border p-4 ${selectedCourseId === course.id
+                            ? "border-red-300 bg-red-50"
+                            : "border-gray-200 bg-gray-50"
+                            }`}
                         >
                           {editingCourseId === course.id && draft ? (
                             <div className="space-y-3">
@@ -3987,11 +3981,10 @@ export default function AdminPage() {
                     return (
                       <div
                         key={lesson.id}
-                        className={`rounded-2xl border p-4 ${
-                          lesson.is_visible
-                            ? "border-gray-200 bg-gray-50"
-                            : "border-red-200 bg-red-50/60"
-                        }`}
+                        className={`rounded-2xl border p-4 ${lesson.is_visible
+                          ? "border-gray-200 bg-gray-50"
+                          : "border-red-200 bg-red-50/60"
+                          }`}
                       >
                         {editingLessonId === lesson.id && draft ? (
                           <div className="space-y-3">
@@ -4251,8 +4244,8 @@ export default function AdminPage() {
                                 {savingLessonId === lesson.id
                                   ? "처리 중..."
                                   : lesson.is_visible
-                                  ? "숨김"
-                                  : "표시"}
+                                    ? "숨김"
+                                    : "표시"}
                               </button>
 
                               {deleteConfirmLessonId === lesson.id ? (
