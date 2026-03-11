@@ -94,6 +94,35 @@ function getLessonState(index: number, total: number, progress: number) {
   return "locked" as const;
 }
 
+function CourseHeroThumbnail({
+  src,
+  title,
+}: {
+  src?: string | null;
+  title: string;
+}) {
+  if (src) {
+    return (
+      <div className="overflow-hidden rounded-[24px] border border-gray-200 bg-white shadow-sm">
+        <img
+          src={src}
+          alt={title}
+          className="h-[220px] w-full object-cover sm:h-[280px]"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-[220px] w-full items-center justify-center rounded-[24px] border border-dashed border-gray-300 bg-white text-gray-400 shadow-sm sm:h-[280px]">
+      <div className="text-center">
+        <p className="text-4xl">🎓</p>
+        <p className="mt-3 text-sm font-semibold">강의 썸네일 준비 중</p>
+      </div>
+    </div>
+  );
+}
+
 export default function ClassroomCourseDetailPage() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
@@ -170,7 +199,7 @@ export default function ClassroomCourseDetailPage() {
       }
     };
 
-    if (slug) load();
+    if (slug) void load();
 
     return () => {
       mounted = false;
@@ -275,80 +304,86 @@ export default function ClassroomCourseDetailPage() {
     <main className="min-h-screen bg-[#f7f8fa] px-4 pb-12 pt-6 text-gray-900 sm:px-6">
       <div className="mx-auto w-full max-w-6xl">
         <section className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                  {course.level}
-                </span>
-                <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600">
-                  {getStatusLabel(course.status)}
-                </span>
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tone.badgeClass}`}>
-                  {tone.badge}
-                </span>
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr] lg:items-start">
+            <div>
+              <CourseHeroThumbnail src={course.thumbnail_url} title={course.title} />
+            </div>
+
+            <div className="flex flex-col gap-6">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                    {course.level}
+                  </span>
+                  <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600">
+                    {getStatusLabel(course.status)}
+                  </span>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tone.badgeClass}`}>
+                    {tone.badge}
+                  </span>
+                </div>
+
+                <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                  {course.title}
+                </h1>
+
+                <p className="mt-4 text-sm leading-7 text-gray-600 sm:text-base">
+                  {course.description}
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                    진도율 {progress}%
+                  </span>
+                  <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                    최근 학습 {formatDate(enrollment?.last_studied_at)}
+                  </span>
+                  <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                    최근 기록 {enrollment?.last_lesson_title ?? "아직 학습 기록이 없습니다."}
+                  </span>
+                  <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                    레슨 수 {lessons.length}개
+                  </span>
+                </div>
               </div>
 
-              <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                {course.title}
-              </h1>
-
-              <p className="mt-4 text-sm leading-7 text-gray-600 sm:text-base">
-                {course.description}
-              </p>
-
-              <div className="mt-5 flex flex-wrap gap-3">
-                <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  진도율 {progress}%
-                </span>
-                <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  최근 학습 {formatDate(enrollment?.last_studied_at)}
-                </span>
-                <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  최근 기록 {enrollment?.last_lesson_title ?? "아직 학습 기록이 없습니다."}
-                </span>
-                <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  레슨 수 {lessons.length}개
-                </span>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Link
+                  href="/classroom"
+                  className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-center text-base font-semibold text-gray-900 transition hover:bg-gray-50"
+                >
+                  강의실로 돌아가기
+                </Link>
+                <button
+                  type="button"
+                  onClick={handlePrimaryStart}
+                  disabled={activeLessonId !== null}
+                  className={`rounded-2xl px-5 py-4 text-center text-base font-semibold transition disabled:opacity-60 ${tone.buttonClass}`}
+                >
+                  {activeLessonId ? "저장 중..." : tone.buttonLabel}
+                </button>
               </div>
-            </div>
 
-            <div className="grid min-w-[280px] gap-3 sm:grid-cols-2 lg:w-[340px] lg:grid-cols-1">
-              <Link
-                href="/classroom"
-                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-center text-base font-semibold text-gray-900 transition hover:bg-gray-50"
-              >
-                강의실로 돌아가기
-              </Link>
-              <button
-                type="button"
-                onClick={handlePrimaryStart}
-                disabled={activeLessonId !== null}
-                className={`rounded-2xl px-5 py-4 text-center text-base font-semibold transition disabled:opacity-60 ${tone.buttonClass}`}
-              >
-                {activeLessonId ? "저장 중..." : tone.buttonLabel}
-              </button>
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm font-semibold text-gray-600">
+                  <span>전체 진행도</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="h-3 rounded-full bg-gray-100">
+                  <div
+                    className="h-3 rounded-full bg-black transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+
+              {actionMessage ? (
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                  {actionMessage}
+                </div>
+              ) : null}
             </div>
           </div>
-
-          <div className="mt-6">
-            <div className="mb-2 flex items-center justify-between text-sm font-semibold text-gray-600">
-              <span>전체 진행도</span>
-              <span>{progress}%</span>
-            </div>
-            <div className="h-3 rounded-full bg-gray-100">
-              <div
-                className="h-3 rounded-full bg-black transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-
-          {actionMessage ? (
-            <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-              {actionMessage}
-            </div>
-          ) : null}
         </section>
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
@@ -394,7 +429,7 @@ export default function ClassroomCourseDetailPage() {
             </div>
           ) : (
             <div className="mt-6 grid gap-4">
-              {lessons.map((lesson) => {
+              {lessons.map((lesson, index) => {
                 const badgeLabel =
                   lesson.state === "done"
                     ? "학습 완료"
@@ -412,11 +447,18 @@ export default function ClassroomCourseDetailPage() {
                 return (
                   <article
                     key={lesson.id}
-                    className="rounded-[24px] border border-gray-200 bg-gray-50 p-5 transition hover:border-gray-300"
+                    className={`rounded-[24px] border p-5 transition ${
+                      lesson.state === "doing"
+                        ? "border-black bg-white shadow-sm"
+                        : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                    }`}
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-500">
+                            Lesson {index + 1}
+                          </span>
                           {lesson.is_preview ? (
                             <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
                               미리보기

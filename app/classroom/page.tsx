@@ -40,6 +40,7 @@ type CourseCard = {
   status: "continue" | "ready" | "coming" | "completed";
   ctaLabel: string;
   href: string;
+  thumbnailUrl?: string | null;
   lastLessonTitle?: string | null;
   lastStudiedAt?: string | null;
 };
@@ -53,6 +54,73 @@ function formatDateTime(value?: string | null) {
     month: "short",
     day: "numeric",
   }).format(date);
+}
+
+function getStatusBadgeClass(status: CourseCard["status"]) {
+  if (status === "continue") return "bg-black text-white";
+  if (status === "ready") return "bg-gray-200 text-gray-800";
+  if (status === "completed") return "bg-green-100 text-green-700";
+  return "bg-white text-gray-500 ring-1 ring-gray-200";
+}
+
+function getStatusLabel(status: CourseCard["status"]) {
+  if (status === "continue") return "학습 중";
+  if (status === "ready") return "시작 가능";
+  if (status === "completed") return "완료";
+  return "공개 예정";
+}
+
+function getButtonClass(status: CourseCard["status"]) {
+  if (status === "continue") return "bg-black text-white hover:opacity-90";
+  if (status === "ready") {
+    return "border border-gray-300 bg-white text-gray-900 hover:bg-gray-100";
+  }
+  if (status === "completed") {
+    return "border border-green-200 bg-green-50 text-green-700 hover:bg-green-100";
+  }
+  return "border border-gray-200 bg-white text-gray-500 pointer-events-none";
+}
+
+function getCardClass(status: CourseCard["status"]) {
+  if (status === "continue") {
+    return "rounded-[24px] border border-black bg-white p-5 shadow-sm transition hover:shadow-md";
+  }
+  return "rounded-[24px] border border-gray-200 bg-gray-50 p-5 transition hover:border-gray-300";
+}
+
+function CourseThumbnail({
+  src,
+  title,
+  emphasize = false,
+}: {
+  src?: string | null;
+  title: string;
+  emphasize?: boolean;
+}) {
+  if (src) {
+    return (
+      <div className="overflow-hidden rounded-[20px] border border-gray-200 bg-white">
+        <img
+          src={src}
+          alt={title}
+          className={`w-full object-cover ${emphasize ? "h-48" : "h-44"}`}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`flex items-center justify-center rounded-[20px] border border-dashed border-gray-300 bg-white text-gray-400 ${
+        emphasize ? "h-48" : "h-44"
+      }`}
+    >
+      <div className="text-center">
+        <p className="text-3xl">🎓</p>
+        <p className="mt-2 text-xs font-semibold">썸네일 준비 중</p>
+      </div>
+    </div>
+  );
 }
 
 export default function ClassroomPage() {
@@ -131,7 +199,7 @@ export default function ClassroomPage() {
       }
     };
 
-    load();
+    void load();
 
     return () => {
       mounted = false;
@@ -162,6 +230,7 @@ export default function ClassroomPage() {
           status: "coming" as const,
           ctaLabel: "곧 공개",
           href: "/classroom",
+          thumbnailUrl: course.thumbnail_url ?? null,
           lastLessonTitle: null,
           lastStudiedAt: null,
         };
@@ -177,6 +246,7 @@ export default function ClassroomPage() {
           status: "completed" as const,
           ctaLabel: "복습하러 가기",
           href: `/classroom/${course.slug}`,
+          thumbnailUrl: course.thumbnail_url ?? null,
           lastLessonTitle: enrollment.last_lesson_title ?? "완료한 강의",
           lastStudiedAt: enrollment.last_studied_at ?? null,
         };
@@ -192,6 +262,7 @@ export default function ClassroomPage() {
           status: "continue" as const,
           ctaLabel: "이어서 학습",
           href: `/classroom/${course.slug}`,
+          thumbnailUrl: course.thumbnail_url ?? null,
           lastLessonTitle: enrollment.last_lesson_title ?? "최근 학습 기록",
           lastStudiedAt: enrollment.last_studied_at ?? null,
         };
@@ -206,6 +277,7 @@ export default function ClassroomPage() {
         status: "ready" as const,
         ctaLabel: "강의 보기",
         href: `/classroom/${course.slug}`,
+        thumbnailUrl: course.thumbnail_url ?? null,
         lastLessonTitle: null,
         lastStudiedAt: null,
       };
@@ -339,11 +411,14 @@ export default function ClassroomPage() {
           ) : (
             <div className="mt-6 grid gap-4 xl:grid-cols-3">
               {courses.map((course) => (
-                <article
-                  key={course.id}
-                  className="rounded-[24px] border border-gray-200 bg-gray-50 p-5 transition hover:border-gray-300"
-                >
-                  <div className="flex items-start justify-between gap-3">
+                <article key={course.id} className={getCardClass(course.status)}>
+                  <CourseThumbnail
+                    src={course.thumbnailUrl}
+                    title={course.title}
+                    emphasize={course.status === "continue"}
+                  />
+
+                  <div className="mt-4 flex items-start justify-between gap-3">
                     <div>
                       <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200">
                         {course.level}
@@ -352,23 +427,11 @@ export default function ClassroomPage() {
                     </div>
 
                     <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        course.status === "continue"
-                          ? "bg-black text-white"
-                          : course.status === "ready"
-                          ? "bg-gray-200 text-gray-800"
-                          : course.status === "completed"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-white text-gray-500 ring-1 ring-gray-200"
-                      }`}
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusBadgeClass(
+                        course.status
+                      )}`}
                     >
-                      {course.status === "continue"
-                        ? "학습 중"
-                        : course.status === "ready"
-                        ? "시작 가능"
-                        : course.status === "completed"
-                        ? "완료"
-                        : "공개 예정"}
+                      {getStatusLabel(course.status)}
                     </span>
                   </div>
 
@@ -400,15 +463,9 @@ export default function ClassroomPage() {
                   <div className="mt-5">
                     <Link
                       href={course.href}
-                      className={`inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                        course.status === "continue"
-                          ? "bg-black text-white hover:opacity-90"
-                          : course.status === "ready"
-                          ? "border border-gray-300 bg-white text-gray-900 hover:bg-gray-100"
-                          : course.status === "completed"
-                          ? "border border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-                          : "border border-gray-200 bg-white text-gray-500"
-                      }`}
+                      className={`inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${getButtonClass(
+                        course.status
+                      )}`}
                     >
                       {course.ctaLabel}
                     </Link>

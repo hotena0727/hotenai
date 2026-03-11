@@ -79,6 +79,7 @@ type ClassroomCourse = {
   status: "draft" | "open" | "coming";
   sort_order: number;
   is_visible: boolean;
+  thumbnail_url?: string | null;
 };
 
 type ClassroomLesson = {
@@ -94,6 +95,21 @@ type ClassroomLesson = {
   video_embed_url?: string | null;
   video_seconds?: number | null;
   attachment_url?: string | null;
+  poster_url?: string | null;
+};
+
+type LessonDraft = {
+  title: string;
+  description: string;
+  sort_order: number;
+  is_preview: boolean;
+  is_visible: boolean;
+  video_source: "youtube" | "vimeo" | "server" | null;
+  video_url: string;
+  video_embed_url: string;
+  video_seconds: number;
+  attachment_url: string;
+  poster_url: string;
 };
 
 const PLAN_DURATION_OPTIONS = [
@@ -180,7 +196,7 @@ function getMenuStatusLabel(show: boolean, minPlan: PlanCode) {
     text: `${getPlanLabel(minPlan)} 이상`,
     className:
       "rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700",
-    };
+  };
 }
 
 function canUserSeeMenu(userPlan: PlanCode, show: boolean, minPlan: PlanCode) {
@@ -335,6 +351,35 @@ export default function AdminPage() {
   const [lessons, setLessons] = useState<ClassroomLesson[]>([]);
   const [classroomLoading, setClassroomLoading] = useState(false);
   const [classroomMessage, setClassroomMessage] = useState("");
+  const [classroomSavingCourseId, setClassroomSavingCourseId] = useState("");
+
+  const [editingCourseId, setEditingCourseId] = useState("");
+  const [savingCourseId, setSavingCourseId] = useState("");
+  const [courseDrafts, setCourseDrafts] = useState<
+    Record<
+      string,
+      {
+        title: string;
+        slug: string;
+        level: string;
+        description: string;
+        status: "draft" | "open" | "coming";
+        thumbnail_url: string;
+      }
+    >
+  >({});
+
+  const [editingLessonId, setEditingLessonId] = useState("");
+  const [savingLessonId, setSavingLessonId] = useState("");
+  const [lessonDrafts, setLessonDrafts] = useState<Record<string, LessonDraft>>(
+    {}
+  );
+
+  const [deleteConfirmLessonId, setDeleteConfirmLessonId] = useState("");
+  const [deletingLessonId, setDeletingLessonId] = useState("");
+
+  const [deleteConfirmCourseId, setDeleteConfirmCourseId] = useState("");
+  const [deletingCourseId, setDeletingCourseId] = useState("");
 
   const [newCourseTitle, setNewCourseTitle] = useState("");
   const [newCourseSlug, setNewCourseSlug] = useState("");
@@ -343,6 +388,7 @@ export default function AdminPage() {
   const [newCourseStatus, setNewCourseStatus] = useState<
     "draft" | "open" | "coming"
   >("draft");
+  const [newCourseThumbnailUrl, setNewCourseThumbnailUrl] = useState("");
 
   const [newLessonTitle, setNewLessonTitle] = useState("");
   const [newLessonDescription, setNewLessonDescription] = useState("");
@@ -355,6 +401,7 @@ export default function AdminPage() {
   const [newLessonEmbedUrl, setNewLessonEmbedUrl] = useState("");
   const [newLessonVideoSeconds, setNewLessonVideoSeconds] = useState(600);
   const [newLessonAttachmentUrl, setNewLessonAttachmentUrl] = useState("");
+  const [newLessonPosterUrl, setNewLessonPosterUrl] = useState("");
 
   useEffect(() => {
     const loadAdmin = async () => {
@@ -639,7 +686,7 @@ export default function AdminPage() {
     const { data, error } = await supabase
       .from("courses")
       .select(
-        "id, slug, title, level, description, status, sort_order, is_visible"
+        "id, slug, title, level, description, status, sort_order, is_visible, thumbnail_url"
       )
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
@@ -649,13 +696,32 @@ export default function AdminPage() {
     const rows = (data || []) as ClassroomCourse[];
     setCourses(rows);
 
+    setCourseDrafts(
+      Object.fromEntries(
+        rows.map((course) => [
+          course.id,
+          {
+            title: course.title || "",
+            slug: course.slug || "",
+            level: course.level || "",
+            description: course.description || "",
+            status: course.status,
+            thumbnail_url: course.thumbnail_url || "",
+          },
+        ])
+      )
+    );
+
     if (rows.length === 0) {
       setSelectedCourseId("");
       setLessons([]);
       return;
     }
 
-    setSelectedCourseId((prev) => prev || rows[0].id);
+    setSelectedCourseId((prev) => {
+      const exists = rows.some((course) => course.id === prev);
+      return exists ? prev : rows[0].id;
+    });
   };
 
   const loadLessons = async (courseId: string) => {
@@ -678,7 +744,8 @@ export default function AdminPage() {
         video_url,
         video_embed_url,
         video_seconds,
-        attachment_url
+        attachment_url,
+        poster_url
       `)
       .eq("course_id", courseId)
       .order("sort_order", { ascending: true })
@@ -689,6 +756,27 @@ export default function AdminPage() {
     const rows = (data || []) as ClassroomLesson[];
     setLessons(rows);
     setNewLessonSortOrder(rows.length + 1);
+
+    setLessonDrafts(
+      Object.fromEntries(
+        rows.map((lesson) => [
+          lesson.id,
+          {
+            title: lesson.title || "",
+            description: lesson.description || "",
+            sort_order: lesson.sort_order || 1,
+            is_preview: Boolean(lesson.is_preview),
+            is_visible: Boolean(lesson.is_visible),
+            video_source: lesson.video_source || "youtube",
+            video_url: lesson.video_url || "",
+            video_embed_url: lesson.video_embed_url || "",
+            video_seconds: Number(lesson.video_seconds || 0),
+            attachment_url: lesson.attachment_url || "",
+            poster_url: lesson.poster_url || "",
+          },
+        ])
+      )
+    );
   };
 
   const handleCreateCourse = async () => {
@@ -709,6 +797,7 @@ export default function AdminPage() {
         status: newCourseStatus,
         sort_order: courses.length + 1,
         is_visible: true,
+        thumbnail_url: newCourseThumbnailUrl.trim() || null,
       });
 
       if (error) throw error;
@@ -718,6 +807,7 @@ export default function AdminPage() {
       setNewCourseLevel("입문");
       setNewCourseDescription("");
       setNewCourseStatus("draft");
+      setNewCourseThumbnailUrl("");
 
       await loadCourses();
       setClassroomMessage("강의를 추가했습니다.");
@@ -758,6 +848,7 @@ export default function AdminPage() {
         video_embed_url: newLessonEmbedUrl.trim() || null,
         video_seconds: newLessonVideoSeconds || null,
         attachment_url: newLessonAttachmentUrl.trim() || null,
+        poster_url: newLessonPosterUrl.trim() || null,
       });
 
       if (error) throw error;
@@ -771,6 +862,7 @@ export default function AdminPage() {
       setNewLessonEmbedUrl("");
       setNewLessonVideoSeconds(600);
       setNewLessonAttachmentUrl("");
+      setNewLessonPosterUrl("");
 
       await loadLessons(selectedCourseId);
       setClassroomMessage("레슨을 추가했습니다.");
@@ -781,6 +873,376 @@ export default function AdminPage() {
       );
     } finally {
       setClassroomLoading(false);
+    }
+  };
+
+  const handleUpdateCourseStatus = async (
+    courseId: string,
+    nextStatus: "draft" | "open" | "coming"
+  ) => {
+    try {
+      setClassroomSavingCourseId(courseId);
+      setClassroomMessage("");
+
+      const { error } = await supabase
+        .from("courses")
+        .update({
+          status: nextStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", courseId);
+
+      if (error) throw error;
+
+      setCourses((prev) =>
+        prev.map((course) =>
+          course.id === courseId ? { ...course, status: nextStatus } : course
+        )
+      );
+
+      setCourseDrafts((prev) => ({
+        ...prev,
+        [courseId]: {
+          ...prev[courseId],
+          status: nextStatus,
+        },
+      }));
+
+      setClassroomMessage(`강의 상태를 ${nextStatus}로 변경했습니다.`);
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error
+          ? error.message
+          : "강의 상태 변경 중 오류가 발생했습니다."
+      );
+    } finally {
+      setClassroomSavingCourseId("");
+    }
+  };
+
+  const handleCourseDraftChange = (
+    courseId: string,
+    key: "title" | "slug" | "level" | "description" | "status" | "thumbnail_url",
+    value: string
+  ) => {
+    setCourseDrafts((prev) => ({
+      ...prev,
+      [courseId]: {
+        ...prev[courseId],
+        [key]: value,
+      },
+    }));
+  };
+
+  const handleSaveCourse = async (courseId: string) => {
+    const draft = courseDrafts[courseId];
+    if (!draft) return;
+
+    if (!draft.title.trim() || !draft.slug.trim()) {
+      setClassroomMessage("강의 제목과 slug는 비워둘 수 없습니다.");
+      return;
+    }
+
+    try {
+      setSavingCourseId(courseId);
+      setClassroomMessage("");
+
+      const { error } = await supabase
+        .from("courses")
+        .update({
+          title: draft.title.trim(),
+          slug: draft.slug.trim(),
+          level: draft.level.trim() || "입문",
+          description: draft.description.trim(),
+          status: draft.status,
+          thumbnail_url: draft.thumbnail_url.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", courseId);
+
+      if (error) throw error;
+
+      setCourses((prev) =>
+        prev.map((course) =>
+          course.id === courseId
+            ? {
+                ...course,
+                title: draft.title.trim(),
+                slug: draft.slug.trim(),
+                level: draft.level.trim() || "입문",
+                description: draft.description.trim(),
+                status: draft.status,
+                thumbnail_url: draft.thumbnail_url.trim() || null,
+              }
+            : course
+        )
+      );
+
+      setEditingCourseId("");
+      setClassroomMessage("강의 정보를 저장했습니다.");
+
+      await loadCourses();
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error
+          ? error.message
+          : "강의 저장 중 오류가 발생했습니다."
+      );
+    } finally {
+      setSavingCourseId("");
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    try {
+      setDeletingCourseId(courseId);
+      setClassroomMessage("");
+
+      const { error: lessonDeleteError } = await supabase
+        .from("course_lessons")
+        .delete()
+        .eq("course_id", courseId);
+
+      if (lessonDeleteError) throw lessonDeleteError;
+
+      const { error: courseDeleteError } = await supabase
+        .from("courses")
+        .delete()
+        .eq("id", courseId);
+
+      if (courseDeleteError) throw courseDeleteError;
+
+      setCourses((prev) => prev.filter((course) => course.id !== courseId));
+
+      setCourseDrafts((prev) => {
+        const next = { ...prev };
+        delete next[courseId];
+        return next;
+      });
+
+      if (selectedCourseId === courseId) {
+        const remainCourses = courses.filter((course) => course.id !== courseId);
+        setSelectedCourseId(remainCourses[0]?.id || "");
+        setLessons([]);
+      }
+
+      if (editingCourseId === courseId) {
+        setEditingCourseId("");
+      }
+
+      if (deleteConfirmCourseId === courseId) {
+        setDeleteConfirmCourseId("");
+      }
+
+      setClassroomMessage("강의를 삭제했습니다.");
+
+      await loadCourses();
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error
+          ? error.message
+          : "강의 삭제 중 오류가 발생했습니다."
+      );
+    } finally {
+      setDeletingCourseId("");
+    }
+  };
+
+  const handleLessonDraftChange = (
+    lessonId: string,
+    key:
+      | "title"
+      | "description"
+      | "sort_order"
+      | "is_preview"
+      | "video_source"
+      | "video_url"
+      | "video_embed_url"
+      | "video_seconds"
+      | "attachment_url"
+      | "poster_url",
+    value: string | number | boolean | null
+  ) => {
+    setLessonDrafts((prev) => ({
+      ...prev,
+      [lessonId]: {
+        ...prev[lessonId],
+        [key]: value,
+      },
+    }));
+  };
+
+  const handleSaveLesson = async (lessonId: string) => {
+    const draft = lessonDrafts[lessonId];
+    if (!draft) return;
+
+    if (!draft.title.trim()) {
+      setClassroomMessage("레슨 제목은 비워둘 수 없습니다.");
+      return;
+    }
+
+    try {
+      setSavingLessonId(lessonId);
+      setClassroomMessage("");
+
+      const { error } = await supabase
+        .from("course_lessons")
+        .update({
+          title: draft.title.trim(),
+          description: draft.description.trim(),
+          sort_order: Number(draft.sort_order || 1),
+          is_preview: Boolean(draft.is_preview),
+          video_source: draft.video_source,
+          video_url: draft.video_url.trim() || null,
+          video_embed_url: draft.video_embed_url.trim() || null,
+          video_seconds: Number(draft.video_seconds || 0) || null,
+          attachment_url: draft.attachment_url.trim() || null,
+          poster_url: draft.poster_url.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", lessonId);
+
+      if (error) throw error;
+
+      setLessons((prev) =>
+        prev.map((lesson) =>
+          lesson.id === lessonId
+            ? {
+                ...lesson,
+                title: draft.title.trim(),
+                description: draft.description.trim(),
+                sort_order: Number(draft.sort_order || 1),
+                is_preview: Boolean(draft.is_preview),
+                video_source: draft.video_source,
+                video_url: draft.video_url.trim() || null,
+                video_embed_url: draft.video_embed_url.trim() || null,
+                video_seconds: Number(draft.video_seconds || 0) || null,
+                attachment_url: draft.attachment_url.trim() || null,
+                poster_url: draft.poster_url.trim() || null,
+              }
+            : lesson
+        )
+      );
+
+      setEditingLessonId("");
+      setClassroomMessage("레슨 정보를 저장했습니다.");
+
+      if (selectedCourseId) {
+        await loadLessons(selectedCourseId);
+      }
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error
+          ? error.message
+          : "레슨 저장 중 오류가 발생했습니다."
+      );
+    } finally {
+      setSavingLessonId("");
+    }
+  };
+
+  const handleToggleLessonVisibility = async (
+    lessonId: string,
+    nextVisible: boolean
+  ) => {
+    try {
+      setSavingLessonId(lessonId);
+      setClassroomMessage("");
+
+      const { error } = await supabase
+        .from("course_lessons")
+        .update({
+          is_visible: nextVisible,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", lessonId);
+
+      if (error) throw error;
+
+      setLessons((prev) =>
+        prev.map((lesson) =>
+          lesson.id === lessonId
+            ? {
+                ...lesson,
+                is_visible: nextVisible,
+              }
+            : lesson
+        )
+      );
+
+      setLessonDrafts((prev) => ({
+        ...prev,
+        [lessonId]: {
+          ...prev[lessonId],
+          is_visible: nextVisible,
+        },
+      }));
+
+      setClassroomMessage(
+        nextVisible ? "레슨을 표시 상태로 변경했습니다." : "레슨을 숨김 상태로 변경했습니다."
+      );
+
+      if (selectedCourseId) {
+        await loadLessons(selectedCourseId);
+      }
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error
+          ? error.message
+          : "레슨 표시 상태 변경 중 오류가 발생했습니다."
+      );
+    } finally {
+      setSavingLessonId("");
+    }
+  };
+
+  const handleDeleteLesson = async (lessonId: string) => {
+    try {
+      setDeletingLessonId(lessonId);
+      setClassroomMessage("");
+
+      const { error } = await supabase
+        .from("course_lessons")
+        .delete()
+        .eq("id", lessonId);
+
+      if (error) throw error;
+
+      setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
+
+      setLessonDrafts((prev) => {
+        const next = { ...prev };
+        delete next[lessonId];
+        return next;
+      });
+
+      if (editingLessonId === lessonId) {
+        setEditingLessonId("");
+      }
+
+      if (deleteConfirmLessonId === lessonId) {
+        setDeleteConfirmLessonId("");
+      }
+
+      setClassroomMessage("레슨을 삭제했습니다.");
+
+      if (selectedCourseId) {
+        await loadLessons(selectedCourseId);
+      }
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error
+          ? error.message
+          : "레슨 삭제 중 오류가 발생했습니다."
+      );
+    } finally {
+      setDeletingLessonId("");
     }
   };
 
@@ -2723,6 +3185,12 @@ export default function AdminPage() {
                     placeholder="강의 설명"
                     className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
                   />
+                  <input
+                    value={newCourseThumbnailUrl}
+                    onChange={(e) => setNewCourseThumbnailUrl(e.target.value)}
+                    placeholder="썸네일 이미지 URL"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  />
                   <select
                     value={newCourseStatus}
                     onChange={(e) =>
@@ -2759,23 +3227,240 @@ export default function AdminPage() {
                       아직 등록된 강의가 없습니다.
                     </div>
                   ) : (
-                    courses.map((course) => (
-                      <button
-                        key={course.id}
-                        type="button"
-                        onClick={() => setSelectedCourseId(course.id)}
-                        className={`w-full rounded-2xl border p-4 text-left ${
-                          selectedCourseId === course.id
-                            ? "border-red-300 bg-red-50"
-                            : "border-gray-200 bg-gray-50"
-                        }`}
-                      >
-                        <p className="text-base font-bold text-gray-900">{course.title}</p>
-                        <p className="mt-1 text-sm text-gray-600">
-                          {course.slug} · {course.level} · {course.status}
-                        </p>
-                      </button>
-                    ))
+                    courses.map((course) => {
+                      const draft = courseDrafts[course.id];
+
+                      return (
+                        <div
+                          key={course.id}
+                          className={`rounded-2xl border p-4 ${
+                            selectedCourseId === course.id
+                              ? "border-red-300 bg-red-50"
+                              : "border-gray-200 bg-gray-50"
+                          }`}
+                        >
+                          {editingCourseId === course.id && draft ? (
+                            <div className="space-y-3">
+                              <input
+                                value={draft.title}
+                                onChange={(e) =>
+                                  handleCourseDraftChange(course.id, "title", e.target.value)
+                                }
+                                placeholder="강의 제목"
+                                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                              />
+
+                              <input
+                                value={draft.slug}
+                                onChange={(e) =>
+                                  handleCourseDraftChange(course.id, "slug", e.target.value)
+                                }
+                                placeholder="slug"
+                                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                              />
+
+                              <input
+                                value={draft.level}
+                                onChange={(e) =>
+                                  handleCourseDraftChange(course.id, "level", e.target.value)
+                                }
+                                placeholder="레벨"
+                                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                              />
+
+                              <textarea
+                                value={draft.description}
+                                onChange={(e) =>
+                                  handleCourseDraftChange(course.id, "description", e.target.value)
+                                }
+                                rows={3}
+                                placeholder="강의 설명"
+                                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                              />
+
+                              <input
+                                value={draft.thumbnail_url}
+                                onChange={(e) =>
+                                  handleCourseDraftChange(course.id, "thumbnail_url", e.target.value)
+                                }
+                                placeholder="썸네일 이미지 URL"
+                                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                              />
+
+                              <select
+                                value={draft.status}
+                                onChange={(e) =>
+                                  handleCourseDraftChange(
+                                    course.id,
+                                    "status",
+                                    e.target.value as "draft" | "open" | "coming"
+                                  )
+                                }
+                                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                              >
+                                <option value="draft">draft</option>
+                                <option value="coming">coming</option>
+                                <option value="open">open</option>
+                              </select>
+
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveCourse(course.id)}
+                                  disabled={savingCourseId === course.id || deletingCourseId === course.id}
+                                  className={
+                                    savingCourseId === course.id
+                                      ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400"
+                                      : "rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white"
+                                  }
+                                >
+                                  {savingCourseId === course.id ? "저장 중..." : "저장"}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingCourseId("")}
+                                  disabled={deletingCourseId === course.id}
+                                  className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700"
+                                >
+                                  취소
+                                </button>
+
+                                {deleteConfirmCourseId === course.id ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCourse(course.id)}
+                                    disabled={deletingCourseId === course.id}
+                                    className={
+                                      deletingCourseId === course.id
+                                        ? "rounded-2xl border border-red-200 bg-red-100 px-4 py-3 text-sm font-semibold text-red-300"
+                                        : "rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white"
+                                    }
+                                  >
+                                    {deletingCourseId === course.id ? "삭제 중..." : "정말 삭제"}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeleteConfirmCourseId(course.id)}
+                                    disabled={deletingCourseId === course.id}
+                                    className="rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                                  >
+                                    삭제
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedCourseId(course.id)}
+                                className="w-full text-left"
+                              >
+                                {course.thumbnail_url ? (
+                                  <img
+                                    src={course.thumbnail_url}
+                                    alt={course.title}
+                                    className="mb-3 h-24 w-full rounded-2xl object-cover"
+                                  />
+                                ) : null}
+
+                                <p className="text-base font-bold text-gray-900">{course.title}</p>
+                                <p className="mt-1 text-sm text-gray-600">
+                                  {course.slug} · {course.level}
+                                </p>
+                              </button>
+
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-700">
+                                  현재 상태: {course.status}
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateCourseStatus(course.id, "draft")}
+                                  disabled={classroomSavingCourseId === course.id || deletingCourseId === course.id}
+                                  className={
+                                    course.status === "draft"
+                                      ? "rounded-full bg-gray-800 px-3 py-1.5 text-xs font-semibold text-white"
+                                      : "rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+                                  }
+                                >
+                                  draft
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateCourseStatus(course.id, "coming")}
+                                  disabled={classroomSavingCourseId === course.id || deletingCourseId === course.id}
+                                  className={
+                                    course.status === "coming"
+                                      ? "rounded-full bg-yellow-500 px-3 py-1.5 text-xs font-semibold text-white"
+                                      : "rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+                                  }
+                                >
+                                  coming
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateCourseStatus(course.id, "open")}
+                                  disabled={classroomSavingCourseId === course.id || deletingCourseId === course.id}
+                                  className={
+                                    course.status === "open"
+                                      ? "rounded-full bg-green-600 px-3 py-1.5 text-xs font-semibold text-white"
+                                      : "rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+                                  }
+                                >
+                                  open
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingCourseId(course.id);
+                                    setDeleteConfirmCourseId("");
+                                  }}
+                                  disabled={deletingCourseId === course.id}
+                                  className="rounded-2xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700"
+                                >
+                                  수정
+                                </button>
+
+                                {deleteConfirmCourseId === course.id ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCourse(course.id)}
+                                    disabled={deletingCourseId === course.id}
+                                    className={
+                                      deletingCourseId === course.id
+                                        ? "rounded-2xl border border-red-200 bg-red-100 px-4 py-2 text-xs font-semibold text-red-300"
+                                        : "rounded-2xl bg-red-500 px-4 py-2 text-xs font-semibold text-white"
+                                    }
+                                  >
+                                    {deletingCourseId === course.id ? "삭제 중..." : "정말 삭제"}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeleteConfirmCourseId(course.id)}
+                                    disabled={deletingCourseId === course.id}
+                                    className="rounded-2xl border border-red-300 bg-white px-4 py-2 text-xs font-semibold text-red-600"
+                                  >
+                                    삭제
+                                  </button>
+                                )}
+
+                                {classroomSavingCourseId === course.id ? (
+                                  <span className="text-xs text-gray-500">저장 중...</span>
+                                ) : null}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -2847,6 +3532,12 @@ export default function AdminPage() {
                   placeholder="첨부자료 URL"
                   className="lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
                 />
+                <input
+                  value={newLessonPosterUrl}
+                  onChange={(e) => setNewLessonPosterUrl(e.target.value)}
+                  placeholder="포스터 이미지 URL"
+                  className="lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                />
 
                 <label className="inline-flex items-center gap-3 text-sm font-medium text-gray-700">
                   <input
@@ -2882,15 +3573,309 @@ export default function AdminPage() {
                     표시할 레슨이 없습니다.
                   </div>
                 ) : (
-                  lessons.map((lesson) => (
-                    <div key={lesson.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                      <p className="text-base font-bold text-gray-900">{lesson.title}</p>
-                      <p className="mt-1 text-sm text-gray-600">
-                        순서 {lesson.sort_order} · {lesson.video_source || "-"} · {lesson.is_preview ? "미리보기" : "일반"}
-                      </p>
-                      <p className="mt-2 text-sm text-gray-600">{lesson.description}</p>
-                    </div>
-                  ))
+                  lessons.map((lesson) => {
+                    const draft = lessonDrafts[lesson.id];
+
+                    return (
+                      <div
+                        key={lesson.id}
+                        className={`rounded-2xl border p-4 ${
+                          lesson.is_visible
+                            ? "border-gray-200 bg-gray-50"
+                            : "border-red-200 bg-red-50/60"
+                        }`}
+                      >
+                        {editingLessonId === lesson.id && draft ? (
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={
+                                  draft.is_visible
+                                    ? "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
+                                    : "rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600"
+                                }
+                              >
+                                {draft.is_visible ? "표시 중" : "숨김 중"}
+                              </span>
+                            </div>
+
+                            <input
+                              value={draft.title}
+                              onChange={(e) =>
+                                handleLessonDraftChange(lesson.id, "title", e.target.value)
+                              }
+                              placeholder="레슨 제목"
+                              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                            />
+
+                            <textarea
+                              value={draft.description}
+                              onChange={(e) =>
+                                handleLessonDraftChange(lesson.id, "description", e.target.value)
+                              }
+                              rows={3}
+                              placeholder="레슨 설명"
+                              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                            />
+
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <input
+                                type="number"
+                                value={draft.sort_order}
+                                onChange={(e) =>
+                                  handleLessonDraftChange(
+                                    lesson.id,
+                                    "sort_order",
+                                    Number(e.target.value || 1)
+                                  )
+                                }
+                                placeholder="정렬 순서"
+                                className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                              />
+
+                              <input
+                                type="number"
+                                value={draft.video_seconds}
+                                onChange={(e) =>
+                                  handleLessonDraftChange(
+                                    lesson.id,
+                                    "video_seconds",
+                                    Number(e.target.value || 0)
+                                  )
+                                }
+                                placeholder="영상 길이(초)"
+                                className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                              />
+                            </div>
+
+                            <select
+                              value={draft.video_source || "youtube"}
+                              onChange={(e) =>
+                                handleLessonDraftChange(
+                                  lesson.id,
+                                  "video_source",
+                                  e.target.value as "youtube" | "vimeo" | "server"
+                                )
+                              }
+                              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                            >
+                              <option value="youtube">youtube</option>
+                              <option value="vimeo">vimeo</option>
+                              <option value="server">server</option>
+                            </select>
+
+                            <input
+                              value={draft.video_url}
+                              onChange={(e) =>
+                                handleLessonDraftChange(lesson.id, "video_url", e.target.value)
+                              }
+                              placeholder="원본 영상 URL"
+                              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                            />
+
+                            <input
+                              value={draft.video_embed_url}
+                              onChange={(e) =>
+                                handleLessonDraftChange(
+                                  lesson.id,
+                                  "video_embed_url",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="embed URL"
+                              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                            />
+
+                            <input
+                              value={draft.attachment_url}
+                              onChange={(e) =>
+                                handleLessonDraftChange(
+                                  lesson.id,
+                                  "attachment_url",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="첨부자료 URL"
+                              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                            />
+
+                            <input
+                              value={draft.poster_url}
+                              onChange={(e) =>
+                                handleLessonDraftChange(lesson.id, "poster_url", e.target.value)
+                              }
+                              placeholder="포스터 이미지 URL"
+                              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                            />
+
+                            <label className="inline-flex items-center gap-3 text-sm font-medium text-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={draft.is_preview}
+                                onChange={(e) =>
+                                  handleLessonDraftChange(
+                                    lesson.id,
+                                    "is_preview",
+                                    e.target.checked
+                                  )
+                                }
+                                className="h-4 w-4"
+                              />
+                              미리보기 레슨
+                            </label>
+
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleToggleLessonVisibility(lesson.id, !lesson.is_visible)
+                                }
+                                disabled={savingLessonId === lesson.id}
+                                className={
+                                  lesson.is_visible
+                                    ? "rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                                    : "rounded-2xl border border-green-300 bg-white px-4 py-3 text-sm font-semibold text-green-700"
+                                }
+                              >
+                                {lesson.is_visible ? "숨김으로 변경" : "표시로 변경"}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleSaveLesson(lesson.id)}
+                                disabled={savingLessonId === lesson.id || deletingLessonId === lesson.id}
+                                className={
+                                  savingLessonId === lesson.id
+                                    ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400"
+                                    : "rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white"
+                                }
+                              >
+                                {savingLessonId === lesson.id ? "저장 중..." : "저장"}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setEditingLessonId("")}
+                                disabled={deletingLessonId === lesson.id}
+                                className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700"
+                              >
+                                취소
+                              </button>
+
+                              {deleteConfirmLessonId === lesson.id ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteLesson(lesson.id)}
+                                  disabled={deletingLessonId === lesson.id}
+                                  className={
+                                    deletingLessonId === lesson.id
+                                      ? "rounded-2xl border border-red-200 bg-red-100 px-4 py-3 text-sm font-semibold text-red-300"
+                                      : "rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white"
+                                  }
+                                >
+                                  {deletingLessonId === lesson.id ? "삭제 중..." : "정말 삭제"}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteConfirmLessonId(lesson.id)}
+                                  disabled={deletingLessonId === lesson.id}
+                                  className="rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                                >
+                                  삭제
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            {lesson.poster_url ? (
+                              <img
+                                src={lesson.poster_url}
+                                alt={lesson.title}
+                                className="mb-3 h-24 w-full rounded-2xl object-cover"
+                              />
+                            ) : null}
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-base font-bold text-gray-900">{lesson.title}</p>
+                              <span
+                                className={
+                                  lesson.is_visible
+                                    ? "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
+                                    : "rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600"
+                                }
+                              >
+                                {lesson.is_visible ? "표시 중" : "숨김 중"}
+                              </span>
+                            </div>
+
+                            <p className="mt-1 text-sm text-gray-600">
+                              순서 {lesson.sort_order} · {lesson.video_source || "-"} ·{" "}
+                              {lesson.is_preview ? "미리보기" : "일반"}
+                            </p>
+                            <p className="mt-2 text-sm text-gray-600">{lesson.description}</p>
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingLessonId(lesson.id);
+                                  setDeleteConfirmLessonId("");
+                                }}
+                                className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700"
+                              >
+                                수정
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleToggleLessonVisibility(lesson.id, !lesson.is_visible)
+                                }
+                                disabled={savingLessonId === lesson.id || deletingLessonId === lesson.id}
+                                className={
+                                  lesson.is_visible
+                                    ? "rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                                    : "rounded-2xl border border-green-300 bg-white px-4 py-3 text-sm font-semibold text-green-700"
+                                }
+                              >
+                                {savingLessonId === lesson.id
+                                  ? "처리 중..."
+                                  : lesson.is_visible
+                                  ? "숨김"
+                                  : "표시"}
+                              </button>
+
+                              {deleteConfirmLessonId === lesson.id ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteLesson(lesson.id)}
+                                  disabled={deletingLessonId === lesson.id}
+                                  className={
+                                    deletingLessonId === lesson.id
+                                      ? "rounded-2xl border border-red-200 bg-red-100 px-4 py-3 text-sm font-semibold text-red-300"
+                                      : "rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white"
+                                  }
+                                >
+                                  {deletingLessonId === lesson.id ? "삭제 중..." : "정말 삭제"}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteConfirmLessonId(lesson.id)}
+                                  disabled={deletingLessonId === lesson.id}
+                                  className="rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                                >
+                                  삭제
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>

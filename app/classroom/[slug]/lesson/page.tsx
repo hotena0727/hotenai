@@ -12,6 +12,7 @@ type CourseRow = {
   level: string;
   description: string;
   status: "draft" | "open" | "coming";
+  thumbnail_url?: string | null;
   is_visible: boolean;
 };
 
@@ -85,6 +86,43 @@ function getVideoBadge(source?: string | null) {
   return "영상 준비 중";
 }
 
+function LessonPoster({
+  src,
+  title,
+  compact = false,
+}: {
+  src?: string | null;
+  title: string;
+  compact?: boolean;
+}) {
+  if (src) {
+    return (
+      <div className="overflow-hidden rounded-[20px] border border-gray-200 bg-white">
+        <img
+          src={src}
+          alt={title}
+          className={`w-full object-cover ${compact ? "h-20" : "h-[220px] sm:h-[280px]"}`}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`flex items-center justify-center rounded-[20px] border border-dashed border-gray-300 bg-white text-gray-400 ${
+        compact ? "h-20" : "h-[220px] sm:h-[280px]"
+      }`}
+    >
+      <div className="text-center">
+        <p className={compact ? "text-xl" : "text-4xl"}>🎬</p>
+        <p className={`mt-2 font-semibold ${compact ? "text-[11px]" : "text-sm"}`}>
+          포스터 준비 중
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function LessonVideoPage() {
   const params = useParams<{ slug: string }>();
   const slug = Array.isArray(params?.slug) ? params.slug[0] : params?.slug ?? "";
@@ -111,7 +149,7 @@ export default function LessonVideoPage() {
 
         const { data: courseData, error: courseError } = await supabase
           .from("courses")
-          .select("id, slug, title, level, description, status, is_visible")
+          .select("id, slug, title, level, description, status, thumbnail_url, is_visible")
           .eq("slug", slug)
           .eq("is_visible", true)
           .maybeSingle();
@@ -187,7 +225,7 @@ export default function LessonVideoPage() {
       }
     };
 
-    if (slug) load();
+    if (slug) void load();
 
     return () => {
       mounted = false;
@@ -307,33 +345,59 @@ export default function LessonVideoPage() {
             </div>
 
             <div className="mt-5 grid gap-3">
-              {lessons.map((lesson) => (
+              {lessons.map((lesson, index) => (
                 <button
                   key={lesson.id}
                   type="button"
                   onClick={() => setSelectedLessonId(lesson.id)}
                   className={`rounded-2xl border p-4 text-left transition ${
                     selectedLesson?.id === lesson.id
-                      ? "border-black bg-gray-50"
+                      ? "border-black bg-gray-50 shadow-sm"
+                      : lesson.state === "doing"
+                      ? "border-gray-300 bg-white hover:border-black"
                       : "border-gray-200 bg-white hover:border-gray-300"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">{lesson.title}</p>
-                      <p className="mt-1 text-xs text-gray-500">{formatSeconds(lesson.video_seconds)}</p>
+                  <div className="flex items-start gap-3">
+                    <div className="w-20 shrink-0">
+                      <LessonPoster
+                        src={lesson.poster_url}
+                        title={lesson.title}
+                        compact
+                      />
                     </div>
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                        lesson.state === "done"
-                          ? "bg-green-100 text-green-700"
-                          : lesson.state === "doing"
-                          ? "bg-black text-white"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {lesson.state === "done" ? "완료" : lesson.state === "doing" ? "학습 가능" : "잠금"}
-                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold text-gray-500">
+                            Lesson {index + 1}
+                          </p>
+                          <p className="mt-1 truncate text-sm font-bold text-gray-900">
+                            {lesson.title}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {formatSeconds(lesson.video_seconds)}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                            lesson.state === "done"
+                              ? "bg-green-100 text-green-700"
+                              : lesson.state === "doing"
+                              ? "bg-black text-white"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {lesson.state === "done"
+                            ? "완료"
+                            : lesson.state === "doing"
+                            ? "학습 가능"
+                            : "잠금"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </button>
               ))}
@@ -357,6 +421,21 @@ export default function LessonVideoPage() {
                           미리보기
                         </span>
                       ) : null}
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          selectedLesson.state === "done"
+                            ? "bg-green-100 text-green-700"
+                            : selectedLesson.state === "doing"
+                            ? "bg-black text-white"
+                            : "bg-gray-200 text-gray-500"
+                        }`}
+                      >
+                        {selectedLesson.state === "done"
+                          ? "완료"
+                          : selectedLesson.state === "doing"
+                          ? "학습 가능"
+                          : "잠금"}
+                      </span>
                     </div>
 
                     <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
@@ -394,27 +473,44 @@ export default function LessonVideoPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 overflow-hidden rounded-[24px] border border-gray-200 bg-black">
-                  {selectedLesson.video_source === "server" ? (
-                    <video
-                      controls
-                      className="aspect-video w-full bg-black"
-                      poster={selectedLesson.poster_url || undefined}
-                      src={selectedLesson.video_embed_url || selectedLesson.video_url || undefined}
-                    />
-                  ) : getEmbedUrl(selectedLesson) ? (
-                    <iframe
-                      src={getEmbedUrl(selectedLesson)}
-                      className="aspect-video w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                      allowFullScreen
+                <div className="mt-6 grid gap-6">
+                  {(selectedLesson.poster_url || selectedLesson.video_source !== "server") && (
+                    <LessonPoster
+                      src={selectedLesson.poster_url}
                       title={selectedLesson.title}
                     />
-                  ) : (
-                    <div className="flex aspect-video items-center justify-center bg-gray-900 text-sm text-gray-300">
-                      아직 연결된 영상이 없습니다.
-                    </div>
                   )}
+
+                  <div className="overflow-hidden rounded-[24px] border border-gray-200 bg-black">
+                    {selectedLesson.video_source === "server" ? (
+                      <video
+                        controls
+                        className="aspect-video w-full bg-black"
+                        poster={selectedLesson.poster_url || undefined}
+                        src={selectedLesson.video_embed_url || selectedLesson.video_url || undefined}
+                      />
+                    ) : getEmbedUrl(selectedLesson) ? (
+                      <iframe
+                        src={getEmbedUrl(selectedLesson)}
+                        className="aspect-video w-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                        allowFullScreen
+                        title={selectedLesson.title}
+                      />
+                    ) : selectedLesson.poster_url ? (
+                      <div className="bg-black p-4">
+                        <img
+                          src={selectedLesson.poster_url}
+                          alt={selectedLesson.title}
+                          className="aspect-video w-full rounded-[20px] object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex aspect-video items-center justify-center bg-gray-900 text-sm text-gray-300">
+                        아직 연결된 영상이 없습니다.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-5 grid gap-4 md:grid-cols-3">
