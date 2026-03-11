@@ -23,6 +23,15 @@ type EnrollmentRow = {
   is_completed: boolean;
 };
 
+type LessonRow = {
+  id: string;
+  title: string;
+  description: string;
+  sort_order: number;
+  is_preview: boolean;
+  is_visible: boolean;
+};
+
 type PageProps = {
   params: Promise<{
     slug: string;
@@ -74,6 +83,17 @@ function getProgressTone(progress: number, isCompleted: boolean) {
   };
 }
 
+function getLessonState(index: number, total: number, progress: number) {
+  if (total <= 0) return "locked" as const;
+  const unit = 100 / total;
+  const thresholdDone = unit * (index + 1);
+  const thresholdOpen = unit * index;
+
+  if (progress >= thresholdDone) return "done" as const;
+  if (progress > thresholdOpen || index === 0) return "doing" as const;
+  return "locked" as const;
+}
+
 export default async function ClassroomCourseDetailPage({ params }: PageProps) {
   const { slug } = await params;
 
@@ -113,36 +133,26 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
     }
   }
 
+  const { data: lessonRows, error: lessonError } = await supabase
+    .from("course_lessons")
+    .select("id, title, description, sort_order, is_preview, is_visible")
+    .eq("course_id", course.id)
+    .eq("is_visible", true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (lessonError) {
+    console.error(lessonError);
+  }
+
+  const lessons = ((lessonRows as LessonRow[] | null) ?? []).map((lesson, index, arr) => ({
+    ...lesson,
+    state: getLessonState(index, arr.length, enrollment?.progress ?? 0),
+  }));
+
   const progress = enrollment?.progress ?? 0;
   const isCompleted = enrollment?.is_completed ?? false;
   const tone = getProgressTone(progress, isCompleted);
-
-  const lessons = [
-    {
-      id: 1,
-      title: "1강. 핵심 표현 익히기",
-      desc: "강의의 핵심 문형과 분위기를 먼저 익히는 파트입니다.",
-      state: progress >= 1 ? "done" : "ready",
-    },
-    {
-      id: 2,
-      title: "2강. 예문으로 패턴 확장하기",
-      desc: "짧은 예문을 통해 실제 사용 장면으로 확장합니다.",
-      state: progress >= 35 ? "doing" : "locked",
-    },
-    {
-      id: 3,
-      title: "3강. 응용 회화 연결",
-      desc: "문형을 회화 상황에 넣어 자연스럽게 연결합니다.",
-      state: progress >= 70 ? "doing" : "locked",
-    },
-    {
-      id: 4,
-      title: "4강. 마무리 복습",
-      desc: "배운 표현을 한 번 더 정리하고 복습합니다.",
-      state: progress >= 100 ? "done" : "locked",
-    },
-  ];
 
   return (
     <main className="min-h-screen bg-[#f7f8fa] px-4 pb-12 pt-6 text-gray-900 sm:px-6">
@@ -179,6 +189,9 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
                   최근 기록 {enrollment?.last_lesson_title ?? "아직 학습 기록이 없습니다."}
+                </span>
+                <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                  레슨 수 {lessons.length}개
                 </span>
               </div>
             </div>
@@ -233,10 +246,12 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
           </div>
 
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-gray-500">다음 확장 포인트</p>
-            <p className="mt-2 text-lg font-bold text-gray-900">레슨 DB 연결</p>
+            <p className="text-sm font-semibold text-gray-500">레슨 상태</p>
+            <p className="mt-2 text-lg font-bold text-gray-900">
+              {lessons.length > 0 ? `${lessons.length}개 레슨 연결 완료` : "레슨 준비 중"}
+            </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              다음에는 course_lessons 테이블을 붙여서 각 강의의 레슨 목록과 잠금 상태를 실제 데이터로 바꾸면 됩니다.
+              이제 상세 페이지의 레슨 목록이 DB에서 직접 불러와집니다.
             </p>
           </div>
         </section>
@@ -245,70 +260,79 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-500">레슨 구성</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">기본 상세 페이지 레이아웃</h2>
+              <h2 className="mt-2 text-2xl font-bold text-gray-900">DB 연동 상세 페이지 레이아웃</h2>
             </div>
-            <p className="text-sm text-gray-500">지금은 더미 레슨 목록으로 먼저 구조를 잡아두었습니다.</p>
+            <p className="text-sm text-gray-500">course_lessons 테이블 기준으로 표시합니다.</p>
           </div>
 
-          <div className="mt-6 grid gap-4">
-            {lessons.map((lesson) => {
-              const badgeLabel =
-                lesson.state === "done"
-                  ? "학습 완료"
-                  : lesson.state === "doing"
-                  ? "학습 가능"
-                  : lesson.state === "ready"
-                  ? "시작 가능"
-                  : "잠금";
+          {lessons.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
+              아직 연결된 레슨이 없습니다. course_lessons 테이블에 레슨을 추가해 주세요.
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4">
+              {lessons.map((lesson) => {
+                const badgeLabel =
+                  lesson.state === "done"
+                    ? "학습 완료"
+                    : lesson.state === "doing"
+                    ? "학습 가능"
+                    : "잠금";
 
-              const badgeClass =
-                lesson.state === "done"
-                  ? "bg-green-100 text-green-700"
-                  : lesson.state === "doing"
-                  ? "bg-black text-white"
-                  : lesson.state === "ready"
-                  ? "bg-gray-200 text-gray-800"
-                  : "bg-white text-gray-500 ring-1 ring-gray-200";
+                const badgeClass =
+                  lesson.state === "done"
+                    ? "bg-green-100 text-green-700"
+                    : lesson.state === "doing"
+                    ? "bg-black text-white"
+                    : "bg-white text-gray-500 ring-1 ring-gray-200";
 
-              return (
-                <article
-                  key={lesson.id}
-                  className="rounded-[24px] border border-gray-200 bg-gray-50 p-5 transition hover:border-gray-300"
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">{lesson.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-gray-600">{lesson.desc}</p>
+                return (
+                  <article
+                    key={lesson.id}
+                    className="rounded-[24px] border border-gray-200 bg-gray-50 p-5 transition hover:border-gray-300"
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {lesson.is_preview ? (
+                            <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
+                              미리보기
+                            </span>
+                          ) : null}
+                          <h3 className="text-lg font-bold text-gray-900">{lesson.title}</h3>
+                        </div>
+                        <p className="mt-2 text-sm leading-6 text-gray-600">{lesson.description}</p>
+                      </div>
+
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+                        {badgeLabel}
+                      </span>
                     </div>
 
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
-                      {badgeLabel}
-                    </span>
-                  </div>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <Link
+                        href="/talk"
+                        className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                          lesson.state === "locked"
+                            ? "border border-gray-200 bg-white text-gray-400"
+                            : "bg-black text-white hover:opacity-90"
+                        }`}
+                      >
+                        {lesson.state === "locked" ? "준비 중" : "학습하러 가기"}
+                      </Link>
 
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <Link
-                      href="/talk"
-                      className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                        lesson.state === "locked"
-                          ? "border border-gray-200 bg-white text-gray-400"
-                          : "bg-black text-white hover:opacity-90"
-                      }`}
-                    >
-                      {lesson.state === "locked" ? "준비 중" : "학습하러 가기"}
-                    </Link>
-
-                    <button
-                      type="button"
-                      className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900"
-                    >
-                      학습 메모
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                      <button
+                        type="button"
+                        className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900"
+                      >
+                        학습 메모
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
       </div>
     </main>
