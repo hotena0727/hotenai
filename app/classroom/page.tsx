@@ -11,6 +11,18 @@ type MyProfile = {
   plan?: string | null;
 };
 
+type CourseRow = {
+  id: string;
+  slug: string;
+  title: string;
+  level: string;
+  description: string;
+  status: "draft" | "open" | "coming";
+  sort_order: number;
+  thumbnail_url?: string | null;
+  is_visible: boolean;
+};
+
 type CourseCard = {
   id: string;
   title: string;
@@ -25,6 +37,9 @@ type CourseCard = {
 export default function ClassroomPage() {
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [coursesError, setCoursesError] = useState("");
+  const [courseRows, setCourseRows] = useState<CourseRow[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -35,29 +50,49 @@ export default function ClassroomPage() {
           data: { user },
         } = await supabase.auth.getUser();
 
-        if (!user) {
-          if (mounted) setLoading(false);
-          return;
+        if (user) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("id, email, full_name, plan")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (mounted) {
+            setProfile({
+              id: user.id,
+              email: user.email ?? "",
+              full_name: data?.full_name ?? "",
+              plan: data?.plan ?? "FREE",
+            });
+          }
         }
 
-        const { data } = await supabase
-          .from("profiles")
-          .select("id, email, full_name, plan")
-          .eq("id", user.id)
-          .maybeSingle();
+        const { data: coursesData, error: coursesFetchError } = await supabase
+          .from("courses")
+          .select("id, slug, title, level, description, status, sort_order, thumbnail_url, is_visible")
+          .eq("is_visible", true)
+          .neq("status", "draft")
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        if (coursesFetchError) {
+          throw coursesFetchError;
+        }
 
         if (mounted) {
-          setProfile({
-            id: user.id,
-            email: user.email ?? "",
-            full_name: data?.full_name ?? "",
-            plan: data?.plan ?? "FREE",
-          });
+          setCourseRows((coursesData as CourseRow[] | null) ?? []);
+          setCoursesError("");
         }
       } catch (error) {
         console.error(error);
+        if (mounted) {
+          setCoursesError("강의 목록을 불러오지 못했습니다.");
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          setCoursesLoading(false);
+        }
       }
     };
 
@@ -74,40 +109,26 @@ export default function ClassroomPage() {
     return "회원";
   }, [profile]);
 
-  const courses: CourseCard[] = [
-    {
-      id: "starter-patterns",
-      title: "기초 패턴 코스",
-      level: "입문",
-      description: "자주 쓰는 문형과 표현을 짧고 가볍게 익히는 과정입니다.",
-      progress: 0,
-      status: "ready",
-      ctaLabel: "수강 준비 중",
-      href: "/mypage",
-    },
-    {
-      id: "daily-speaking",
-      title: "일상 회화 트레이닝",
-      level: "초중급",
-      description: "실제 회화에서 바로 쓰는 문장을 중심으로 연습합니다.",
-      progress: 35,
-      status: "continue",
-      ctaLabel: "이어서 학습",
-      href: "/talk",
-    },
-    {
-      id: "jlpt-bridge",
-      title: "JLPT 브릿지 클래스",
-      level: "N3~N2",
-      description: "문법·어휘·독해를 자연스럽게 연결하는 강의입니다.",
-      progress: 0,
-      status: "coming",
-      ctaLabel: "곧 공개",
-      href: "/mypage",
-    },
-  ];
+  const courses: CourseCard[] = useMemo(() => {
+    return courseRows.map((course, index) => {
+      const isOpen = course.status === "open";
+      const isContinue = isOpen && index === 0;
+
+      return {
+        id: course.id,
+        title: course.title,
+        level: course.level,
+        description: course.description,
+        progress: isContinue ? 35 : 0,
+        status: isContinue ? "continue" : isOpen ? "ready" : "coming",
+        ctaLabel: isContinue ? "이어서 학습" : isOpen ? "강의 보기" : "곧 공개",
+        href: isOpen ? `/classroom/${course.slug}` : "/classroom",
+      };
+    });
+  }, [courseRows]);
 
   const continueCourse = courses.find((course) => course.status === "continue") ?? null;
+  const openCoursesCount = courseRows.filter((course) => course.status === "open").length;
   const planLabel = (profile?.plan ?? "FREE").toUpperCase();
 
   return (
@@ -125,8 +146,8 @@ export default function ClassroomPage() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
-                지금은 강의실의 기본 화면입니다. 수강 중 강의, 이어보기, 준비 중인 강의를 한눈에 볼 수 있게
-                먼저 구성해 두었습니다. 나중에 강의 공개를 시작하면 이 공간을 중심으로 확장할 수 있습니다.
+                이제 강의실은 예시 카드가 아니라 실제 강의 데이터 기반으로 보이도록 연결해 두었습니다.
+                공개 강의와 공개 예정 강의를 이 화면에서 함께 관리할 수 있습니다.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-3">
@@ -134,20 +155,20 @@ export default function ClassroomPage() {
                   현재 플랜 {planLabel}
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  수강 예정 {courses.length}개
+                  공개 강의 {openCoursesCount}개
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  현재는 베타 준비 단계
+                  전체 노출 강의 {courseRows.length}개
                 </span>
               </div>
             </div>
 
             <div className="grid min-w-[260px] gap-3 sm:grid-cols-2 lg:w-[340px] lg:grid-cols-1">
               <Link
-                href={continueCourse?.href ?? "/mypage"}
+                href={continueCourse?.href ?? "/classroom"}
                 className="rounded-2xl bg-black px-5 py-4 text-center text-base font-semibold text-white transition hover:opacity-90"
               >
-                {continueCourse ? "▶ 이어서 학습" : "강의 준비 보기"}
+                {continueCourse ? "▶ 이어서 학습" : "강의 목록 보기"}
               </Link>
               <Link
                 href="/mypage"
@@ -167,24 +188,26 @@ export default function ClassroomPage() {
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
               {continueCourse
-                ? `${continueCourse.progress}%까지 진행했습니다. 오늘도 흐름을 끊지 않고 이어가 보세요.`
-                : "강의가 공개되면 이곳에 가장 먼저 이어볼 강의가 표시됩니다."}
+                ? `${continueCourse.progress}%까지 진행된 것으로 표시했습니다. 이후에는 실제 진도 테이블과 연결하면 됩니다.`
+                : "공개된 강의가 생기면 이곳에 가장 먼저 이어볼 강의가 표시됩니다."}
             </p>
           </div>
 
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-semibold text-gray-500">강의실 운영 상태</p>
-            <p className="mt-2 text-lg font-bold text-gray-900">비공개 준비 중</p>
+            <p className="mt-2 text-lg font-bold text-gray-900">
+              {coursesLoading ? "불러오는 중" : coursesError ? "점검 필요" : "DB 연결 완료"}
+            </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              관리자에서 공개 스위치를 켜기 전까지는 마이페이지에서만 제한적으로 노출할 수 있도록 설계되어 있습니다.
+              {coursesError || "이제 courses 테이블만 수정해도 강의 카드가 함께 바뀝니다."}
             </p>
           </div>
 
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-semibold text-gray-500">다음 확장 포인트</p>
-            <p className="mt-2 text-lg font-bold text-gray-900">진도 · 자료 · 공지</p>
+            <p className="mt-2 text-lg font-bold text-gray-900">수강 진도 연결</p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              이후에는 강의 상세 페이지, 수강 진도 저장, 자료실, 공지 영역까지 자연스럽게 붙일 수 있습니다.
+              다음에는 course_enrollments 테이블을 붙여서 사용자별 이어보기와 완료율을 진짜 데이터로 바꾸면 됩니다.
             </p>
           </div>
         </section>
@@ -193,102 +216,88 @@ export default function ClassroomPage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-500">강의 목록</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">기본 카드형 레이아웃</h2>
+              <h2 className="mt-2 text-2xl font-bold text-gray-900">DB 연결형 카드 레이아웃</h2>
             </div>
-            <p className="text-sm text-gray-500">지금은 기본형 예시 데이터로 먼저 구성했습니다.</p>
+            <p className="text-sm text-gray-500">courses 테이블의 공개 강의와 공개 예정 강의를 표시합니다.</p>
           </div>
 
-          <div className="mt-6 grid gap-4 xl:grid-cols-3">
-            {courses.map((course) => (
-              <article
-                key={course.id}
-                className="rounded-[24px] border border-gray-200 bg-gray-50 p-5 transition hover:border-gray-300"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200">
-                      {course.level}
+          {coursesLoading ? (
+            <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
+              강의 목록을 불러오는 중입니다.
+            </div>
+          ) : coursesError ? (
+            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+              {coursesError}
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
+              아직 표시할 강의가 없습니다. courses 테이블에 공개 강의를 추가해 주세요.
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4 xl:grid-cols-3">
+              {courses.map((course) => (
+                <article
+                  key={course.id}
+                  className="rounded-[24px] border border-gray-200 bg-gray-50 p-5 transition hover:border-gray-300"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200">
+                        {course.level}
+                      </span>
+                      <h3 className="mt-3 text-xl font-bold text-gray-900">{course.title}</h3>
+                    </div>
+
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                        course.status === "continue"
+                          ? "bg-black text-white"
+                          : course.status === "ready"
+                          ? "bg-gray-200 text-gray-800"
+                          : "bg-white text-gray-500 ring-1 ring-gray-200"
+                      }`}
+                    >
+                      {course.status === "continue"
+                        ? "학습 중"
+                        : course.status === "ready"
+                        ? "공개 중"
+                        : "공개 예정"}
                     </span>
-                    <h3 className="mt-3 text-xl font-bold text-gray-900">{course.title}</h3>
                   </div>
 
-                  <span
-                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                      course.status === "continue"
-                        ? "bg-black text-white"
-                        : course.status === "ready"
-                        ? "bg-gray-200 text-gray-800"
-                        : "bg-white text-gray-500 ring-1 ring-gray-200"
-                    }`}
-                  >
-                    {course.status === "continue"
-                      ? "학습 중"
-                      : course.status === "ready"
-                      ? "준비 완료"
-                      : "공개 예정"}
-                  </span>
-                </div>
+                  <p className="mt-3 text-sm leading-6 text-gray-600">{course.description}</p>
 
-                <p className="mt-3 text-sm leading-6 text-gray-600">{course.description}</p>
-
-                <div className="mt-5">
-                  <div className="mb-2 flex items-center justify-between text-sm font-semibold text-gray-600">
-                    <span>진도율</span>
-                    <span>{course.progress}%</span>
+                  <div className="mt-5">
+                    <div className="mb-2 flex items-center justify-between text-sm font-semibold text-gray-600">
+                      <span>진도율</span>
+                      <span>{course.progress}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-white ring-1 ring-gray-200">
+                      <div
+                        className="h-2 rounded-full bg-black transition-all"
+                        style={{ width: `${course.progress}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 rounded-full bg-white ring-1 ring-gray-200">
-                    <div
-                      className="h-2 rounded-full bg-black transition-all"
-                      style={{ width: `${course.progress}%` }}
-                    />
+
+                  <div className="mt-5">
+                    <Link
+                      href={course.href}
+                      className={`inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                        course.status === "continue"
+                          ? "bg-black text-white hover:opacity-90"
+                          : course.status === "ready"
+                          ? "border border-gray-300 bg-white text-gray-900 hover:bg-gray-100"
+                          : "border border-gray-200 bg-white text-gray-500"
+                      }`}
+                    >
+                      {course.ctaLabel}
+                    </Link>
                   </div>
-                </div>
-
-                <div className="mt-5">
-                  <Link
-                    href={course.href}
-                    className={`inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                      course.status === "continue"
-                        ? "bg-black text-white hover:opacity-90"
-                        : course.status === "ready"
-                        ? "border border-gray-300 bg-white text-gray-900 hover:bg-gray-100"
-                        : "border border-gray-200 bg-white text-gray-500"
-                    }`}
-                  >
-                    {course.ctaLabel}
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-6 rounded-[28px] border border-dashed border-gray-300 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-sm font-semibold text-gray-500">운영 메모</p>
-          <h2 className="mt-2 text-2xl font-bold text-gray-900">지금 단계에서 추천하는 다음 작업</h2>
-
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl bg-gray-50 p-4">
-              <p className="text-sm font-bold text-gray-900">1. 상세 페이지 연결</p>
-              <p className="mt-2 text-sm leading-6 text-gray-600">
-                강의 카드 클릭 시 챕터와 강의 설명이 보이는 상세 화면으로 이어지게 하면 흐름이 더 단단해집니다.
-              </p>
+                </article>
+              ))}
             </div>
-
-            <div className="rounded-2xl bg-gray-50 p-4">
-              <p className="text-sm font-bold text-gray-900">2. 실제 데이터 연결</p>
-              <p className="mt-2 text-sm leading-6 text-gray-600">
-                Supabase에 강의 테이블과 수강 진도 테이블을 만들면 사용자별 강의실이 완성됩니다.
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-gray-50 p-4">
-              <p className="text-sm font-bold text-gray-900">3. 공개 시점 제어</p>
-              <p className="mt-2 text-sm leading-6 text-gray-600">
-                이미 만든 관리자 스위치와 연결해서 준비가 끝난 시점에만 단계적으로 오픈하면 됩니다.
-              </p>
-            </div>
-          </div>
+          )}
         </section>
       </div>
     </main>
