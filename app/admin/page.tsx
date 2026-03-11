@@ -112,6 +112,16 @@ type LessonDraft = {
   poster_url: string;
 };
 
+type CourseEnrollmentRow = {
+  id: string;
+  user_id: string;
+  course_id: string;
+  progress: number;
+  last_lesson_title?: string | null;
+  last_studied_at?: string | null;
+  is_completed: boolean;
+};
+
 const PLAN_DURATION_OPTIONS = [
   { value: 30, label: "30일" },
   { value: 90, label: "90일" },
@@ -403,6 +413,17 @@ export default function AdminPage() {
   const [newLessonAttachmentUrl, setNewLessonAttachmentUrl] = useState("");
   const [newLessonPosterUrl, setNewLessonPosterUrl] = useState("");
 
+  // 회원 강의 배정
+  const [enrollmentsLoading, setEnrollmentsLoading] = useState(false);
+  const [enrollmentMessage, setEnrollmentMessage] = useState("");
+  const [memberCourseQuery, setMemberCourseQuery] = useState("");
+  const [selectedEnrollmentUserId, setSelectedEnrollmentUserId] = useState("");
+  const [userEnrollments, setUserEnrollments] = useState<CourseEnrollmentRow[]>(
+    []
+  );
+  const [assigningCourseId, setAssigningCourseId] = useState("");
+  const [removingEnrollmentId, setRemovingEnrollmentId] = useState("");
+
   useEffect(() => {
     const loadAdmin = async () => {
       setLoading(true);
@@ -476,7 +497,11 @@ export default function AdminPage() {
         setDurationDrafts(
           Object.fromEntries(normalizedProfiles.map((item) => [item.id, 30]))
         );
-        if (normalizedProfiles[0]?.id) setSelectedMemberId(normalizedProfiles[0].id);
+
+        if (normalizedProfiles[0]?.id) {
+          setSelectedMemberId(normalizedProfiles[0].id);
+          setSelectedEnrollmentUserId(normalizedProfiles[0].id);
+        }
 
         const { data: menuRow, error: menuError } = await supabase
           .from("app_menu_settings")
@@ -575,6 +600,22 @@ export default function AdminPage() {
       .slice(0, 50);
   }, [profiles, pushMemberQuery]);
 
+  const filteredEnrollmentProfiles = useMemo(() => {
+    const q = memberCourseQuery.trim().toLowerCase();
+    const base = profiles.filter((item) => !!item.email);
+    if (!q) return base.slice(0, 100);
+
+    return base
+      .filter((item) => {
+        return (
+          item.email.toLowerCase().includes(q) ||
+          item.id.toLowerCase().includes(q) ||
+          String(item.full_name || "").toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 100);
+  }, [profiles, memberCourseQuery]);
+
   const selectedPushProfile = useMemo(
     () => profiles.find((item) => item.id === selectedPushUserId) || null,
     [profiles, selectedPushUserId]
@@ -583,6 +624,11 @@ export default function AdminPage() {
   const selectedMember = useMemo(
     () => profiles.find((item) => item.id === selectedMemberId) || null,
     [profiles, selectedMemberId]
+  );
+
+  const selectedEnrollmentMember = useMemo(
+    () => profiles.find((item) => item.id === selectedEnrollmentUserId) || null,
+    [profiles, selectedEnrollmentUserId]
   );
 
   const selectedCourse = useMemo(
@@ -657,6 +703,10 @@ export default function AdminPage() {
       return typeOk && queryOk && wrongOk;
     });
   }, [attempts, logType, logQuery, logOnlyWrong]);
+
+  const enrolledCourseMap = useMemo(() => {
+    return new Map(userEnrollments.map((item) => [item.course_id, item]));
+  }, [userEnrollments]);
 
   const handlePlanDraftChange = (userId: string, value: PlanCode) => {
     setPlanDrafts((prev) => ({ ...prev, [userId]: value }));
@@ -779,6 +829,25 @@ export default function AdminPage() {
     );
   };
 
+  const loadUserEnrollments = async (userId: string) => {
+    if (!userId) {
+      setUserEnrollments([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("course_enrollments")
+      .select(
+        "id, user_id, course_id, progress, last_lesson_title, last_studied_at, is_completed"
+      )
+      .eq("user_id", userId)
+      .order("last_studied_at", { ascending: false });
+
+    if (error) throw error;
+
+    setUserEnrollments((data || []) as CourseEnrollmentRow[]);
+  };
+
   const handleCreateCourse = async () => {
     if (!newCourseTitle.trim() || !newCourseSlug.trim()) {
       setClassroomMessage("강의 제목과 slug를 입력해 주세요.");
@@ -873,6 +942,72 @@ export default function AdminPage() {
       );
     } finally {
       setClassroomLoading(false);
+    }
+  };
+
+  const handleAssignCourseToUser = async (courseId: string) => {
+    if (!selectedEnrollmentUserId) {
+      setEnrollmentMessage("먼저 회원을 선택해 주세요.");
+      return;
+    }
+
+    try {
+      setAssigningCourseId(courseId);
+      setEnrollmentMessage("");
+
+      const alreadyAssigned = userEnrollments.some((item) => item.course_id === courseId);
+      if (alreadyAssigned) {
+        setEnrollmentMessage("이미 배정된 강의입니다.");
+        return;
+      }
+
+      const { error } = await supabase.from("course_enrollments").insert({
+        user_id: selectedEnrollmentUserId,
+        course_id: courseId,
+        progress: 0,
+        is_completed: false,
+        last_lesson_title: null,
+        last_studied_at: null,
+      });
+
+      if (error) throw error;
+
+      await loadUserEnrollments(selectedEnrollmentUserId);
+      setEnrollmentMessage("강의를 회원에게 배정했습니다.");
+    } catch (error) {
+      console.error(error);
+      setEnrollmentMessage(
+        error instanceof Error ? error.message : "강의 배정 중 오류가 발생했습니다."
+      );
+    } finally {
+      setAssigningCourseId("");
+    }
+  };
+
+  const handleRemoveEnrollment = async (enrollmentId: string) => {
+    try {
+      setRemovingEnrollmentId(enrollmentId);
+      setEnrollmentMessage("");
+
+      const { error } = await supabase
+        .from("course_enrollments")
+        .delete()
+        .eq("id", enrollmentId);
+
+      if (error) throw error;
+
+      if (selectedEnrollmentUserId) {
+        await loadUserEnrollments(selectedEnrollmentUserId);
+      }
+
+      setEnrollmentMessage("강의 배정을 해제했습니다.");
+    } catch (error) {
+      console.error(error);
+      setEnrollmentMessage(
+        error instanceof Error ? error.message : "강의 배정 해제 중 오류가 발생했습니다."
+      );
+    } finally {
+      setRemovingEnrollmentId("");
     }
   };
 
@@ -1007,6 +1142,13 @@ export default function AdminPage() {
 
       if (lessonDeleteError) throw lessonDeleteError;
 
+      const { error: enrollmentDeleteError } = await supabase
+        .from("course_enrollments")
+        .delete()
+        .eq("course_id", courseId);
+
+      if (enrollmentDeleteError) throw enrollmentDeleteError;
+
       const { error: courseDeleteError } = await supabase
         .from("courses")
         .delete()
@@ -1039,6 +1181,9 @@ export default function AdminPage() {
       setClassroomMessage("강의를 삭제했습니다.");
 
       await loadCourses();
+      if (selectedEnrollmentUserId) {
+        await loadUserEnrollments(selectedEnrollmentUserId);
+      }
     } catch (error) {
       console.error(error);
       setClassroomMessage(
@@ -1283,6 +1428,29 @@ export default function AdminPage() {
 
     void run();
   }, [tab, selectedCourseId]);
+
+  useEffect(() => {
+    if (tab !== "classroom") return;
+    if (!selectedEnrollmentUserId) {
+      setUserEnrollments([]);
+      return;
+    }
+
+    const run = async () => {
+      try {
+        setEnrollmentsLoading(true);
+        setEnrollmentMessage("");
+        await loadUserEnrollments(selectedEnrollmentUserId);
+      } catch (error) {
+        console.error(error);
+        setEnrollmentMessage("회원의 수강 강의 목록을 불러오지 못했습니다.");
+      } finally {
+        setEnrollmentsLoading(false);
+      }
+    };
+
+    void run();
+  }, [tab, selectedEnrollmentUserId]);
 
   const handleSaveMenuSettings = async () => {
     try {
@@ -3153,6 +3321,176 @@ export default function AdminPage() {
               {classroomMessage ? (
                 <p className="mt-4 text-sm text-gray-600">{classroomMessage}</p>
               ) : null}
+            </div>
+
+            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-bold">회원 강의 배정</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                특정 회원에게 강의를 붙이거나 해제할 수 있습니다.
+              </p>
+
+              <div className="mt-4 grid gap-6 lg:grid-cols-[320px_1fr]">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-base font-semibold text-gray-800">회원 검색</label>
+                    <input
+                      value={memberCourseQuery}
+                      onChange={(e) => {
+                        setMemberCourseQuery(e.target.value);
+                        setEnrollmentMessage("");
+                      }}
+                      placeholder="이름 / 이메일 / ID 검색"
+                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-base font-semibold text-gray-800">회원 선택</label>
+                    <select
+                      value={selectedEnrollmentUserId}
+                      onChange={(e) => {
+                        setSelectedEnrollmentUserId(e.target.value);
+                        setEnrollmentMessage("");
+                      }}
+                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-base outline-none"
+                    >
+                      <option value="">회원 선택</option>
+                      {filteredEnrollmentProfiles.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.email} · {getPlanBadge(item.plan)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                    <p className="text-sm font-semibold text-gray-800">선택 회원</p>
+                    <p className="mt-2 text-sm text-gray-600">
+                      {selectedEnrollmentMember?.email || "-"}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {selectedEnrollmentMember?.full_name || "-"}
+                    </p>
+                  </div>
+
+                  {enrollmentMessage ? (
+                    <p className="text-sm text-gray-600">{enrollmentMessage}</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-900">현재 배정된 강의</h4>
+
+                    <div className="mt-3 space-y-3">
+                      {!selectedEnrollmentUserId ? (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                          먼저 회원을 선택해 주세요.
+                        </div>
+                      ) : enrollmentsLoading ? (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                          불러오는 중...
+                        </div>
+                      ) : userEnrollments.length === 0 ? (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                          아직 배정된 강의가 없습니다.
+                        </div>
+                      ) : (
+                        userEnrollments.map((enrollment) => {
+                          const course = courses.find((c) => c.id === enrollment.course_id);
+                          return (
+                            <div
+                              key={enrollment.id}
+                              className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-base font-bold text-gray-900">
+                                    {course?.title || enrollment.course_id}
+                                  </p>
+                                  <p className="mt-1 text-sm text-gray-600">
+                                    진도율 {enrollment.progress}% ·{" "}
+                                    {enrollment.is_completed ? "완료" : "진행 중"}
+                                  </p>
+                                  <p className="mt-1 text-sm text-gray-500">
+                                    최근 학습: {enrollment.last_lesson_title || "-"}
+                                  </p>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEnrollment(enrollment.id)}
+                                  disabled={removingEnrollmentId === enrollment.id}
+                                  className={
+                                    removingEnrollmentId === enrollment.id
+                                      ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400"
+                                      : "rounded-2xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                                  }
+                                >
+                                  {removingEnrollmentId === enrollment.id ? "해제 중..." : "배정 해제"}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-900">강의 배정하기</h4>
+
+                    <div className="mt-3 space-y-3">
+                      {courses.length === 0 ? (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                          등록된 강의가 없습니다.
+                        </div>
+                      ) : (
+                        courses.map((course) => {
+                          const already = enrolledCourseMap.has(course.id);
+
+                          return (
+                            <div
+                              key={course.id}
+                              className="rounded-2xl border border-gray-200 bg-white p-4"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-base font-bold text-gray-900">{course.title}</p>
+                                  <p className="mt-1 text-sm text-gray-600">
+                                    {course.level} · {course.status}
+                                  </p>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleAssignCourseToUser(course.id)}
+                                  disabled={
+                                    !selectedEnrollmentUserId ||
+                                    already ||
+                                    assigningCourseId === course.id
+                                  }
+                                  className={
+                                    !selectedEnrollmentUserId || already || assigningCourseId === course.id
+                                      ? "rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400"
+                                      : "rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white"
+                                  }
+                                >
+                                  {already
+                                    ? "배정됨"
+                                    : assigningCourseId === course.id
+                                      ? "배정 중..."
+                                      : "강의 배정"}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
