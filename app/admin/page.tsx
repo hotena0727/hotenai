@@ -13,7 +13,15 @@ import {
   type PlanCode,
 } from "@/lib/plans";
 
-type AdminTab = "members" | "stats" | "push" | "logs" | "app" | "backup";
+type AdminTab =
+  | "members"
+  | "stats"
+  | "push"
+  | "logs"
+  | "app"
+  | "classroom"
+  | "backup";
+
 type LogFilter = "all" | "word" | "kanji" | "talk";
 
 type AdminProfile = {
@@ -60,6 +68,32 @@ type MenuSettings = {
   talk_min_plan: PlanCode;
   mypage_min_plan: PlanCode;
   admin_min_plan: PlanCode;
+};
+
+type ClassroomCourse = {
+  id: string;
+  slug: string;
+  title: string;
+  level: string;
+  description: string;
+  status: "draft" | "open" | "coming";
+  sort_order: number;
+  is_visible: boolean;
+};
+
+type ClassroomLesson = {
+  id: string;
+  course_id: string;
+  title: string;
+  description: string;
+  sort_order: number;
+  is_preview: boolean;
+  is_visible: boolean;
+  video_source: "youtube" | "vimeo" | "server" | null;
+  video_url?: string | null;
+  video_embed_url?: string | null;
+  video_seconds?: number | null;
+  attachment_url?: string | null;
 };
 
 const PLAN_DURATION_OPTIONS = [
@@ -146,7 +180,7 @@ function getMenuStatusLabel(show: boolean, minPlan: PlanCode) {
     text: `${getPlanLabel(minPlan)} 이상`,
     className:
       "rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700",
-  };
+    };
 }
 
 function canUserSeeMenu(userPlan: PlanCode, show: boolean, minPlan: PlanCode) {
@@ -295,6 +329,32 @@ export default function AdminPage() {
   const [logType, setLogType] = useState<LogFilter>("all");
   const [logQuery, setLogQuery] = useState("");
   const [logOnlyWrong, setLogOnlyWrong] = useState(false);
+
+  const [courses, setCourses] = useState<ClassroomCourse[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [lessons, setLessons] = useState<ClassroomLesson[]>([]);
+  const [classroomLoading, setClassroomLoading] = useState(false);
+  const [classroomMessage, setClassroomMessage] = useState("");
+
+  const [newCourseTitle, setNewCourseTitle] = useState("");
+  const [newCourseSlug, setNewCourseSlug] = useState("");
+  const [newCourseLevel, setNewCourseLevel] = useState("입문");
+  const [newCourseDescription, setNewCourseDescription] = useState("");
+  const [newCourseStatus, setNewCourseStatus] = useState<
+    "draft" | "open" | "coming"
+  >("draft");
+
+  const [newLessonTitle, setNewLessonTitle] = useState("");
+  const [newLessonDescription, setNewLessonDescription] = useState("");
+  const [newLessonSortOrder, setNewLessonSortOrder] = useState(1);
+  const [newLessonPreview, setNewLessonPreview] = useState(false);
+  const [newLessonVideoSource, setNewLessonVideoSource] = useState<
+    "youtube" | "vimeo" | "server"
+  >("youtube");
+  const [newLessonVideoUrl, setNewLessonVideoUrl] = useState("");
+  const [newLessonEmbedUrl, setNewLessonEmbedUrl] = useState("");
+  const [newLessonVideoSeconds, setNewLessonVideoSeconds] = useState(600);
+  const [newLessonAttachmentUrl, setNewLessonAttachmentUrl] = useState("");
 
   useEffect(() => {
     const loadAdmin = async () => {
@@ -478,6 +538,11 @@ export default function AdminPage() {
     [profiles, selectedMemberId]
   );
 
+  const selectedCourse = useMemo(
+    () => courses.find((item) => item.id === selectedCourseId) || null,
+    [courses, selectedCourseId]
+  );
+
   const memberRecentMap = useMemo(() => {
     const recent = new Map<string, string>();
     for (
@@ -569,6 +634,193 @@ export default function AdminPage() {
     }));
     setMenuMessage("");
   };
+
+  const loadCourses = async () => {
+    const { data, error } = await supabase
+      .from("courses")
+      .select(
+        "id, slug, title, level, description, status, sort_order, is_visible"
+      )
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    const rows = (data || []) as ClassroomCourse[];
+    setCourses(rows);
+
+    if (rows.length === 0) {
+      setSelectedCourseId("");
+      setLessons([]);
+      return;
+    }
+
+    setSelectedCourseId((prev) => prev || rows[0].id);
+  };
+
+  const loadLessons = async (courseId: string) => {
+    if (!courseId) {
+      setLessons([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("course_lessons")
+      .select(`
+        id,
+        course_id,
+        title,
+        description,
+        sort_order,
+        is_preview,
+        is_visible,
+        video_source,
+        video_url,
+        video_embed_url,
+        video_seconds,
+        attachment_url
+      `)
+      .eq("course_id", courseId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    const rows = (data || []) as ClassroomLesson[];
+    setLessons(rows);
+    setNewLessonSortOrder(rows.length + 1);
+  };
+
+  const handleCreateCourse = async () => {
+    if (!newCourseTitle.trim() || !newCourseSlug.trim()) {
+      setClassroomMessage("강의 제목과 slug를 입력해 주세요.");
+      return;
+    }
+
+    try {
+      setClassroomLoading(true);
+      setClassroomMessage("");
+
+      const { error } = await supabase.from("courses").insert({
+        title: newCourseTitle.trim(),
+        slug: newCourseSlug.trim(),
+        level: newCourseLevel.trim() || "입문",
+        description: newCourseDescription.trim(),
+        status: newCourseStatus,
+        sort_order: courses.length + 1,
+        is_visible: true,
+      });
+
+      if (error) throw error;
+
+      setNewCourseTitle("");
+      setNewCourseSlug("");
+      setNewCourseLevel("입문");
+      setNewCourseDescription("");
+      setNewCourseStatus("draft");
+
+      await loadCourses();
+      setClassroomMessage("강의를 추가했습니다.");
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error ? error.message : "강의 추가 중 오류가 발생했습니다."
+      );
+    } finally {
+      setClassroomLoading(false);
+    }
+  };
+
+  const handleCreateLesson = async () => {
+    if (!selectedCourseId) {
+      setClassroomMessage("먼저 강의를 선택해 주세요.");
+      return;
+    }
+
+    if (!newLessonTitle.trim()) {
+      setClassroomMessage("레슨 제목을 입력해 주세요.");
+      return;
+    }
+
+    try {
+      setClassroomLoading(true);
+      setClassroomMessage("");
+
+      const { error } = await supabase.from("course_lessons").insert({
+        course_id: selectedCourseId,
+        title: newLessonTitle.trim(),
+        description: newLessonDescription.trim(),
+        sort_order: newLessonSortOrder,
+        is_preview: newLessonPreview,
+        is_visible: true,
+        video_source: newLessonVideoSource,
+        video_url: newLessonVideoUrl.trim() || null,
+        video_embed_url: newLessonEmbedUrl.trim() || null,
+        video_seconds: newLessonVideoSeconds || null,
+        attachment_url: newLessonAttachmentUrl.trim() || null,
+      });
+
+      if (error) throw error;
+
+      setNewLessonTitle("");
+      setNewLessonDescription("");
+      setNewLessonSortOrder(lessons.length + 1);
+      setNewLessonPreview(false);
+      setNewLessonVideoSource("youtube");
+      setNewLessonVideoUrl("");
+      setNewLessonEmbedUrl("");
+      setNewLessonVideoSeconds(600);
+      setNewLessonAttachmentUrl("");
+
+      await loadLessons(selectedCourseId);
+      setClassroomMessage("레슨을 추가했습니다.");
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error ? error.message : "레슨 추가 중 오류가 발생했습니다."
+      );
+    } finally {
+      setClassroomLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab !== "classroom") return;
+
+    const run = async () => {
+      try {
+        setClassroomLoading(true);
+        setClassroomMessage("");
+        await loadCourses();
+      } catch (error) {
+        console.error(error);
+        setClassroomMessage("강의 목록을 불러오지 못했습니다.");
+      } finally {
+        setClassroomLoading(false);
+      }
+    };
+
+    void run();
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== "classroom") return;
+    if (!selectedCourseId) return;
+
+    const run = async () => {
+      try {
+        setClassroomLoading(true);
+        await loadLessons(selectedCourseId);
+      } catch (error) {
+        console.error(error);
+        setClassroomMessage("레슨 목록을 불러오지 못했습니다.");
+      } finally {
+        setClassroomLoading(false);
+      }
+    };
+
+    void run();
+  }, [tab, selectedCourseId]);
 
   const handleSaveMenuSettings = async () => {
     try {
@@ -1263,6 +1515,7 @@ export default function AdminPage() {
             <TabButton active={tab === "push"} onClick={() => setTab("push")} icon="🔔" label="푸시" />
             <TabButton active={tab === "logs"} onClick={() => setTab("logs")} icon="🕒" label="기록" />
             <TabButton active={tab === "app"} onClick={() => setTab("app")} icon="⚙️" label="앱 설정" />
+            <TabButton active={tab === "classroom"} onClick={() => setTab("classroom")} icon="🎓" label="강의실 관리" />
             <TabButton active={tab === "backup"} onClick={() => setTab("backup")} icon="🗂️" label="백업·버전" />
           </div>
         </section>
@@ -2423,6 +2676,222 @@ export default function AdminPage() {
                 >
                   {menuSaving ? "저장 중..." : "메뉴 설정 저장"}
                 </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {tab === "classroom" ? (
+          <section className="mt-8 space-y-8">
+            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="text-2xl font-bold">강의실 관리</h2>
+              <p className="mt-3 text-sm text-gray-600">
+                강의와 레슨을 직접 등록하고 관리합니다.
+              </p>
+              {classroomMessage ? (
+                <p className="mt-4 text-sm text-gray-600">{classroomMessage}</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+              <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                <h3 className="text-xl font-bold">강의 추가</h3>
+
+                <div className="mt-4 space-y-4">
+                  <input
+                    value={newCourseTitle}
+                    onChange={(e) => setNewCourseTitle(e.target.value)}
+                    placeholder="강의 제목"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  />
+                  <input
+                    value={newCourseSlug}
+                    onChange={(e) => setNewCourseSlug(e.target.value)}
+                    placeholder="slug 예: starter-patterns"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  />
+                  <input
+                    value={newCourseLevel}
+                    onChange={(e) => setNewCourseLevel(e.target.value)}
+                    placeholder="레벨 예: 입문 / N3~N2"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  />
+                  <textarea
+                    value={newCourseDescription}
+                    onChange={(e) => setNewCourseDescription(e.target.value)}
+                    rows={4}
+                    placeholder="강의 설명"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  />
+                  <select
+                    value={newCourseStatus}
+                    onChange={(e) =>
+                      setNewCourseStatus(e.target.value as "draft" | "open" | "coming")
+                    }
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                  >
+                    <option value="draft">draft</option>
+                    <option value="open">open</option>
+                    <option value="coming">coming</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={handleCreateCourse}
+                    disabled={classroomLoading}
+                    className={
+                      classroomLoading
+                        ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
+                        : "inline-flex rounded-2xl bg-black px-6 py-4 text-base font-semibold text-white"
+                    }
+                  >
+                    {classroomLoading ? "처리 중..." : "강의 추가"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                <h3 className="text-xl font-bold">강의 목록</h3>
+
+                <div className="mt-4 space-y-3">
+                  {courses.length === 0 ? (
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                      아직 등록된 강의가 없습니다.
+                    </div>
+                  ) : (
+                    courses.map((course) => (
+                      <button
+                        key={course.id}
+                        type="button"
+                        onClick={() => setSelectedCourseId(course.id)}
+                        className={`w-full rounded-2xl border p-4 text-left ${
+                          selectedCourseId === course.id
+                            ? "border-red-300 bg-red-50"
+                            : "border-gray-200 bg-gray-50"
+                        }`}
+                      >
+                        <p className="text-base font-bold text-gray-900">{course.title}</p>
+                        <p className="mt-1 text-sm text-gray-600">
+                          {course.slug} · {course.level} · {course.status}
+                        </p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-bold">레슨 추가</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                선택한 강의에 레슨을 추가합니다.
+              </p>
+              <p className="mt-2 text-sm text-gray-600">
+                현재 선택 강의: {selectedCourse?.title || "-"}
+              </p>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <input
+                  value={newLessonTitle}
+                  onChange={(e) => setNewLessonTitle(e.target.value)}
+                  placeholder="레슨 제목"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                />
+                <input
+                  type="number"
+                  value={newLessonSortOrder}
+                  onChange={(e) => setNewLessonSortOrder(Number(e.target.value || 1))}
+                  placeholder="정렬 순서"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                />
+                <textarea
+                  value={newLessonDescription}
+                  onChange={(e) => setNewLessonDescription(e.target.value)}
+                  rows={3}
+                  placeholder="레슨 설명"
+                  className="lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                />
+                <select
+                  value={newLessonVideoSource}
+                  onChange={(e) =>
+                    setNewLessonVideoSource(e.target.value as "youtube" | "vimeo" | "server")
+                  }
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                >
+                  <option value="youtube">youtube</option>
+                  <option value="vimeo">vimeo</option>
+                  <option value="server">server</option>
+                </select>
+                <input
+                  value={newLessonVideoUrl}
+                  onChange={(e) => setNewLessonVideoUrl(e.target.value)}
+                  placeholder="원본 영상 URL"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                />
+                <input
+                  value={newLessonEmbedUrl}
+                  onChange={(e) => setNewLessonEmbedUrl(e.target.value)}
+                  placeholder="embed URL"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                />
+                <input
+                  type="number"
+                  value={newLessonVideoSeconds}
+                  onChange={(e) => setNewLessonVideoSeconds(Number(e.target.value || 0))}
+                  placeholder="영상 길이(초)"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                />
+                <input
+                  value={newLessonAttachmentUrl}
+                  onChange={(e) => setNewLessonAttachmentUrl(e.target.value)}
+                  placeholder="첨부자료 URL"
+                  className="lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-base outline-none"
+                />
+
+                <label className="inline-flex items-center gap-3 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={newLessonPreview}
+                    onChange={(e) => setNewLessonPreview(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  미리보기 레슨
+                </label>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCreateLesson}
+                disabled={classroomLoading || !selectedCourseId}
+                className={
+                  classroomLoading || !selectedCourseId
+                    ? "mt-5 inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-4 text-base font-semibold text-gray-400"
+                    : "mt-5 inline-flex rounded-2xl bg-black px-6 py-4 text-base font-semibold text-white"
+                }
+              >
+                {classroomLoading ? "처리 중..." : "레슨 추가"}
+              </button>
+            </div>
+
+            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-bold">선택 강의의 레슨 목록</h3>
+
+              <div className="mt-4 space-y-3">
+                {lessons.length === 0 ? (
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                    표시할 레슨이 없습니다.
+                  </div>
+                ) : (
+                  lessons.map((lesson) => (
+                    <div key={lesson.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                      <p className="text-base font-bold text-gray-900">{lesson.title}</p>
+                      <p className="mt-1 text-sm text-gray-600">
+                        순서 {lesson.sort_order} · {lesson.video_source || "-"} · {lesson.is_preview ? "미리보기" : "일반"}
+                      </p>
+                      <p className="mt-2 text-sm text-gray-600">{lesson.description}</p>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </section>

@@ -194,10 +194,11 @@ export default function ClassroomCourseDetailPage() {
   const tone = getProgressTone(progress, isCompleted);
 
   const primaryHref = useMemo(() => {
+    if (!course) return "/classroom";
     const firstOpenLesson = lessons.find((lesson) => lesson.state !== "locked");
-    if (!firstOpenLesson) return "/talk";
-    return "/talk";
-  }, [lessons]);
+    if (!firstOpenLesson) return `/classroom/${course.slug}/lesson`;
+    return `/classroom/${course.slug}/lesson`;
+  }, [lessons, course]);
 
   const handleLessonStart = async (lesson: LessonWithState) => {
     if (!course) return;
@@ -237,7 +238,7 @@ export default function ClassroomCourseDetailPage() {
       });
 
       setActionMessage(`"${lesson.title}" 학습 기록이 저장되었습니다.`);
-      router.push("/talk");
+      router.push(`/classroom/${course.slug}/lesson`);
     } catch (error) {
       console.error(error);
       setActionMessage("학습 기록 저장 중 오류가 발생했습니다.");
