@@ -173,7 +173,9 @@ export default function ClassroomPage() {
         }
 
         const safeEnrollments = (enrollmentsData as EnrollmentRow[] | null) ?? [];
-        const enrolledCourseIds = safeEnrollments.map((row) => row.course_id).filter(Boolean);
+        const enrolledCourseIds = safeEnrollments
+          .map((row) => row.course_id)
+          .filter(Boolean);
 
         let assignedCourses: CourseRow[] = [];
 
@@ -318,21 +320,23 @@ export default function ClassroomPage() {
 
   const continueCourse = courses.find((course) => course.status === "continue") ?? null;
   const firstAssignedCourse = courses[0] ?? null;
-  const enrolledCoursesCount = enrollmentRows.length;
-  const completedCoursesCount = enrollmentRows.filter(
-    (row) => row.is_completed || row.progress === 100
+
+  const assignedVisibleCoursesCount = courseRows.length;
+  const completedCoursesCount = courses.filter(
+    (course) => course.status === "completed"
   ).length;
-  const inProgressCoursesCount = enrollmentRows.filter(
-    (row) => !row.is_completed && Number(row.progress || 0) > 0
+  const inProgressCoursesCount = courses.filter(
+    (course) => course.status === "continue"
   ).length;
+
   const planLabel = (profile?.plan ?? "FREE").toUpperCase();
 
   const primaryHref = continueCourse?.href ?? firstAssignedCourse?.href ?? "/courses";
   const primaryLabel = continueCourse
     ? "▶ 이어서 학습"
     : firstAssignedCourse
-    ? "내 강의 보기"
-    : "강의 카탈로그 보기";
+      ? "내 강의 보기"
+      : "강의 카탈로그 보기";
 
   return (
     <main className="min-h-screen bg-[#f7f8fa] px-4 pb-12 pt-6 text-gray-900 sm:px-6">
@@ -358,7 +362,7 @@ export default function ClassroomPage() {
                   현재 플랜 {planLabel}
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  배정 강의 {enrolledCoursesCount}개
+                  배정 강의 {assignedVisibleCoursesCount}개
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
                   학습 중 {inProgressCoursesCount}개
@@ -393,15 +397,15 @@ export default function ClassroomPage() {
               {continueCourse
                 ? continueCourse.title
                 : firstAssignedCourse
-                ? firstAssignedCourse.title
-                : "아직 배정된 강의가 없습니다."}
+                  ? firstAssignedCourse.title
+                  : "아직 배정된 강의가 없습니다."}
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
               {continueCourse
                 ? `${continueCourse.progress}% 진행 중 · ${continueCourse.lastLessonTitle ?? "최근 기록"}`
                 : firstAssignedCourse
-                ? "배정된 강의가 있습니다. 첫 강의부터 시작해 보세요."
-                : "강의를 배정받으면 이곳에 이어볼 강의가 표시됩니다."}
+                  ? "배정된 강의가 있습니다. 첫 강의부터 시작해 보세요."
+                  : "강의를 배정받으면 이곳에 이어볼 강의가 표시됩니다."}
             </p>
           </div>
 
