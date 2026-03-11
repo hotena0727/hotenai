@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type CourseRow = {
@@ -32,10 +33,9 @@ type LessonRow = {
   is_visible: boolean;
 };
 
-type PageProps = {
-  params: Promise<{
-    slug: string;
-  }>;
+type LessonWithState = LessonRow & {
+  state: "done" | "doing" | "locked";
+  targetProgress: number;
 };
 
 function formatDate(value?: string | null) {
@@ -94,65 +94,181 @@ function getLessonState(index: number, total: number, progress: number) {
   return "locked" as const;
 }
 
-export default async function ClassroomCourseDetailPage({ params }: PageProps) {
-  const { slug } = await params;
+export default function ClassroomCourseDetailPage() {
+  const params = useParams<{ slug: string }>();
+  const router = useRouter();
+  const slug = Array.isArray(params?.slug) ? params.slug[0] : params?.slug ?? "";
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [loading, setLoading] = useState(true);
+  const [course, setCourse] = useState<CourseRow | null>(null);
+  const [enrollment, setEnrollment] = useState<EnrollmentRow | null>(null);
+  const [lessonRows, setLessonRows] = useState<LessonRow[]>([]);
+  const [notFoundState, setNotFoundState] = useState(false);
+  const [actionMessage, setActionMessage] = useState("");
+  const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
 
-  const { data: course, error: courseError } = await supabase
-    .from("courses")
-    .select("id, slug, title, level, description, status, thumbnail_url, is_visible")
-    .eq("slug", slug)
-    .eq("is_visible", true)
-    .maybeSingle();
+  useEffect(() => {
+    let mounted = true;
 
-  if (courseError) {
-    console.error(courseError);
-  }
+    const load = async () => {
+      try {
+        setLoading(true);
 
-  if (!course || course.status === "draft") {
-    notFound();
-  }
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-  let enrollment: EnrollmentRow | null = null;
+        const { data: courseData, error: courseError } = await supabase
+          .from("courses")
+          .select("id, slug, title, level, description, status, thumbnail_url, is_visible")
+          .eq("slug", slug)
+          .eq("is_visible", true)
+          .maybeSingle();
 
-  if (user) {
-    const { data: enrollmentData, error: enrollmentError } = await supabase
-      .from("course_enrollments")
-      .select("course_id, progress, last_lesson_title, last_studied_at, is_completed")
-      .eq("user_id", user.id)
-      .eq("course_id", course.id)
-      .maybeSingle();
+        if (courseError) throw courseError;
+        if (!courseData || courseData.status === "draft") {
+          if (mounted) setNotFoundState(true);
+          return;
+        }
 
-    if (enrollmentError) {
-      console.error(enrollmentError);
-    } else {
-      enrollment = enrollmentData as EnrollmentRow | null;
-    }
-  }
+        let enrollmentData: EnrollmentRow | null = null;
+        if (user) {
+          const { data, error } = await supabase
+            .from("course_enrollments")
+            .select("course_id, progress, last_lesson_title, last_studied_at, is_completed")
+            .eq("user_id", user.id)
+            .eq("course_id", courseData.id)
+            .maybeSingle();
 
-  const { data: lessonRows, error: lessonError } = await supabase
-    .from("course_lessons")
-    .select("id, title, description, sort_order, is_preview, is_visible")
-    .eq("course_id", course.id)
-    .eq("is_visible", true)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
+          if (error) throw error;
+          enrollmentData = (data as EnrollmentRow | null) ?? null;
+        }
 
-  if (lessonError) {
-    console.error(lessonError);
-  }
+        const { data: lessonsData, error: lessonError } = await supabase
+          .from("course_lessons")
+          .select("id, title, description, sort_order, is_preview, is_visible")
+          .eq("course_id", courseData.id)
+          .eq("is_visible", true)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true });
 
-  const lessons = ((lessonRows as LessonRow[] | null) ?? []).map((lesson, index, arr) => ({
-    ...lesson,
-    state: getLessonState(index, arr.length, enrollment?.progress ?? 0),
-  }));
+        if (lessonError) throw lessonError;
+
+        if (!mounted) return;
+
+        setCourse(courseData as CourseRow);
+        setEnrollment(enrollmentData);
+        setLessonRows((lessonsData as LessonRow[] | null) ?? []);
+        setActionMessage("");
+      } catch (error) {
+        console.error(error);
+        if (mounted) {
+          setActionMessage("상세 강의 정보를 불러오지 못했습니다.");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    if (slug) load();
+
+    return () => {
+      mounted = false;
+    };
+  }, [slug]);
+
+  const lessons: LessonWithState[] = useMemo(() => {
+    const progress = enrollment?.progress ?? 0;
+    return lessonRows.map((lesson, index, arr) => {
+      const targetProgress = Math.round(((index + 1) / arr.length) * 100);
+      return {
+        ...lesson,
+        state: getLessonState(index, arr.length, progress),
+        targetProgress,
+      };
+    });
+  }, [lessonRows, enrollment]);
 
   const progress = enrollment?.progress ?? 0;
   const isCompleted = enrollment?.is_completed ?? false;
   const tone = getProgressTone(progress, isCompleted);
+
+  const primaryHref = useMemo(() => {
+    const firstOpenLesson = lessons.find((lesson) => lesson.state !== "locked");
+    if (!firstOpenLesson) return "/talk";
+    return "/talk";
+  }, [lessons]);
+
+  const handleLessonStart = async (lesson: LessonWithState) => {
+    if (!course) return;
+    if (lesson.state === "locked") return;
+
+    try {
+      setActiveLessonId(lesson.id);
+      setActionMessage("");
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setActionMessage("로그인 후 이용할 수 있습니다.");
+        return;
+      }
+
+      const { error } = await supabase.rpc("upsert_course_progress", {
+        p_course_id: course.id,
+        p_progress: lesson.targetProgress,
+        p_last_lesson_title: lesson.title,
+        p_is_completed: lesson.targetProgress >= 100,
+      });
+
+      if (error) throw error;
+
+      setEnrollment((prev) => {
+        const nextProgress = Math.max(prev?.progress ?? 0, lesson.targetProgress);
+        return {
+          course_id: course.id,
+          progress: nextProgress,
+          last_lesson_title: lesson.title,
+          last_studied_at: new Date().toISOString(),
+          is_completed: nextProgress >= 100 || prev?.is_completed === true,
+        };
+      });
+
+      setActionMessage(`"${lesson.title}" 학습 기록이 저장되었습니다.`);
+      router.push("/talk");
+    } catch (error) {
+      console.error(error);
+      setActionMessage("학습 기록 저장 중 오류가 발생했습니다.");
+    } finally {
+      setActiveLessonId(null);
+    }
+  };
+
+  const handlePrimaryStart = async () => {
+    const lesson = lessons.find((item) => item.state !== "locked");
+    if (!lesson) {
+      router.push(primaryHref);
+      return;
+    }
+    await handleLessonStart(lesson);
+  };
+
+  if (notFoundState) {
+    notFound();
+  }
+
+  if (loading || !course) {
+    return (
+      <main className="min-h-screen bg-[#f7f8fa] px-4 pb-12 pt-6 text-gray-900 sm:px-6">
+        <div className="mx-auto w-full max-w-6xl rounded-[28px] border border-gray-200 bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold text-gray-500">강의실</p>
+          <h1 className="mt-3 text-2xl font-bold text-gray-900">강의 정보를 불러오는 중입니다.</h1>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f7f8fa] px-4 pb-12 pt-6 text-gray-900 sm:px-6">
@@ -203,12 +319,14 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
               >
                 강의실로 돌아가기
               </Link>
-              <Link
-                href="/talk"
-                className={`rounded-2xl px-5 py-4 text-center text-base font-semibold transition ${tone.buttonClass}`}
+              <button
+                type="button"
+                onClick={handlePrimaryStart}
+                disabled={activeLessonId !== null}
+                className={`rounded-2xl px-5 py-4 text-center text-base font-semibold transition disabled:opacity-60 ${tone.buttonClass}`}
               >
-                {tone.buttonLabel}
-              </Link>
+                {activeLessonId ? "저장 중..." : tone.buttonLabel}
+              </button>
             </div>
           </div>
 
@@ -224,6 +342,12 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
               />
             </div>
           </div>
+
+          {actionMessage ? (
+            <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+              {actionMessage}
+            </div>
+          ) : null}
         </section>
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
@@ -231,7 +355,7 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
             <p className="text-sm font-semibold text-gray-500">학습 상태</p>
             <p className="mt-2 text-lg font-bold text-gray-900">{tone.badge}</p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              수강 기록이 있으면 자동으로 이어보기 상태가 반영되고, 100%에 도달하면 완료 상태로 바뀝니다.
+              레슨을 누르면 현재 강의의 진도와 최근 학습 기록이 자동으로 업데이트됩니다.
             </p>
           </div>
 
@@ -246,12 +370,10 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
           </div>
 
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-gray-500">레슨 상태</p>
-            <p className="mt-2 text-lg font-bold text-gray-900">
-              {lessons.length > 0 ? `${lessons.length}개 레슨 연결 완료` : "레슨 준비 중"}
-            </p>
+            <p className="text-sm font-semibold text-gray-500">자동 기록 상태</p>
+            <p className="mt-2 text-lg font-bold text-gray-900">RPC 연결형</p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              이제 상세 페이지의 레슨 목록이 DB에서 직접 불러와집니다.
+              레슨 버튼을 누를 때 course_enrollments가 자동으로 upsert 되도록 연결했습니다.
             </p>
           </div>
         </section>
@@ -260,9 +382,9 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-500">레슨 구성</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">DB 연동 상세 페이지 레이아웃</h2>
+              <h2 className="mt-2 text-2xl font-bold text-gray-900">레슨 클릭 시 진도 자동 저장</h2>
             </div>
-            <p className="text-sm text-gray-500">course_lessons 테이블 기준으로 표시합니다.</p>
+            <p className="text-sm text-gray-500">course_lessons + course_enrollments 연동</p>
           </div>
 
           {lessons.length === 0 ? (
@@ -310,16 +432,22 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-3">
-                      <Link
-                        href="/talk"
-                        className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                      <button
+                        type="button"
+                        onClick={() => handleLessonStart(lesson)}
+                        disabled={lesson.state === "locked" || activeLessonId !== null}
+                        className={`rounded-2xl px-4 py-3 text-sm font-semibold transition disabled:opacity-60 ${
                           lesson.state === "locked"
                             ? "border border-gray-200 bg-white text-gray-400"
                             : "bg-black text-white hover:opacity-90"
                         }`}
                       >
-                        {lesson.state === "locked" ? "준비 중" : "학습하러 가기"}
-                      </Link>
+                        {activeLessonId === lesson.id
+                          ? "저장 중..."
+                          : lesson.state === "locked"
+                          ? "준비 중"
+                          : "학습하러 가기"}
+                      </button>
 
                       <button
                         type="button"
@@ -327,6 +455,10 @@ export default async function ClassroomCourseDetailPage({ params }: PageProps) {
                       >
                         학습 메모
                       </button>
+
+                      <span className="inline-flex items-center rounded-2xl border border-gray-200 bg-white px-4 py-3 text-xs font-semibold text-gray-500">
+                        저장 목표 진도 {lesson.targetProgress}%
+                      </span>
                     </div>
                   </article>
                 );
