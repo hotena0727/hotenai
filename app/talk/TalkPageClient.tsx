@@ -53,7 +53,8 @@ const TITLE_PATHS = {
 } as const;
 
 const JA_FONT_STYLE = {
-  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
+  fontFamily:
+    '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
 } as const;
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -93,7 +94,8 @@ function fakeTranscript(answer: string) {
 
 function fakePronComment(score: number, answer: string) {
   if (score >= 90) return `🎯 いいですね\n🗣️ ${answer} 의 발음이 또렷합니다.`;
-  if (score >= 70) return `🎯 좋습니다\n🗣️ ${answer} 를 조금만 더 또박또박 말해보세요.`;
+  if (score >= 70)
+    return `🎯 좋습니다\n🗣️ ${answer} 를 조금만 더 또박또박 말해보세요.`;
   return `🎯 천천히 다시\n🗣️ ${answer} 를 2~3번 따라 말해보세요.`;
 }
 
@@ -152,7 +154,11 @@ function encodeWav(samples: Float32Array, sampleRate: number) {
   let offset = 44;
   for (let i = 0; i < samples.length; i += 1) {
     const sample = Math.max(-1, Math.min(1, samples[i] ?? 0));
-    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+    view.setInt16(
+      offset,
+      sample < 0 ? sample * 0x8000 : sample * 0x7fff,
+      true
+    );
     offset += 2;
   }
 
@@ -247,9 +253,8 @@ function playSfx(kind: "correct" | "wrong" | "reward") {
     try {
       const AudioCtx =
         window.AudioContext ||
-        ((window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext as
-          | typeof AudioContext
-          | undefined);
+        ((window as Window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext as typeof AudioContext | undefined);
       if (!AudioCtx) return;
 
       const ctx = new AudioCtx();
@@ -277,9 +282,9 @@ function playSfx(kind: "correct" | "wrong" | "reward") {
 
       if (kind === "correct") {
         tone(660, now, 0.09);
-        tone(880, now + 0.10, 0.14);
+        tone(880, now + 0.1, 0.14);
       } else if (kind === "wrong") {
-        tone(300, now, 0.10, 0.045, "sawtooth");
+        tone(300, now, 0.1, 0.045, "sawtooth");
         tone(220, now + 0.11, 0.16, 0.045, "sawtooth");
       } else {
         tone(660, now, 0.08);
@@ -296,7 +301,9 @@ function playSfx(kind: "correct" | "wrong" | "reward") {
   };
 
   try {
-    const candidates = pathCandidates[kind].map((path) => `${BASE_SFX_URL}${path}`);
+    const candidates = pathCandidates[kind].map(
+      (path) => `${BASE_SFX_URL}${path}`
+    );
     let idx = 0;
 
     const tryPlay = (url: string) => {
@@ -408,7 +415,9 @@ export default function TalkPage() {
   const [isRecordedPlaying, setIsRecordedPlaying] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [rewardNoticeRequested, setRewardNoticeRequested] = useState(false);
-  const [waveformBars, setWaveformBars] = useState<number[]>(makeWaveformBars(0.06));
+  const [waveformBars, setWaveformBars] = useState<number[]>(
+    makeWaveformBars(0.06)
+  );
 
   const restoringRef = useRef(false);
   const resumedOnceRef = useRef(false);
@@ -430,7 +439,9 @@ export default function TalkPage() {
 
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(`talk-spoken-count:${todayKST()}`);
+      const stored = window.localStorage.getItem(
+        `talk-spoken-count:${todayKST()}`
+      );
       if (stored) {
         const parsed = Number(stored);
         if (Number.isFinite(parsed) && parsed >= 0) {
@@ -567,12 +578,13 @@ export default function TalkPage() {
 
       const AudioCtx =
         window.AudioContext ||
-        ((window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext as
-          | typeof AudioContext
-          | undefined);
+        ((window as Window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext as typeof AudioContext | undefined);
 
       if (!AudioCtx) {
-        setPronError("이 브라우저에서는 오디오 컨텍스트를 사용할 수 없습니다.");
+        setPronError(
+          "이 브라우저에서는 오디오 컨텍스트를 사용할 수 없습니다."
+        );
         await stopRecordingInternal();
         return;
       }
@@ -607,7 +619,10 @@ export default function TalkPage() {
           sumSq += sample * sample;
         }
         const rms = Math.sqrt(sumSq / Math.max(input.length, 1));
-        waveLevelRef.current = Math.max(waveLevelRef.current * 0.72, Math.min(1, rms * 10));
+        waveLevelRef.current = Math.max(
+          waveLevelRef.current * 0.72,
+          Math.min(1, rms * 10)
+        );
       };
 
       recordSourceRef.current = source;
@@ -621,7 +636,10 @@ export default function TalkPage() {
       setPronDuration("00:00");
 
       recordTimerRef.current = window.setInterval(() => {
-        const elapsedSec = Math.max(0, Math.floor((Date.now() - recordStartAtRef.current) / 1000));
+        const elapsedSec = Math.max(
+          0,
+          Math.floor((Date.now() - recordStartAtRef.current) / 1000)
+        );
         setRecordingSeconds(elapsedSec);
         setPronDuration(formatSeconds(elapsedSec));
       }, 200);
@@ -640,8 +658,14 @@ export default function TalkPage() {
           }
           liveLevel = Math.max(liveLevel, peak * 2.4);
         }
-        const visualLevel = Math.max(0.14, liveLevel, 0.14 + Math.abs(Math.sin(waveformPhaseRef.current * 0.22)) * 0.08);
-        setWaveformBars(makeWaveformBars(visualLevel, 32, waveformPhaseRef.current));
+        const visualLevel = Math.max(
+          0.14,
+          liveLevel,
+          0.14 + Math.abs(Math.sin(waveformPhaseRef.current * 0.22)) * 0.08
+        );
+        setWaveformBars(
+          makeWaveformBars(visualLevel, 32, waveformPhaseRef.current)
+        );
         waveLevelRef.current *= 0.92;
         waveformAnimRef.current = window.requestAnimationFrame(animateWaveform);
       };
@@ -653,11 +677,19 @@ export default function TalkPage() {
       let message = "녹음을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 
       if (errName === "NotAllowedError" || errName === "SecurityError") {
-        message = "마이크 권한이 거부되었습니다. 브라우저에서 마이크 권한을 허용해 주세요.";
-      } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
+        message =
+          "마이크 권한이 거부되었습니다. 브라우저에서 마이크 권한을 허용해 주세요.";
+      } else if (
+        errName === "NotFoundError" ||
+        errName === "DevicesNotFoundError"
+      ) {
         message = "사용할 수 있는 마이크를 찾지 못했습니다.";
-      } else if (errName === "NotReadableError" || errName === "TrackStartError") {
-        message = "다른 앱이 마이크를 사용 중일 수 있습니다. 마이크 사용 중인 앱을 닫고 다시 시도해 주세요.";
+      } else if (
+        errName === "NotReadableError" ||
+        errName === "TrackStartError"
+      ) {
+        message =
+          "다른 앱이 마이크를 사용 중일 수 있습니다. 마이크 사용 중인 앱을 닫고 다시 시도해 주세요.";
       } else if (errName === "AbortError") {
         message = "녹음 시작이 중단되었습니다. 다시 시도해 주세요.";
       } else if (errName === "TypeError") {
@@ -696,7 +728,9 @@ export default function TalkPage() {
         data = {};
       }
       if (!res.ok) {
-        throw new Error(String(data?.error || raw || "말하기 점수를 계산하지 못했습니다."));
+        throw new Error(
+          String(data?.error || raw || "말하기 점수를 계산하지 못했습니다.")
+        );
       }
 
       const transcript = String(data?.transcript || "").trim();
@@ -713,7 +747,10 @@ export default function TalkPage() {
       }
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : "말하기 점수를 계산하지 못했습니다.";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "말하기 점수를 계산하지 못했습니다.";
       setPronChecked(false);
       setPronScore(null);
       setPronTranscript("");
@@ -728,7 +765,10 @@ export default function TalkPage() {
     if (pronStage !== "recording") return;
 
     try {
-      const elapsedSec = Math.max(1, Math.floor((Date.now() - recordStartAtRef.current) / 1000));
+      const elapsedSec = Math.max(
+        1,
+        Math.floor((Date.now() - recordStartAtRef.current) / 1000)
+      );
       setRecordingSeconds(elapsedSec);
       setPronDuration(formatSeconds(elapsedSec));
       await stopRecordingInternal();
@@ -741,7 +781,10 @@ export default function TalkPage() {
         return;
       }
 
-      const wavBlob = encodeWav(merged, recordSampleRateRef.current || 44100);
+      const wavBlob = encodeWav(
+        merged,
+        recordSampleRateRef.current || 44100
+      );
       if (!wavBlob.size) {
         setPronStage("idle");
         setPronError("녹음 파일을 만들지 못했습니다. 다시 시도해 주세요.");
@@ -791,7 +834,9 @@ export default function TalkPage() {
     } catch (error) {
       console.error(error);
       setIsRecordedPlaying(false);
-      setPronError("내 녹음 재생을 지원하지 않는 브라우저입니다. Chrome 또는 Edge에서 다시 시도해 주세요.");
+      setPronError(
+        "내 녹음 재생을 지원하지 않는 브라우저입니다. Chrome 또는 Edge에서 다시 시도해 주세요."
+      );
     }
   };
 
@@ -911,6 +956,14 @@ export default function TalkPage() {
   const currentQuestion = questions[currentIndex];
 
   useEffect(() => {
+    setCoachOpen(false);
+    setCoachAnswer("");
+    setCoachError("");
+    setCoachLoading(false);
+    setCoachQuestion("");
+  }, [currentQuestion?.qid]);
+
+  useEffect(() => {
     if (!currentQuestion) {
       setCurrentChoices([]);
       return;
@@ -938,17 +991,17 @@ export default function TalkPage() {
   const isCorrect = submitted && selected === currentQuestion?.answer_jp;
   const isWrong = submitted && selected !== currentQuestion?.answer_jp;
   const isPro = isPaidPlan(userPlan);
-  const listenLimitReached =
-    !isPro && listenUsed >= DAILY_TALK_LISTEN_LIMIT;
-  const recordLimitReached =
-    !isPro && recordUsed >= DAILY_TALK_RECORD_LIMIT;
+  const listenLimitReached = !isPro && listenUsed >= DAILY_TALK_LISTEN_LIMIT;
+  const recordLimitReached = !isPro && recordUsed >= DAILY_TALK_RECORD_LIMIT;
   const quotaLimitReached = listenLimitReached || recordLimitReached;
   const remainingListen = Math.max(DAILY_TALK_LISTEN_LIMIT - listenUsed, 0);
   const remainingRecord = Math.max(DAILY_TALK_RECORD_LIMIT - recordUsed, 0);
   const isPronPerfect = pronChecked && (pronScore ?? 0) >= 100;
   const showRewardCard = isPronPerfect && isCorrect;
-  const showPronOnlyNotice = rewardNoticeRequested && isPronPerfect && !isCorrect;
-  const showNeedPerfectNotice = rewardNoticeRequested && pronChecked && !isPronPerfect;
+  const showPronOnlyNotice =
+    rewardNoticeRequested && isPronPerfect && !isCorrect;
+  const showNeedPerfectNotice =
+    rewardNoticeRequested && pronChecked && !isPronPerfect;
 
   const solvedCount = submitted ? currentIndex + 1 : currentIndex;
   const totalCount = questions.length || QUIZ_SET_SIZE;
@@ -1012,12 +1065,15 @@ export default function TalkPage() {
         }
 
         setQuestions(restored);
-        setCurrentIndex(Math.min(Math.max(ds.idx || 0, 0), restored.length - 1));
+        setCurrentIndex(
+          Math.min(Math.max(ds.idx || 0, 0), restored.length - 1)
+        );
         setSelected("");
         setSubmitted(false);
         setScore(0);
         setWrongList([]);
         setSaveDone(false);
+        setCoachOpen(false);
         setCoachAnswer("");
         setCoachError("");
         setCoachLoading(false);
@@ -1161,7 +1217,8 @@ export default function TalkPage() {
         `정답표현: ${currentQuestion.answer_jp || ""}`,
         `정답해석: ${currentQuestion.answer_kr || ""}`,
         `내선택: ${selected}`,
-        `정오답: ${selected === currentQuestion.answer_jp ? "정답" : "오답"}`,
+        `정오답: ${selected === currentQuestion.answer_jp ? "정답" : "오답"
+        }`,
       ].filter(Boolean);
 
       await askTalkCoach({
@@ -1215,6 +1272,7 @@ export default function TalkPage() {
     setScore(0);
     setWrongList([]);
     setSaveDone(false);
+    setCoachOpen(false);
     setCoachAnswer("");
     setCoachError("");
     setCoachLoading(false);
@@ -1243,7 +1301,14 @@ export default function TalkPage() {
 
     reviewStartedRef.current = true;
     void startReviewMode();
-  }, [loading, allRows, dailyStateLoaded, isReviewMode, reviewQid, reviewQids.length]);
+  }, [
+    loading,
+    allRows,
+    dailyStateLoaded,
+    isReviewMode,
+    reviewQid,
+    reviewQids.length,
+  ]);
 
   const makeQuizSet = async () => {
     setIsReviewing(false);
@@ -1263,7 +1328,10 @@ export default function TalkPage() {
       return;
     }
 
-    const picked: TalkCsvRow[] = pool.slice(0, Math.min(QUIZ_SET_SIZE, pool.length));
+    const picked: TalkCsvRow[] = pool.slice(
+      0,
+      Math.min(QUIZ_SET_SIZE, pool.length)
+    );
 
     setQuestions(picked);
     setCurrentIndex(0);
@@ -1272,6 +1340,7 @@ export default function TalkPage() {
     setScore(0);
     setWrongList([]);
     setSaveDone(false);
+    setCoachOpen(false);
     setCoachAnswer("");
     setCoachError("");
     setCoachLoading(false);
@@ -1323,7 +1392,10 @@ export default function TalkPage() {
       picked = pool.slice(0, Math.min(5, pool.length));
     } else if (reviewModeType === "mixed") {
       const oldPart = pool.slice(0, Math.min(3, pool.length));
-      const randomPart = shuffleArray(pool).slice(0, Math.min(2, pool.length));
+      const randomPart = shuffleArray(pool).slice(
+        0,
+        Math.min(2, pool.length)
+      );
       const merged = [...oldPart, ...randomPart];
       const seen = new Set<string>();
       picked = merged.filter((row) => {
@@ -1346,6 +1418,7 @@ export default function TalkPage() {
     setSubmitted(false);
     setScore(0);
     setSaveDone(false);
+    setCoachOpen(false);
     setCoachAnswer("");
     setCoachError("");
     setCoachLoading(false);
@@ -1405,6 +1478,7 @@ export default function TalkPage() {
       ]);
     }
 
+    setCoachOpen(false);
     setCoachAnswer("");
     setCoachError("");
     setCoachLoading(false);
@@ -1489,6 +1563,7 @@ export default function TalkPage() {
       setCurrentIndex(nextIdx);
       setSelected("");
       setSubmitted(false);
+      setCoachOpen(false);
       setCoachAnswer("");
       setCoachError("");
       setCoachLoading(false);
@@ -1527,9 +1602,13 @@ export default function TalkPage() {
     }
     if (!showRewardCard) {
       if (showPronOnlyNotice) {
-        setPronError("발음은 100점이지만, 문제 선택이 오답이라 보상은 지급되지 않습니다. (정답/발음은 별개로 관리돼요.)");
+        setPronError(
+          "발음은 100점이지만, 문제 선택이 오답이라 보상은 지급되지 않습니다. (정답/발음은 별개로 관리돼요.)"
+        );
       } else if (showNeedPerfectNotice) {
-        setPronError("보상은 '녹음 + 100점'일 때만 받을 수 있어요. 지금 바로 녹음하고 100점을 만들어 보세요.");
+        setPronError(
+          "보상은 '녹음 + 100점'일 때만 받을 수 있어요. 지금 바로 녹음하고 100점을 만들어 보세요."
+        );
       }
       return;
     }
@@ -1558,6 +1637,7 @@ export default function TalkPage() {
     setScore(0);
     setWrongList([]);
     setSaveDone(false);
+    setCoachOpen(false);
     setCoachAnswer("");
     setCoachError("");
     setCoachLoading(false);
@@ -1608,8 +1688,12 @@ export default function TalkPage() {
             <p className="text-lg font-medium">
               최종 점수: {score} / {questions.length}
             </p>
-            <p className="mt-2 text-sm text-gray-600">오답 수: {wrongList.length}</p>
-            <p className="mt-2 text-sm text-gray-600">오늘 말한 문장: {spokenSentenceCount}</p>
+            <p className="mt-2 text-sm text-gray-600">
+              오답 수: {wrongList.length}
+            </p>
+            <p className="mt-2 text-sm text-gray-600">
+              오늘 말한 문장: {spokenSentenceCount}
+            </p>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -1675,8 +1759,8 @@ export default function TalkPage() {
                   {isPro
                     ? "자세한 이용 안내 보기"
                     : quotaLimitReached
-                    ? "오늘 이용 한도 도달"
-                    : `발음 ${remainingListen}회 · 녹음 ${remainingRecord}회 남음`}
+                      ? "오늘 이용 한도 도달"
+                      : `발음 ${remainingListen}회 · 녹음 ${remainingRecord}회 남음`}
                 </p>
               </div>
               <span
@@ -1702,7 +1786,7 @@ export default function TalkPage() {
                   {isPro
                     ? "유료 플랜은 발음듣기와 녹음을 제한 없이 이용할 수 있고, AI 스마트코치도 사용할 수 있습니다."
                     : quotaMessage ||
-                      "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 유료 플랜에서 이용할 수 있습니다."}
+                    "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 유료 플랜에서 이용할 수 있습니다."}
                 </p>
               </div>
             ) : null}
@@ -1721,7 +1805,9 @@ export default function TalkPage() {
 
           <div className="mt-6 space-y-4 rounded-3xl border border-gray-200 bg-gradient-to-b from-white to-gray-50/70 p-6 shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-              <label className="block text-sm font-semibold tracking-[-0.01em] text-gray-700">코스 선택</label>
+              <label className="block text-sm font-semibold tracking-[-0.01em] text-gray-700">
+                코스 선택
+              </label>
               <div className="relative mt-2">
                 <select
                   value={selectedStage}
@@ -1735,15 +1821,29 @@ export default function TalkPage() {
                   ))}
                 </select>
                 <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M5 7.5L10 12.5L15 7.5"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </span>
               </div>
             </div>
 
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-              <label className="block text-sm font-semibold tracking-[-0.01em] text-gray-700">유형 선택</label>
+              <label className="block text-sm font-semibold tracking-[-0.01em] text-gray-700">
+                유형 선택
+              </label>
               <div className="relative mt-2">
                 <select
                   value={selectedTag}
@@ -1757,15 +1857,29 @@ export default function TalkPage() {
                   ))}
                 </select>
                 <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M5 7.5L10 12.5L15 7.5"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </span>
               </div>
             </div>
 
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-              <label className="block text-sm font-semibold tracking-[-0.01em] text-gray-700">상황 선택</label>
+              <label className="block text-sm font-semibold tracking-[-0.01em] text-gray-700">
+                상황 선택
+              </label>
               <div className="relative mt-2">
                 <select
                   value={selectedSub}
@@ -1780,8 +1894,20 @@ export default function TalkPage() {
                   ))}
                 </select>
                 <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M5 7.5L10 12.5L15 7.5"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </span>
               </div>
@@ -1802,7 +1928,8 @@ export default function TalkPage() {
             <div className="rounded-3xl border border-gray-200 bg-white p-5">
               <div className="flex flex-wrap items-center gap-3">
                 <p className="text-lg font-semibold">
-                  📈 세트 {questions.length > 0 ? 1 : 0}/1 (문항 {solvedCount}/{totalCount} · 남은 {remainingCount}) · {progressPercent}%
+                  📈 세트 {questions.length > 0 ? 1 : 0}/1 (문항 {solvedCount}/
+                  {totalCount} · 남은 {remainingCount}) · {progressPercent}%
                 </p>
 
                 {isReviewing ? (
@@ -1822,10 +1949,13 @@ export default function TalkPage() {
               <p className="mt-3 text-sm text-gray-500">
                 {isReviewing
                   ? `복습 진행: ${Math.min(
-                      solvedCount + (submitted ? 0 : 1),
-                      totalCount
-                    )}/${totalCount}`
-                  : `문항 진행: ${Math.min(currentIndex + 1, totalCount)}/${totalCount}`}
+                    solvedCount + (submitted ? 0 : 1),
+                    totalCount
+                  )}/${totalCount}`
+                  : `문항 진행: ${Math.min(
+                    currentIndex + 1,
+                    totalCount
+                  )}/${totalCount}`}
               </p>
 
               {reviewNotice ? (
@@ -1863,13 +1993,16 @@ export default function TalkPage() {
                 </button>
 
                 <p className="text-sm leading-6 text-gray-500">
-                  틀린 것, 오래된 것, 랜덤을 기준으로 복습 세트를 구성할 수 있습니다.
-                  현재 선택한 코스/유형/상황 범위 안에서 5문제를 자동 구성합니다.
+                  틀린 것, 오래된 것, 랜덤을 기준으로 복습 세트를 구성할 수
+                  있습니다. 현재 선택한 코스/유형/상황 범위 안에서 5문제를 자동
+                  구성합니다.
                 </p>
               </div>
 
               <div className="mt-6">
-                <p className="text-base font-semibold text-gray-700">복습 방식</p>
+                <p className="text-base font-semibold text-gray-700">
+                  복습 방식
+                </p>
 
                 <div className="mt-3 space-y-3 text-base">
                   <label className="flex items-center gap-2">
@@ -1943,12 +2076,15 @@ export default function TalkPage() {
 
         <section className="mt-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-base text-gray-500">
-            문항 진행: {questions.length > 0 ? currentIndex + 1 : 0}/{questions.length || QUIZ_SET_SIZE}
+            문항 진행: {questions.length > 0 ? currentIndex + 1 : 0}/
+            {questions.length || QUIZ_SET_SIZE}
           </p>
 
           <div className="mt-6">
             <p className="text-lg font-semibold">
-              상황: {currentQuestion?.situation_kr || "세트를 시작하면 상황이 표시됩니다."}
+              상황:{" "}
+              {currentQuestion?.situation_kr ||
+                "세트를 시작하면 상황이 표시됩니다."}
             </p>
           </div>
 
@@ -1964,7 +2100,10 @@ export default function TalkPage() {
                       `partner-${currentQuestion.qid}`
                     )
                   }
-                  disabled={listenLimitReached || audioLoadingKey === `partner-${currentQuestion?.qid}`}
+                  disabled={
+                    listenLimitReached ||
+                    audioLoadingKey === `partner-${currentQuestion?.qid}`
+                  }
                 >
                   {audioLoadingKey === `partner-${currentQuestion?.qid}`
                     ? "재생 중..."
@@ -1975,7 +2114,9 @@ export default function TalkPage() {
 
             <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-5 min-h-[92px]">
               {!isPro ? (
-                <p lang="ja" style={JA_FONT_STYLE} className="text-lg">{currentQuestion?.partner_jp || "-"}</p>
+                <p lang="ja" style={JA_FONT_STYLE} className="text-lg">
+                  {currentQuestion?.partner_jp || "-"}
+                </p>
               ) : currentQuestion?.partner_mp3 ? (
                 <div className="flex min-h-[52px] items-center justify-center">
                   <button
@@ -1986,11 +2127,18 @@ export default function TalkPage() {
                         `partner-${currentQuestion.qid}`
                       )
                     }
-                    disabled={listenLimitReached || audioLoadingKey === `partner-${currentQuestion?.qid}`}
+                    disabled={
+                      listenLimitReached ||
+                      audioLoadingKey === `partner-${currentQuestion?.qid}`
+                    }
                     className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-base font-semibold text-gray-700 shadow-sm disabled:opacity-60"
                   >
                     <span className="text-lg leading-none">🔊</span>
-                    <span>{audioLoadingKey === `partner-${currentQuestion?.qid}` ? "재생 중..." : "먼저 듣기"}</span>
+                    <span>
+                      {audioLoadingKey === `partner-${currentQuestion?.qid}`
+                        ? "재생 중..."
+                        : "먼저 듣기"}
+                    </span>
                   </button>
                 </div>
               ) : null}
@@ -2029,7 +2177,9 @@ export default function TalkPage() {
                     onClick={() => handleSelect(choice)}
                     className={className}
                   >
-                    <span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
+                    <span lang="ja" style={JA_FONT_STYLE}>
+                      {choice}
+                    </span>
                   </button>
                 );
               })}
@@ -2073,11 +2223,15 @@ export default function TalkPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold">🎯 오늘 미션</p>
-                  <p className="mt-2 text-lg font-semibold">{getTodayMissionText()}</p>
+                  <p className="mt-2 text-lg font-semibold">
+                    {getTodayMissionText()}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold">🗣️ 오늘 말한 문장</p>
-                  <p className="mt-1 text-3xl font-bold">{spokenSentenceCount}</p>
+                  <p className="mt-1 text-3xl font-bold">
+                    {spokenSentenceCount}
+                  </p>
                   <p className="text-sm">문장</p>
                 </div>
               </div>
@@ -2100,7 +2254,10 @@ export default function TalkPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-gray-800">
-                      상대(말) <span lang="ja" style={JA_FONT_STYLE}>{currentQuestion?.partner_jp || "-"}</span>
+                      상대(말){" "}
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {currentQuestion?.partner_jp || "-"}
+                      </span>
                     </p>
                     <p className="mt-1 text-sm text-gray-500">
                       {currentQuestion?.partner_kr || "-"}
@@ -2119,12 +2276,12 @@ export default function TalkPage() {
                       disabled={
                         listenLimitReached ||
                         audioLoadingKey ===
-                          `partner-dialog-${currentQuestion?.qid}`
+                        `partner-dialog-${currentQuestion?.qid}`
                       }
                       className="shrink-0 p-1 text-xl leading-none"
                     >
                       {audioLoadingKey ===
-                      `partner-dialog-${currentQuestion?.qid}`
+                        `partner-dialog-${currentQuestion?.qid}`
                         ? "재생 중..."
                         : "🔊"}
                     </button>
@@ -2136,7 +2293,10 @@ export default function TalkPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-gray-800">
-                      내(말) <span lang="ja" style={JA_FONT_STYLE}>{currentQuestion?.answer_jp || "-"}</span>
+                      내(말){" "}
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {currentQuestion?.answer_jp || "-"}
+                      </span>
                     </p>
                     <p className="mt-1 text-sm text-gray-500">
                       {currentQuestion?.answer_kr || "-"}
@@ -2155,12 +2315,12 @@ export default function TalkPage() {
                       disabled={
                         listenLimitReached ||
                         audioLoadingKey ===
-                          `answer-dialog-${currentQuestion?.qid}`
+                        `answer-dialog-${currentQuestion?.qid}`
                       }
                       className="shrink-0 p-1 text-xl leading-none"
                     >
                       {audioLoadingKey ===
-                      `answer-dialog-${currentQuestion?.qid}`
+                        `answer-dialog-${currentQuestion?.qid}`
                         ? "재생 중..."
                         : "🔊"}
                     </button>
@@ -2181,7 +2341,9 @@ export default function TalkPage() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-base">{coachOpen ? "⌄" : "›"}</span>
-                    <span>🤖 원포인트 일본어가 어려우면 하테나쌤에게 물어보세요</span>
+                    <span>
+                      🤖 원포인트 일본어가 어려우면 하테나쌤에게 물어보세요
+                    </span>
                   </div>
                 </button>
 
@@ -2204,11 +2366,14 @@ export default function TalkPage() {
                             rows={3}
                           />
                           <p className="mt-3 text-sm text-gray-500">
-                            회화 표현·뉘앙스·자연스러움 위주 질문에 최적화되어 있어요.
+                            회화 표현·뉘앙스·자연스러움 위주 질문에 최적화되어
+                            있어요.
                           </p>
 
                           {!coachLoading && coachError ? (
-                            <p className="mt-3 text-sm text-red-500">{coachError}</p>
+                            <p className="mt-3 text-sm text-red-500">
+                              {coachError}
+                            </p>
                           ) : null}
 
                           {!coachLoading && !coachError && coachAnswer ? (
@@ -2218,7 +2383,9 @@ export default function TalkPage() {
                           ) : null}
 
                           {coachLoading ? (
-                            <p className="mt-3 text-sm text-gray-500">답변 중...</p>
+                            <p className="mt-3 text-sm text-gray-500">
+                              답변 중...
+                            </p>
                           ) : null}
 
                           <button
@@ -2227,7 +2394,9 @@ export default function TalkPage() {
                             disabled={coachLoading}
                             className="mt-4 w-full rounded-2xl border border-gray-300 px-4 py-3 text-base font-semibold"
                           >
-                            {coachLoading ? "AI 코칭 받는 중..." : "AI 코칭 받기 시작"}
+                            {coachLoading
+                              ? "AI 코칭 받는 중..."
+                              : "AI 코칭 받기 시작"}
                           </button>
                         </>
                       ) : (
@@ -2259,18 +2428,27 @@ export default function TalkPage() {
                 </p>
               </div>
 
-              {!isPro && (listenLimitReached || recordLimitReached || quotaMessage) ? (
+              {!isPro &&
+                (listenLimitReached || recordLimitReached || quotaMessage) ? (
                 <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm leading-6 text-gray-700">
                   {quotaMessage ||
                     "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다."}
 
                   <UpgradeHint
-                    title={listenLimitReached ? "오늘 FREE 발음듣기 사용이 모두 끝났어요." : recordLimitReached ? "오늘 FREE 녹음 사용이 모두 끝났어요." : "유료 플랜에서는 더 편하게 이어갈 수 있어요."}
-                    body={listenLimitReached
-                      ? "오늘은 준비된 발음듣기 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 발음듣기를 제한 없이 이용할 수 있습니다."
-                      : recordLimitReached
-                        ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 녹음을 제한 없이 이용할 수 있습니다."
-                        : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. 유료 플랜에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."}
+                    title={
+                      listenLimitReached
+                        ? "오늘 FREE 발음듣기 사용이 모두 끝났어요."
+                        : recordLimitReached
+                          ? "오늘 FREE 녹음 사용이 모두 끝났어요."
+                          : "유료 플랜에서는 더 편하게 이어갈 수 있어요."
+                    }
+                    body={
+                      listenLimitReached
+                        ? "오늘은 준비된 발음듣기 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 발음듣기를 제한 없이 이용할 수 있습니다."
+                        : recordLimitReached
+                          ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 녹음을 제한 없이 이용할 수 있습니다."
+                          : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. 유료 플랜에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."
+                    }
                   />
                 </div>
               ) : null}
@@ -2281,9 +2459,9 @@ export default function TalkPage() {
                   onClick={() =>
                     currentQuestion?.answer_mp3
                       ? playAudio(
-                          currentQuestion.answer_mp3,
-                          `answer-pron-${currentQuestion.qid}`
-                        )
+                        currentQuestion.answer_mp3,
+                        `answer-pron-${currentQuestion.qid}`
+                      )
                       : undefined
                   }
                   disabled={
@@ -2300,23 +2478,37 @@ export default function TalkPage() {
               </div>
 
               <div className="mt-6">
-                <p className="text-lg font-semibold">🎤 (선택) 내 발음을 녹음하고 들어보세요</p>
+                <p className="text-lg font-semibold">
+                  🎤 (선택) 내 발음을 녹음하고 들어보세요
+                </p>
 
                 <div className="mt-4 rounded-[22px] bg-gray-100 px-4 py-4">
                   <div className="flex items-center gap-4 text-gray-500">
                     <button
                       type="button"
-                      onClick={pronStage === "recording" ? stopPronRecording : startPronRecording}
+                      onClick={
+                        pronStage === "recording"
+                          ? stopPronRecording
+                          : startPronRecording
+                      }
                       disabled={recordLimitReached && pronStage !== "recording"}
-                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${pronStage === "recording" ? "ring-4 ring-red-100" : "hover:shadow-md"}`}
-                      aria-label={pronStage === "recording" ? "녹음 정지" : "녹음 시작"}
+                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${pronStage === "recording"
+                          ? "ring-4 ring-red-100"
+                          : "hover:shadow-md"
+                        }`}
+                      aria-label={
+                        pronStage === "recording" ? "녹음 정지" : "녹음 시작"
+                      }
                     >
                       {pronStage === "recording" ? (
                         <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] bg-gray-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
                           <span className="h-3 w-3 rounded-[3px] bg-white/95" />
                         </span>
                       ) : (
-                        <span aria-label="녹음 시작" className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-400 bg-white">
+                        <span
+                          aria-label="녹음 시작"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-400 bg-white"
+                        >
                           <span className="h-3.5 w-3.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.16)]" />
                         </span>
                       )}
@@ -2326,10 +2518,18 @@ export default function TalkPage() {
                       type="button"
                       onClick={playRecordedPronunciation}
                       disabled={!recordedAudioUrl}
-                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${isRecordedPlaying ? "ring-4 ring-gray-200 shadow-md" : "hover:shadow-md"}`}
+                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${isRecordedPlaying
+                          ? "ring-4 ring-gray-200 shadow-md"
+                          : "hover:shadow-md"
+                        }`}
                       aria-label="내 녹음 재생"
                     >
-                      <span className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${isRecordedPlaying ? "border-l-black" : "border-l-gray-700"}`} />
+                      <span
+                        className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${isRecordedPlaying
+                            ? "border-l-black"
+                            : "border-l-gray-700"
+                          }`}
+                      />
                     </button>
 
                     <div className="flex flex-1 items-center justify-center overflow-hidden">
@@ -2339,14 +2539,22 @@ export default function TalkPage() {
                             <span
                               key={idx}
                               className="w-[4px] rounded-full bg-gray-400 transition-all duration-100"
-                              style={{ height: `${Math.max(6, Math.round(bar * 42))}px` }}
+                              style={{
+                                height: `${Math.max(
+                                  6,
+                                  Math.round(bar * 42)
+                                )}px`,
+                              }}
                             />
                           ))}
                         </div>
                       ) : (
                         <div className="flex items-center gap-[6px]">
                           {Array.from({ length: 34 }).map((_, idx) => (
-                            <span key={idx} className="h-[6px] w-[6px] rounded-full bg-gray-300" />
+                            <span
+                              key={idx}
+                              className="h-[6px] w-[6px] rounded-full bg-gray-300"
+                            />
                           ))}
                         </div>
                       )}
@@ -2378,12 +2586,16 @@ export default function TalkPage() {
                   <div className="mt-4 space-y-5">
                     <div>
                       <p className="text-base text-gray-500">인식 결과(참고)</p>
-                      <p className="mt-3 text-[32px] leading-tight text-gray-800">{pronTranscript || "-"}</p>
+                      <p className="mt-3 text-[32px] leading-tight text-gray-800">
+                        {pronTranscript || "-"}
+                      </p>
                     </div>
 
                     <div>
                       <p className="text-base text-gray-700">점수</p>
-                      <p className="mt-2 text-6xl font-bold leading-none text-gray-800">{pronScore ?? 0}</p>
+                      <p className="mt-2 text-6xl font-bold leading-none text-gray-800">
+                        {pronScore ?? 0}
+                      </p>
                     </div>
 
                     {pronFeedback ? (
@@ -2395,7 +2607,8 @@ export default function TalkPage() {
                 ) : (
                   <div className="mt-4">
                     <p className="text-lg text-gray-600">
-                      정답을 보고 2~3번 따라 말해 보세요. 녹음이 끝나면 점수가 자동으로 계산됩니다.
+                      정답을 보고 2~3번 따라 말해 보세요. 녹음이 끝나면 점수가
+                      자동으로 계산됩니다.
                     </p>
                   </div>
                 )}
@@ -2420,13 +2633,15 @@ export default function TalkPage() {
 
                 {showPronOnlyNotice ? (
                   <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-[15px] font-medium text-yellow-800">
-                    발음은 100점이지만, 문제 선택이 오답이라 보상은 지급되지 않습니다. (정답/발음은 별개로 관리돼요.)
+                    발음은 100점이지만, 문제 선택이 오답이라 보상은 지급되지
+                    않습니다. (정답/발음은 별개로 관리돼요.)
                   </div>
                 ) : null}
 
                 {showNeedPerfectNotice ? (
                   <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-[15px] font-medium text-yellow-800">
-                    보상은 '녹음 + 100점'일 때만 받을 수 있어요. 지금 바로 녹음하고 100점을 만들어 보세요.
+                    보상은 '녹음 + 100점'일 때만 받을 수 있어요. 지금 바로
+                    녹음하고 100점을 만들어 보세요.
                   </div>
                 ) : null}
               </div>
