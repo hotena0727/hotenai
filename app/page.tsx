@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -84,7 +84,6 @@ function getPlanProgressColors(plan: PlanCode) {
 
 export default function HomePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [profile, setProfile] = useState<HomeProfile | null>(null);
   const [dashboard, setDashboard] = useState<HomeDashboardSummary | null>(null);
@@ -110,6 +109,7 @@ export default function HomePage() {
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [nextHref, setNextHref] = useState("");
 
   useEffect(() => {
     const loadHome = async () => {
@@ -257,7 +257,12 @@ export default function HomePage() {
   }, [loading, errorMsg]);
 
   const goalSets = Math.max(1, Number(profile?.daily_goal_sets || 3));
-  const nextHref = searchParams.get("next");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    setNextHref(params.get("next") || "");
+  }, []);
 
   const stats = useMemo(() => {
     const safeDashboard = dashboard ?? {
@@ -737,9 +742,8 @@ export default function HomePage() {
                     }
                   />
                   <p
-                    className={`mt-3 text-sm ${
-                      isToday ? "font-semibold text-gray-900" : "text-gray-500"
-                    }`}
+                    className={`mt-3 text-sm ${isToday ? "font-semibold text-gray-900" : "text-gray-500"
+                      }`}
                   >
                     {day.label}
                   </p>
@@ -899,9 +903,8 @@ export default function HomePage() {
                     <div className="flex min-h-[56px] flex-col justify-center">
                       <p className="text-base font-semibold">{routine.title}</p>
                       <p
-                        className={`mt-1 text-sm leading-6 ${
-                          isPrimary ? "text-gray-200" : "text-gray-600"
-                        }`}
+                        className={`mt-1 text-sm leading-6 ${isPrimary ? "text-gray-200" : "text-gray-600"
+                          }`}
                       >
                         {routine.desc}
                       </p>
