@@ -717,32 +717,38 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="rounded-3xl bg-gray-50 p-4">
-              <div className="h-[320px] w-full">
+          <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="rounded-3xl bg-gray-50 p-3 sm:p-4">
+              <div className="h-[340px] w-full sm:h-[360px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={balanceData} outerRadius="72%">
-                    <PolarGrid stroke="#d1d5db" />
+                  <RadarChart data={balanceData} outerRadius="76%">
+                    <PolarGrid stroke="#dbe1ea" />
                     <PolarAngleAxis
                       dataKey="subject"
-                      tick={{ fill: "#374151", fontSize: 14, fontWeight: 600 }}
+                      tick={{ fill: "#374151", fontSize: 13, fontWeight: 700 }}
                     />
                     <Radar
                       dataKey="value"
                       stroke={progressColors.main}
+                      strokeWidth={2.5}
                       fill={progressColors.main}
-                      fillOpacity={0.28}
-                      dot={{ r: 4, fill: progressColors.main }}
+                      fillOpacity={0.24}
+                      dot={{
+                        r: 4,
+                        strokeWidth: 2,
+                        stroke: progressColors.main,
+                        fill: "#ffffff",
+                      }}
                     />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 sm:gap-4">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <p className="text-xs font-semibold text-emerald-700">강점</p>
-                <p className="mt-1 text-base font-bold text-gray-900">
+                <p className="mt-1 text-base font-bold leading-6 text-gray-900">
                   {balanceSummary.strengths.join(", ")}
                 </p>
               </div>
@@ -759,8 +765,8 @@ export default function HomePage() {
                   오늘의 한 줄 진단
                 </p>
                 <p className="mt-1 text-sm leading-6 text-gray-700">
-                  {balanceSummary.weaknesses.join(", ")} 쪽을 조금 더 채우면
-                  전체 밸런스가 더 좋아집니다.
+                  {balanceSummary.weaknesses.join(", ")} 영역을 조금 더 보강하면
+                  전체 흐름이 더 단단해집니다.
                 </p>
               </div>
 
@@ -800,7 +806,7 @@ export default function HomePage() {
           </div>
           <p className="mt-2 text-lg text-gray-600">최근 7일 (오늘 포함)</p>
 
-          <div className="mt-5 grid grid-cols-7 gap-3">
+          <div className="mt-5 grid grid-cols-7 gap-2 sm:gap-3">
             {stats.recent7Days.map((day, idx) => {
               const active = day.count > 0;
               const isToday = idx === stats.recent7Days.length - 1;
@@ -811,9 +817,9 @@ export default function HomePage() {
                     className={
                       active
                         ? isToday
-                          ? "h-5 rounded-full border border-blue-400 bg-blue-300"
-                          : "h-5 rounded-full border border-blue-200 bg-blue-100"
-                        : "h-5 rounded-full border border-gray-300 bg-white"
+                          ? "h-6 rounded-full border border-blue-400 bg-blue-300"
+                            ? "h-6 rounded-full border border-blue-200 bg-blue-100"
+                            : "h-6 rounded-full border border-gray-300 bg-white"
                     }
                   />
                   <p className="mt-3 text-sm text-gray-500">{day.label}</p>
@@ -864,14 +870,14 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="mt-5 flex items-end justify-between">
+              <div className="mt-5 flex items-end justify-between gap-3">
                 <div>
                   <p className="text-sm text-gray-500">평균 점수</p>
                   <p className="mt-1 text-2xl font-bold">{stats.wordAvg}%</p>
                 </div>
                 <a
                   href="/word"
-                  className="rounded-2xl border border-blue-200 bg-white px-4 py-2 text-sm text-gray-800"
+                  className="shrink-0 rounded-2xl border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-gray-800"y-800"
                 >
                   단어 시작
                 </a>
@@ -987,7 +993,7 @@ export default function HomePage() {
               {recommendedMainHref && recommendedMainLabel ? (
                 <a
                   href={recommendedMainHref}
-                  className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
+                  className="rounded-2xl bg-gray-900 px-5 py-4 text-center text-base font-semibold text-white"
                 >
                   {recommendedMainLabel}
                 </a>
