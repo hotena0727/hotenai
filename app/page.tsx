@@ -395,20 +395,6 @@ export default function HomePage() {
     );
   }
 
-  if (errorMsg === "로그인이 필요합니다.") {
-    return null;
-  }
-
-  if (errorMsg) {
-    return (
-      <main className="min-h-screen bg-white text-gray-900">
-        <div className="mx-auto max-w-3xl px-4 py-10">
-          <p className="text-sm text-red-500">{errorMsg}</p>
-        </div>
-      </main>
-    );
-  }
-
   const userPlan = profile?.plan || "free";
   const planTheme = getPlanTheme(userPlan);
   const progressColors = getPlanProgressColors(userPlan);
@@ -504,6 +490,20 @@ export default function HomePage() {
     : stats.activeDays7 <= 2
       ? "루틴은 짧게라도 이어가는 게 중요해요."
       : "좋아요. 최근 루틴이 조금씩 이어지고 있어요.";
+
+  if (errorMsg === "로그인이 필요합니다.") {
+    return null;
+  }
+
+  if (errorMsg) {
+    return (
+      <main className="min-h-screen bg-white text-gray-900">
+        <div className="mx-auto max-w-3xl px-4 py-10">
+          <p className="text-sm text-red-500">{errorMsg}</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
