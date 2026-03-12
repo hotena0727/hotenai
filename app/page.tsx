@@ -2,6 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  PolarAngleAxis,
+  PolarGrid,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+} from "recharts";
 import { supabase } from "@/lib/supabase";
 import { fetchAllAttempts, type QuizAttemptRow } from "@/lib/attempts";
 import {
@@ -49,6 +56,11 @@ type DayBucket = {
   key: string;
   label: string;
   count: number;
+};
+
+type BalanceItem = {
+  subject: string;
+  value: number;
 };
 
 function canAccess(
@@ -198,6 +210,85 @@ function getPlanProgressColors(plan: PlanCode) {
     default:
       return { main: "#6b7280", rest: "#e5e7eb" };
   }
+}
+
+function clampScore(value: number, min = 0, max = 100) {
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+function calcActiveDays(days: DayBucket[]) {
+  return days.filter((d) => d.count > 0).length;
+}
+
+function calcReviewScore(
+  totalWrong: number,
+  todayCount: number,
+  totalAttempts: number
+) {
+  if (totalAttempts === 0) return 0;
+
+  const wrongRate = totalWrong / Math.max(1, totalAttempts);
+  const routineBonus = Math.min(30, todayCount * 10);
+  const base = 100 - wrongRate * 18 + routineBonus;
+
+  return clampScore(base);
+}
+
+function calcConsistencyScore(
+  streak: number,
+  activeDays7: number,
+  todayCount: number
+) {
+  const streakPart = Math.min(45, streak * 8);
+  const activePart = Math.min(40, activeDays7 * 6);
+  const todayPart = Math.min(15, todayCount * 5);
+
+  return clampScore(streakPart + activePart + todayPart);
+}
+
+function buildBalanceData(stats: {
+  wordAvg: number;
+  kanjiAvg: number;
+  katsuyouAvg: number;
+  talkAvg: number;
+  totalWrong: number;
+  totalAttempts: number;
+  streak: number;
+  todayCount: number;
+  recent7Days: DayBucket[];
+}): BalanceItem[] {
+  const activeDays7 = calcActiveDays(stats.recent7Days);
+
+  return [
+    { subject: "단어", value: clampScore(stats.wordAvg) },
+    { subject: "한자", value: clampScore(stats.kanjiAvg) },
+    { subject: "활용", value: clampScore(stats.katsuyouAvg) },
+    { subject: "회화", value: clampScore(stats.talkAvg) },
+    {
+      subject: "복습",
+      value: calcReviewScore(
+        stats.totalWrong,
+        stats.todayCount,
+        stats.totalAttempts
+      ),
+    },
+    {
+      subject: "꾸준함",
+      value: calcConsistencyScore(
+        stats.streak,
+        activeDays7,
+        stats.todayCount
+      ),
+    },
+  ];
+}
+
+function pickStrengthWeakness(balanceData: BalanceItem[]) {
+  const sorted = [...balanceData].sort((a, b) => b.value - a.value);
+  return {
+    strengths: sorted.slice(0, 2).map((x) => x.subject),
+    weaknesses: sorted.slice(-2).map((x) => x.subject),
+  };
 }
 
 export default function HomePage() {
@@ -380,6 +471,7 @@ export default function HomePage() {
     const todayCount = getTodayAttemptCount(attempts);
     const goalPercent = calcGoalPercent(todayCount, goalSets);
     const levelProgress = buildLevelProgress(attempts);
+    const activeDays7 = calcActiveDays(recent7Days);
 
     return {
       totalAttempts,
@@ -397,12 +489,44 @@ export default function HomePage() {
       todayCount,
       goalPercent,
       levelProgress,
+      activeDays7,
     };
   }, [attempts, goalSets]);
 
   const todayMessage = useMemo(
     () => getTodayMessage(stats.totalAttempts, stats.totalWrong),
     [stats.totalAttempts, stats.totalWrong]
+  );
+
+  const balanceData = useMemo(
+    () =>
+      buildBalanceData({
+        wordAvg: stats.wordAvg,
+        kanjiAvg: stats.kanjiAvg,
+        katsuyouAvg: stats.katsuyouAvg,
+        talkAvg: stats.talkAvg,
+        totalWrong: stats.totalWrong,
+        totalAttempts: stats.totalAttempts,
+        streak: stats.streak,
+        todayCount: stats.todayCount,
+        recent7Days: stats.recent7Days,
+      }),
+    [
+      stats.wordAvg,
+      stats.kanjiAvg,
+      stats.katsuyouAvg,
+      stats.talkAvg,
+      stats.totalWrong,
+      stats.totalAttempts,
+      stats.streak,
+      stats.todayCount,
+      stats.recent7Days,
+    ]
+  );
+
+  const balanceSummary = useMemo(
+    () => pickStrengthWeakness(balanceData),
+    [balanceData]
   );
 
   if (loading) {
@@ -433,39 +557,83 @@ export default function HomePage() {
   const planTheme = getPlanTheme(userPlan);
   const progressColors = getPlanProgressColors(userPlan);
 
-  const canWord = canAccess(userPlan, menuSettings.word_min_plan, menuSettings.show_word);
-  const canKanji = canAccess(userPlan, menuSettings.kanji_min_plan, menuSettings.show_kanji);
+  const canWord = canAccess(
+    userPlan,
+    menuSettings.word_min_plan,
+    menuSettings.show_word
+  );
+  const canKanji = canAccess(
+    userPlan,
+    menuSettings.kanji_min_plan,
+    menuSettings.show_kanji
+  );
   const canKatsuyou = canAccess(
     userPlan,
     menuSettings.katsuyou_min_plan,
     menuSettings.show_katsuyou
   );
-  const canTalk = canAccess(userPlan, menuSettings.talk_min_plan, menuSettings.show_talk);
+  const canTalk = canAccess(
+    userPlan,
+    menuSettings.talk_min_plan,
+    menuSettings.show_talk
+  );
   const canMyPage = canAccess(
     userPlan,
     menuSettings.mypage_min_plan,
     menuSettings.show_mypage
   );
 
-  const recommendedMainHref = canTalk
-    ? "/talk"
-    : canWord
-      ? "/word"
-      : canKanji
-        ? "/kanji"
-        : canKatsuyou
-          ? "/katsuyou"
-          : null;
+  const weakest = balanceSummary.weaknesses[0] || "";
 
-  const recommendedMainLabel = canTalk
-    ? "🗣️ 회화 시작"
-    : canWord
-      ? "📝 단어 시작"
-      : canKanji
-        ? "🈯 한자 시작"
-        : canKatsuyou
-          ? "🔄 활용 시작"
-          : null;
+  const recommendedMainHref =
+    weakest === "회화" && canTalk
+      ? "/talk"
+      : weakest === "단어" && canWord
+        ? "/word"
+        : weakest === "한자" && canKanji
+          ? "/kanji"
+          : weakest === "활용" && canKatsuyou
+            ? "/katsuyou"
+            : weakest === "복습" && canMyPage
+              ? canTalk
+                ? "/mypage/wrong-talk"
+                : canWord
+                  ? "/mypage/wrong-word"
+                  : canKanji
+                    ? "/mypage/wrong-kanji"
+                    : canKatsuyou
+                      ? "/mypage/wrong-katsuyou"
+                      : null
+              : canTalk
+                ? "/talk"
+                : canWord
+                  ? "/word"
+                  : canKanji
+                    ? "/kanji"
+                    : canKatsuyou
+                      ? "/katsuyou"
+                      : null;
+
+  const recommendedMainLabel =
+    weakest === "회화" && canTalk
+      ? "🗣️ 회화 시작"
+      : weakest === "단어" && canWord
+        ? "📝 단어 시작"
+        : weakest === "한자" && canKanji
+          ? "🈯 한자 시작"
+          : weakest === "활용" && canKatsuyou
+            ? "🔄 활용 시작"
+            : weakest === "복습" && canMyPage
+              ? "↪️ 오답 복습"
+              : canTalk
+                ? "🗣️ 회화 시작"
+                : canWord
+                  ? "📝 단어 시작"
+                  : canKanji
+                    ? "🈯 한자 시작"
+                    : canKatsuyou
+                      ? "🔄 활용 시작"
+                      : null;
 
   const recommendedWrongHref = canMyPage
     ? canTalk
@@ -494,15 +662,19 @@ export default function HomePage() {
   const recommendationText =
     stats.goalPercent >= 100
       ? "오늘 목표 달성! 내일도 1세트부터 가볍게 이어가요."
-      : canTalk
-        ? "오늘은 회화 1세트부터 가볍게 이어가보세요."
-        : canWord
-          ? "오늘은 단어 1세트부터 가볍게 이어가보세요."
-          : canKanji
-            ? "오늘은 한자 1세트부터 가볍게 이어가보세요."
-            : canKatsuyou
-              ? "오늘은 활용 1세트부터 가볍게 이어가보세요."
-              : "오늘 이용 가능한 학습 메뉴를 관리자 설정에서 확인해 주세요.";
+      : weakest === "회화"
+        ? "오늘은 회화 1세트로 말문부터 가볍게 열어보세요."
+        : weakest === "활용"
+          ? "오늘은 활용 1세트로 문장 감각을 채워보세요."
+          : weakest === "한자"
+            ? "오늘은 한자 1세트로 읽기 감각을 보강해보세요."
+            : weakest === "단어"
+              ? "오늘은 단어 1세트로 기본 어휘를 단단히 다져보세요."
+              : weakest === "복습"
+                ? "오늘은 오답 복습부터 먼저 해보면 밸런스가 더 좋아집니다."
+                : weakest === "꾸준함"
+                  ? "오늘은 짧게라도 한 세트부터 시작해서 흐름을 이어가보세요."
+                  : "오늘은 짧게라도 한 세트부터 시작해보세요.";
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
@@ -531,23 +703,90 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-6">
-          <div className="flex flex-col items-center">
-            <div
-              className="flex h-44 w-44 items-center justify-center rounded-full shadow-sm"
-              style={{
-                background: `conic-gradient(${progressColors.main} ${(stats.goalPercent / 100) * 360}deg, ${progressColors.rest} 0deg)`,
-              }}
-            >
-              <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
-                <p className="text-3xl font-bold">{stats.goalPercent}%</p>
-                <p className="mt-1 text-sm text-gray-600">오늘 목표</p>
-                <p className="mt-1 text-xs text-gray-500">{goalSets}세트 기준</p>
+        <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-2xl font-bold">나의 일본어 밸런스</p>
+              <p className="mt-2 text-sm text-gray-600">
+                최근 학습 기록을 바탕으로 현재 상태를 한눈에 보여드려요.
+              </p>
+            </div>
+
+            <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+              최근 30일 기준
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-3xl bg-gray-50 p-4">
+              <div className="h-[320px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={balanceData} outerRadius="72%">
+                    <PolarGrid stroke="#d1d5db" />
+                    <PolarAngleAxis
+                      dataKey="subject"
+                      tick={{ fill: "#374151", fontSize: 14, fontWeight: 600 }}
+                    />
+                    <Radar
+                      dataKey="value"
+                      stroke={progressColors.main}
+                      fill={progressColors.main}
+                      fillOpacity={0.28}
+                      dot={{ r: 4, fill: progressColors.main }}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
-            <div className="mt-5 rounded-full border border-gray-200 bg-white px-5 py-2 text-lg font-semibold">
-              🔥 {stats.streak}일
+            <div className="flex flex-col gap-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-xs font-semibold text-emerald-700">강점</p>
+                <p className="mt-1 text-base font-bold text-gray-900">
+                  {balanceSummary.strengths.join(", ")}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs font-semibold text-amber-700">보완</p>
+                <p className="mt-1 text-base font-bold text-gray-900">
+                  {balanceSummary.weaknesses.join(", ")}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                <p className="text-xs font-semibold text-sky-700">
+                  오늘의 한 줄 진단
+                </p>
+                <p className="mt-1 text-sm leading-6 text-gray-700">
+                  {balanceSummary.weaknesses.join(", ")} 쪽을 조금 더 채우면
+                  전체 밸런스가 더 좋아집니다.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                <p className="text-xs font-semibold text-gray-500">오늘 목표</p>
+                <p className="mt-2 text-3xl font-bold text-gray-900">
+                  {stats.goalPercent}%
+                </p>
+                <p className="mt-1 text-sm text-gray-600">
+                  {stats.todayCount}세트 / 목표 {goalSets}세트
+                </p>
+
+                <div className="mt-3 h-2 rounded-full bg-gray-100">
+                  <div
+                    className="h-2 rounded-full transition-all"
+                    style={{
+                      width: `${stats.goalPercent}%`,
+                      backgroundColor: progressColors.main,
+                    }}
+                  />
+                </div>
+
+                <div className="mt-4 inline-flex rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+                  🔥 연속 학습 {stats.streak}일
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -556,7 +795,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <p className="text-2xl font-bold">이번 주 루틴</p>
             <p className="text-2xl font-semibold text-gray-500">
-              {stats.todayCount}/7일
+              {stats.activeDays7}/7일
             </p>
           </div>
           <p className="mt-2 text-lg text-gray-600">최근 7일 (오늘 포함)</p>
@@ -688,7 +927,9 @@ export default function HomePage() {
               <div className="mt-5 flex items-end justify-between">
                 <div>
                   <p className="text-sm text-gray-500">평균 점수</p>
-                  <p className="mt-1 text-2xl font-bold">{stats.katsuyouAvg}%</p>
+                  <p className="mt-1 text-2xl font-bold">
+                    {stats.katsuyouAvg}%
+                  </p>
                 </div>
                 <a
                   href="/katsuyou"
@@ -770,7 +1011,8 @@ export default function HomePage() {
               <div>
                 <p className="text-lg font-semibold">강의 카탈로그</p>
                 <p className="mt-2 text-sm text-gray-600">
-                  지금 열려 있는 강의를 한눈에 보고, 원하는 강의를 골라 들어가 보세요.
+                  지금 열려 있는 강의를 한눈에 보고, 원하는 강의를 골라
+                  들어가 보세요.
                 </p>
               </div>
 
@@ -784,10 +1026,12 @@ export default function HomePage() {
 
             <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <p className="text-base font-medium text-gray-900">
-                입문 강의부터 패턴, 회화, 실전 강의까지 카탈로그형으로 정리해 두었습니다.
+                입문 강의부터 패턴, 회화, 실전 강의까지 카탈로그형으로 정리해
+                두었습니다.
               </p>
               <p className="mt-2 text-sm text-gray-600">
-                아직 수강 등록 전이어도 어떤 강의가 있는지 먼저 둘러볼 수 있습니다.
+                아직 수강 등록 전이어도 어떤 강의가 있는지 먼저 둘러볼 수
+                있습니다.
               </p>
             </div>
 
@@ -828,7 +1072,9 @@ export default function HomePage() {
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-2xl border border-gray-200 p-4">
                 <p className="text-xs text-gray-500">총 학습 횟수</p>
-                <p className="mt-2 text-2xl font-bold">{stats.totalAttempts}</p>
+                <p className="mt-2 text-2xl font-bold">
+                  {stats.totalAttempts}
+                </p>
               </div>
               <div className="rounded-2xl border border-gray-200 p-4">
                 <p className="text-xs text-gray-500">총 오답 수</p>
