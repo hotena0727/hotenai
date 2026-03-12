@@ -369,11 +369,11 @@ export default function HomePage() {
     const weightedKatsuyouWrong = Number(safeDashboard.weightedKatsuyouWrong || 0);
     const weightedTalkWrong = Number(safeDashboard.weightedTalkWrong || 0);
 
-    const pairs: Array<{ kind: WrongSummary["topWrongKind"]; value: number }> = [
-      { kind: "word", value: weightedWordWrong },
-      { kind: "kanji", value: weightedKanjiWrong },
-      { kind: "katsuyou", value: weightedKatsuyouWrong },
-      { kind: "talk", value: weightedTalkWrong },
+    const pairs = [
+      { kind: "word" as const, value: weightedWordWrong },
+      { kind: "kanji" as const, value: weightedKanjiWrong },
+      { kind: "katsuyou" as const, value: weightedKatsuyouWrong },
+      { kind: "talk" as const, value: weightedTalkWrong },
     ].sort((a, b) => b.value - a.value);
 
     return {
@@ -700,9 +700,8 @@ export default function HomePage() {
                     }
                   />
                   <p
-                    className={`mt-3 text-sm ${
-                      isToday ? "font-semibold text-gray-900" : "text-gray-500"
-                    }`}
+                    className={`mt-3 text-sm ${isToday ? "font-semibold text-gray-900" : "text-gray-500"
+                      }`}
                   >
                     {day.label}
                   </p>
@@ -862,9 +861,8 @@ export default function HomePage() {
                     <div className="flex min-h-[56px] flex-col justify-center">
                       <p className="text-base font-semibold">{routine.title}</p>
                       <p
-                        className={`mt-1 text-sm leading-6 ${
-                          isPrimary ? "text-gray-200" : "text-gray-600"
-                        }`}
+                        className={`mt-1 text-sm leading-6 ${isPrimary ? "text-gray-200" : "text-gray-600"
+                          }`}
                       >
                         {routine.desc}
                       </p>
