@@ -162,7 +162,10 @@ export default function HomePage() {
           full_name: profileRow?.full_name || googleName || "",
           plan: normalizePlan(profileRow?.plan),
           is_admin: Boolean(profileRow?.is_admin),
-          daily_goal_sets: Math.max(1, Number(profileRow?.daily_goal_sets || 3)),
+          daily_goal_sets: Math.max(
+            1,
+            Number(profileRow?.daily_goal_sets || 3)
+          ),
         });
 
         const { data: menuRow, error: menuError } = await supabase
@@ -256,13 +259,13 @@ export default function HomePage() {
     }
   }, [loading, errorMsg]);
 
-  const goalSets = Math.max(1, Number(profile?.daily_goal_sets || 3));
-
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     setNextHref(params.get("next") || "");
   }, []);
+
+  const goalSets = Math.max(1, Number(profile?.daily_goal_sets || 3));
 
   const stats = useMemo(() => {
     const safeDashboard = dashboard ?? {
@@ -288,7 +291,9 @@ export default function HomePage() {
     };
 
     const maxLevelCount = Math.max(
-      ...(safeDashboard.levelProgress || []).map((item) => Number(item.count || 0)),
+      ...(safeDashboard.levelProgress || []).map((item) =>
+        Number(item.count || 0)
+      ),
       1
     );
 
@@ -512,6 +517,52 @@ export default function HomePage() {
       ? "루틴은 짧게라도 이어가는 게 중요해요."
       : "좋아요. 최근 루틴이 조금씩 이어지고 있어요.";
 
+  const nextLabel = useMemo(() => {
+    if (!nextHref) return "";
+
+    if (nextHref.startsWith("/talk")) return "🗣️ 회화 이어서 하기";
+    if (nextHref.startsWith("/word")) return "📝 단어 이어서 하기";
+    if (nextHref.startsWith("/kanji")) return "🈯 한자 이어서 하기";
+    if (nextHref.startsWith("/katsuyou")) return "🔄 활용 이어서 하기";
+    if (nextHref.startsWith("/mypage")) return "📊 MY 이어서 보기";
+    if (nextHref.startsWith("/classroom")) return "🎓 강의실 이어서 가기";
+    if (nextHref.startsWith("/courses")) return "📚 강의 카탈로그 보기";
+
+    return "이전 학습 이어서 하기";
+  }, [nextHref]);
+
+  const nextDesc = useMemo(() => {
+    if (!nextHref) return "";
+
+    if (nextHref.startsWith("/talk")) {
+      return "하던 회화 문제로 바로 돌아가 이어서 학습할 수 있어요.";
+    }
+    if (nextHref.startsWith("/word")) {
+      return "하던 단어 학습 세트로 바로 돌아갈 수 있어요.";
+    }
+    if (nextHref.startsWith("/kanji")) {
+      return "하던 한자 학습 세트로 바로 돌아갈 수 있어요.";
+    }
+    if (nextHref.startsWith("/katsuyou")) {
+      return "하던 활용 학습 세트로 바로 돌아갈 수 있어요.";
+    }
+
+    return "방금 보던 학습 흐름으로 바로 돌아갑니다.";
+  }, [nextHref]);
+
+  const studyCardCount = [canWord, canKanji, canKatsuyou, canTalk].filter(
+    Boolean
+  ).length;
+
+  const studyGridClass =
+    studyCardCount <= 1
+      ? "mt-10 grid grid-cols-1 gap-4"
+      : studyCardCount === 2
+        ? "mt-10 grid grid-cols-2 gap-4"
+        : studyCardCount === 3
+          ? "mt-10 grid grid-cols-2 gap-4 lg:grid-cols-3"
+          : "mt-10 grid grid-cols-2 gap-4 xl:grid-cols-4";
+
   if (loading) {
     return (
       <main className="min-h-screen bg-white text-gray-900">
@@ -563,13 +614,27 @@ export default function HomePage() {
           </p>
 
           {nextHref ? (
-            <div className="mt-4">
-              <a
-                href={nextHref}
-                className="inline-flex rounded-2xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-800"
-              >
-                이어서 학습하기
-              </a>
+            <div className="mt-5 rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-blue-700">
+                    이어가던 학습이 있어요
+                  </p>
+                  <p className="mt-1 text-xl font-bold text-gray-900">
+                    {nextLabel}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                    {nextDesc}
+                  </p>
+                </div>
+
+                <a
+                  href={nextHref}
+                  className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                >
+                  바로 이어가기
+                </a>
+              </div>
             </div>
           ) : null}
         </div>
@@ -742,8 +807,11 @@ export default function HomePage() {
                     }
                   />
                   <p
-                    className={`mt-3 text-sm ${isToday ? "font-semibold text-gray-900" : "text-gray-500"
-                      }`}
+                    className={`mt-3 text-sm ${
+                      isToday
+                        ? "font-semibold text-gray-900"
+                        : "text-gray-500"
+                    }`}
                   >
                     {day.label}
                   </p>
@@ -757,7 +825,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className={studyGridClass}>
           {canWord ? (
             <div className="flex h-full flex-col rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-6 transition hover:shadow-md">
               <div className="flex items-start justify-between gap-3">
@@ -903,8 +971,9 @@ export default function HomePage() {
                     <div className="flex min-h-[56px] flex-col justify-center">
                       <p className="text-base font-semibold">{routine.title}</p>
                       <p
-                        className={`mt-1 text-sm leading-6 ${isPrimary ? "text-gray-200" : "text-gray-600"
-                          }`}
+                        className={`mt-1 text-sm leading-6 ${
+                          isPrimary ? "text-gray-200" : "text-gray-600"
+                        }`}
                       >
                         {routine.desc}
                       </p>
