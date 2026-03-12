@@ -10,13 +10,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { supabase } from "@/lib/supabase";
-import { fetchAllAttempts, type QuizAttemptRow } from "@/lib/attempts";
-import {
-  isKanjiAttempt,
-  isKatsuyouAttempt,
-  isTalkAttempt,
-  isWordAttempt,
-} from "@/lib/labels";
 import {
   getPlanBadge,
   getPlanTheme,
@@ -64,10 +57,6 @@ type BalanceItem = {
 };
 
 type WrongSummary = {
-  wordWrong: number;
-  kanjiWrong: number;
-  katsuyouWrong: number;
-  talkWrong: number;
   weightedWordWrong: number;
   weightedKanjiWrong: number;
   weightedKatsuyouWrong: number;
@@ -115,30 +104,6 @@ function canAccess(
   return hasPlan(userPlan, minPlan);
 }
 
-function calcCount(
-  attempts: QuizAttemptRow[],
-  fn: (posMode?: string) => boolean
-) {
-  return attempts.filter((item) => fn(item.pos_mode)).length;
-}
-
-function calcAvg(
-  attempts: QuizAttemptRow[],
-  fn: (posMode?: string) => boolean
-) {
-  const filtered = attempts.filter((item) => fn(item.pos_mode));
-  const valid = filtered.filter((item) => Number(item.quiz_len || 0) > 0);
-  if (valid.length === 0) return 0;
-
-  return Math.round(
-    valid.reduce((sum, item) => {
-      const quizLen = Number(item.quiz_len || 0);
-      const score = Number(item.score || 0);
-      return sum + (score / quizLen) * 100;
-    }, 0) / valid.length
-  );
-}
-
 function getTodayMessage(totalAttempts: number, totalWrong: number) {
   if (totalAttempts === 0) {
     return "아직 학습 기록이 없어요. 오늘 첫 루틴부터 가볍게 시작해봅시다.";
@@ -155,91 +120,9 @@ function getTodayMessage(totalAttempts: number, totalWrong: number) {
   return "꾸준함은 재능을 이깁니다. 오늘도 한 세트 더 가봅시다.";
 }
 
-function toDate(value?: string): Date | null {
-  if (!value) return null;
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function formatDayKey(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function buildLast7Days(attempts: QuizAttemptRow[]): DayBucket[] {
-  const today = new Date();
-  const map = new Map<string, number>();
-
-  attempts.forEach((item) => {
-    const d = toDate(item.created_at);
-    if (!d) return;
-    const key = formatDayKey(d);
-    map.set(key, (map.get(key) || 0) + 1);
-  });
-
-  const days: DayBucket[] = [];
-  for (let i = 6; i >= 0; i -= 1) {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(today.getDate() - i);
-
-    const key = formatDayKey(d);
-    const label = i === 0 ? "오늘" : `${d.getMonth() + 1}/${d.getDate()}`;
-
-    days.push({
-      key,
-      label,
-      count: map.get(key) || 0,
-    });
-  }
-
-  return days;
-}
-
-function calcStreak(days: DayBucket[]) {
-  let streak = 0;
-  for (let i = days.length - 1; i >= 0; i -= 1) {
-    if (days[i].count > 0) streak += 1;
-    else break;
-  }
-  return streak;
-}
-
-function buildLevelProgress(attempts: QuizAttemptRow[]) {
-  const levels = ["N5", "N4", "N3", "N2", "N1"];
-  const counts = new Map<string, number>();
-
-  levels.forEach((lv) => counts.set(lv, 0));
-
-  attempts.forEach((item) => {
-    const raw = String(item.level || "").trim().toUpperCase();
-    if (counts.has(raw)) {
-      counts.set(raw, (counts.get(raw) || 0) + 1);
-    }
-  });
-
-  const max = Math.max(...levels.map((lv) => counts.get(lv) || 0), 1);
-
-  return levels.map((lv) => ({
-    level: lv,
-    count: counts.get(lv) || 0,
-    widthPct: Math.round(((counts.get(lv) || 0) / max) * 100),
-  }));
-}
-
 function calcGoalPercent(totalTodaySets: number, goalSets: number) {
   const safeGoal = Math.max(1, Number(goalSets || 1));
   return Math.min(100, Math.round((totalTodaySets / safeGoal) * 100));
-}
-
-function getTodayAttemptCount(attempts: QuizAttemptRow[]) {
-  const todayKey = formatDayKey(new Date());
-  return attempts.filter((item) => {
-    const d = toDate(item.created_at);
-    return d ? formatDayKey(d) === todayKey : false;
-  }).length;
 }
 
 function getPlanProgressColors(plan: PlanCode) {
@@ -260,10 +143,6 @@ function getPlanProgressColors(plan: PlanCode) {
 
 function clampScore(value: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(value)));
-}
-
-function calcActiveDays(days: DayBucket[]) {
-  return days.filter((d) => d.count > 0).length;
 }
 
 function calcReviewScore(
@@ -301,10 +180,8 @@ function buildBalanceData(stats: {
   totalAttempts: number;
   streak: number;
   todayCount: number;
-  recent7Days: DayBucket[];
+  activeDays7: number;
 }): BalanceItem[] {
-  const activeDays7 = calcActiveDays(stats.recent7Days);
-
   return [
     { subject: "단어", value: clampScore(stats.wordAvg) },
     { subject: "한자", value: clampScore(stats.kanjiAvg) },
@@ -322,7 +199,7 @@ function buildBalanceData(stats: {
       subject: "꾸준함",
       value: calcConsistencyScore(
         stats.streak,
-        activeDays7,
+        stats.activeDays7,
         stats.todayCount
       ),
     },
@@ -339,74 +216,6 @@ function pickStrengthWeakness(balanceData: BalanceItem[]) {
 
 function getBalanceValue(data: BalanceItem[], subject: string) {
   return data.find((item) => item.subject === subject)?.value ?? 0;
-}
-
-function diffDaysFromNow(date: Date) {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffMs = start.getTime() - target.getTime();
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-}
-
-function buildWrongSummary(attempts: QuizAttemptRow[]): WrongSummary {
-  let wordWrong = 0;
-  let kanjiWrong = 0;
-  let katsuyouWrong = 0;
-  let talkWrong = 0;
-
-  let weightedWordWrong = 0;
-  let weightedKanjiWrong = 0;
-  let weightedKatsuyouWrong = 0;
-  let weightedTalkWrong = 0;
-
-  attempts.forEach((item) => {
-    const wrong = Number(item.wrong_count || 0);
-    if (wrong <= 0) return;
-
-    const d = toDate(item.created_at);
-    const ageDays = d ? diffDaysFromNow(d) : 9999;
-    const weight = ageDays <= 7 ? 3 : ageDays <= 30 ? 2 : 1;
-
-    if (isWordAttempt(item.pos_mode)) {
-      wordWrong += wrong;
-      weightedWordWrong += wrong * weight;
-    }
-    if (isKanjiAttempt(item.pos_mode)) {
-      kanjiWrong += wrong;
-      weightedKanjiWrong += wrong * weight;
-    }
-    if (isKatsuyouAttempt(item.pos_mode)) {
-      katsuyouWrong += wrong;
-      weightedKatsuyouWrong += wrong * weight;
-    }
-    if (isTalkAttempt(item.pos_mode)) {
-      talkWrong += wrong;
-      weightedTalkWrong += wrong * weight;
-    }
-  });
-
-  const pairs: Array<{ kind: WrongSummary["topWrongKind"]; value: number }> = [
-    { kind: "word", value: weightedWordWrong },
-    { kind: "kanji", value: weightedKanjiWrong },
-    { kind: "katsuyou", value: weightedKatsuyouWrong },
-    { kind: "talk", value: weightedTalkWrong },
-  ];
-
-  pairs.sort((a, b) => b.value - a.value);
-  const topWrongKind = pairs[0].value > 0 ? pairs[0].kind : null;
-
-  return {
-    wordWrong,
-    kanjiWrong,
-    katsuyouWrong,
-    talkWrong,
-    weightedWordWrong,
-    weightedKanjiWrong,
-    weightedKatsuyouWrong,
-    weightedTalkWrong,
-    topWrongKind,
-  };
 }
 
 function buildSuggestedRoutines(params: {
@@ -746,7 +555,6 @@ export default function HomePage() {
   const router = useRouter();
 
   const [profile, setProfile] = useState<HomeProfile | null>(null);
-  const [attempts, setAttempts] = useState<QuizAttemptRow[]>([]);
   const [dashboard, setDashboard] = useState<HomeDashboardSummary | null>(null);
   const [showCoursesSection, setShowCoursesSection] = useState(false);
 
@@ -887,12 +695,12 @@ export default function HomePage() {
 
         if (dashboardError) {
           console.error(dashboardError);
-        } else if (dashboardData) {
-          setDashboard(dashboardData as HomeDashboardSummary);
+          setErrorMsg("홈 통계를 불러오지 못했습니다.");
+          setLoading(false);
+          return;
         }
 
-        const all = await fetchAllAttempts(user.id, 300);
-        setAttempts(all);
+        setDashboard(dashboardData as HomeDashboardSummary);
       } catch (error) {
         console.error(error);
         setErrorMsg("홈 정보를 불러오지 못했습니다.");
@@ -913,82 +721,62 @@ export default function HomePage() {
   const goalSets = Math.max(1, Number(profile?.daily_goal_sets || 3));
 
   const stats = useMemo(() => {
-    if (dashboard) {
-      const maxLevelCount = Math.max(
-        ...(dashboard.levelProgress || []).map((item) => item.count || 0),
-        1
-      );
+    const safeDashboard = dashboard ?? {
+      totalAttempts: 0,
+      totalWrong: 0,
+      wordCount: 0,
+      kanjiCount: 0,
+      katsuyouCount: 0,
+      talkCount: 0,
+      wordAvg: 0,
+      kanjiAvg: 0,
+      katsuyouAvg: 0,
+      talkAvg: 0,
+      recent7Days: [],
+      streak: 0,
+      todayCount: 0,
+      activeDays7: 0,
+      levelProgress: [],
+      weightedWordWrong: 0,
+      weightedKanjiWrong: 0,
+      weightedKatsuyouWrong: 0,
+      weightedTalkWrong: 0,
+    };
 
-      return {
-        totalAttempts: Number(dashboard.totalAttempts || 0),
-        totalWrong: Number(dashboard.totalWrong || 0),
-        wordCount: Number(dashboard.wordCount || 0),
-        kanjiCount: Number(dashboard.kanjiCount || 0),
-        katsuyouCount: Number(dashboard.katsuyouCount || 0),
-        talkCount: Number(dashboard.talkCount || 0),
-        wordAvg: Number(dashboard.wordAvg || 0),
-        kanjiAvg: Number(dashboard.kanjiAvg || 0),
-        katsuyouAvg: Number(dashboard.katsuyouAvg || 0),
-        talkAvg: Number(dashboard.talkAvg || 0),
-        recent7Days: (dashboard.recent7Days || []).map((item) => ({
-          key: item.key,
-          label: item.label,
-          count: Number(item.count || 0),
-        })),
-        streak: Number(dashboard.streak || 0),
-        todayCount: Number(dashboard.todayCount || 0),
-        goalPercent: calcGoalPercent(Number(dashboard.todayCount || 0), goalSets),
-        levelProgress: (dashboard.levelProgress || []).map((item) => ({
-          level: item.level,
-          count: Number(item.count || 0),
-          widthPct: Math.round(((Number(item.count || 0) || 0) / maxLevelCount) * 100),
-        })),
-        activeDays7: Number(dashboard.activeDays7 || 0),
-      };
-    }
-
-    const totalAttempts = attempts.length;
-    const totalWrong = attempts.reduce(
-      (sum, item) => sum + Number(item.wrong_count || 0),
-      0
+    const maxLevelCount = Math.max(
+      ...(safeDashboard.levelProgress || []).map((item) => Number(item.count || 0)),
+      1
     );
 
-    const wordCount = calcCount(attempts, isWordAttempt);
-    const kanjiCount = calcCount(attempts, isKanjiAttempt);
-    const katsuyouCount = calcCount(attempts, isKatsuyouAttempt);
-    const talkCount = calcCount(attempts, isTalkAttempt);
-
-    const wordAvg = calcAvg(attempts, isWordAttempt);
-    const kanjiAvg = calcAvg(attempts, isKanjiAttempt);
-    const katsuyouAvg = calcAvg(attempts, isKatsuyouAttempt);
-    const talkAvg = calcAvg(attempts, isTalkAttempt);
-
-    const recent7Days = buildLast7Days(attempts);
-    const streak = calcStreak(recent7Days);
-    const todayCount = getTodayAttemptCount(attempts);
-    const goalPercent = calcGoalPercent(todayCount, goalSets);
-    const levelProgress = buildLevelProgress(attempts);
-    const activeDays7 = calcActiveDays(recent7Days);
-
     return {
-      totalAttempts,
-      totalWrong,
-      wordCount,
-      kanjiCount,
-      katsuyouCount,
-      talkCount,
-      wordAvg,
-      kanjiAvg,
-      katsuyouAvg,
-      talkAvg,
-      recent7Days,
-      streak,
-      todayCount,
-      goalPercent,
-      levelProgress,
-      activeDays7,
+      totalAttempts: Number(safeDashboard.totalAttempts || 0),
+      totalWrong: Number(safeDashboard.totalWrong || 0),
+      wordCount: Number(safeDashboard.wordCount || 0),
+      kanjiCount: Number(safeDashboard.kanjiCount || 0),
+      katsuyouCount: Number(safeDashboard.katsuyouCount || 0),
+      talkCount: Number(safeDashboard.talkCount || 0),
+      wordAvg: Number(safeDashboard.wordAvg || 0),
+      kanjiAvg: Number(safeDashboard.kanjiAvg || 0),
+      katsuyouAvg: Number(safeDashboard.katsuyouAvg || 0),
+      talkAvg: Number(safeDashboard.talkAvg || 0),
+      recent7Days: (safeDashboard.recent7Days || []).map((item) => ({
+        key: item.key,
+        label: item.label,
+        count: Number(item.count || 0),
+      })),
+      streak: Number(safeDashboard.streak || 0),
+      todayCount: Number(safeDashboard.todayCount || 0),
+      goalPercent: calcGoalPercent(Number(safeDashboard.todayCount || 0), goalSets),
+      levelProgress: (safeDashboard.levelProgress || []).map((item) => ({
+        level: item.level,
+        count: Number(item.count || 0),
+        widthPct: Math.round(
+          ((Number(item.count || 0) || 0) / maxLevelCount) * 100
+        ),
+      })),
+      activeDays7: Number(safeDashboard.activeDays7 || 0),
     };
-  }, [dashboard, attempts, goalSets]);
+  }, [dashboard, goalSets]);
 
   const todayMessage = useMemo(
     () => getTodayMessage(stats.totalAttempts, stats.totalWrong),
@@ -1006,7 +794,7 @@ export default function HomePage() {
         totalAttempts: stats.totalAttempts,
         streak: stats.streak,
         todayCount: stats.todayCount,
-        recent7Days: stats.recent7Days,
+        activeDays7: stats.activeDays7,
       }),
     [
       stats.wordAvg,
@@ -1017,7 +805,7 @@ export default function HomePage() {
       stats.totalAttempts,
       stats.streak,
       stats.todayCount,
-      stats.recent7Days,
+      stats.activeDays7,
     ]
   );
 
@@ -1039,34 +827,33 @@ export default function HomePage() {
   );
 
   const wrongSummary = useMemo(() => {
-    if (dashboard) {
-      const weightedWordWrong = Number(dashboard.weightedWordWrong || 0);
-      const weightedKanjiWrong = Number(dashboard.weightedKanjiWrong || 0);
-      const weightedKatsuyouWrong = Number(dashboard.weightedKatsuyouWrong || 0);
-      const weightedTalkWrong = Number(dashboard.weightedTalkWrong || 0);
+    const safeDashboard = dashboard ?? {
+      weightedWordWrong: 0,
+      weightedKanjiWrong: 0,
+      weightedKatsuyouWrong: 0,
+      weightedTalkWrong: 0,
+    };
 
-      const pairs: Array<{ kind: WrongSummary["topWrongKind"]; value: number }> = [
-        { kind: "word", value: weightedWordWrong },
-        { kind: "kanji", value: weightedKanjiWrong },
-        { kind: "katsuyou", value: weightedKatsuyouWrong },
-        { kind: "talk", value: weightedTalkWrong },
-      ].sort((a, b) => b.value - a.value);
+    const weightedWordWrong = Number(safeDashboard.weightedWordWrong || 0);
+    const weightedKanjiWrong = Number(safeDashboard.weightedKanjiWrong || 0);
+    const weightedKatsuyouWrong = Number(safeDashboard.weightedKatsuyouWrong || 0);
+    const weightedTalkWrong = Number(safeDashboard.weightedTalkWrong || 0);
 
-      return {
-        wordWrong: 0,
-        kanjiWrong: 0,
-        katsuyouWrong: 0,
-        talkWrong: 0,
-        weightedWordWrong,
-        weightedKanjiWrong,
-        weightedKatsuyouWrong,
-        weightedTalkWrong,
-        topWrongKind: pairs[0].value > 0 ? pairs[0].kind : null,
-      };
-    }
+    const pairs: Array<{ kind: WrongSummary["topWrongKind"]; value: number }> = [
+      { kind: "word", value: weightedWordWrong },
+      { kind: "kanji", value: weightedKanjiWrong },
+      { kind: "katsuyou", value: weightedKatsuyouWrong },
+      { kind: "talk", value: weightedTalkWrong },
+    ].sort((a, b) => b.value - a.value);
 
-    return buildWrongSummary(attempts);
-  }, [dashboard, attempts]);
+    return {
+      weightedWordWrong,
+      weightedKanjiWrong,
+      weightedKatsuyouWrong,
+      weightedTalkWrong,
+      topWrongKind: pairs[0].value > 0 ? pairs[0].kind : null,
+    };
+  }, [dashboard]);
 
   if (loading) {
     return (
