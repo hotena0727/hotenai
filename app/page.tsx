@@ -614,75 +614,73 @@ export default function HomePage() {
 
   const weakest = balanceSummary.weaknesses[0] || "";
 
-  const recommendedMainHref =
-    isEmptyUser
-      ? canWord
-        ? "/word"
-        : canTalk
-          ? "/talk"
-          : canKanji
-            ? "/kanji"
-            : canKatsuyou
-              ? "/katsuyou"
-              : null
-      : weakest === "회화" && canTalk
+  const recommendedMainHref = isEmptyUser
+    ? canWord
+      ? "/word"
+      : canTalk
         ? "/talk"
-        : weakest === "단어" && canWord
-          ? "/word"
-          : weakest === "한자" && canKanji
-            ? "/kanji"
-            : weakest === "활용" && canKatsuyou
-              ? "/katsuyou"
-              : weakest === "복습" && canMyPage
-                ? canTalk
-                  ? "/mypage/wrong-talk"
-                  : canWord
-                    ? "/mypage/wrong-word"
-                    : canKanji
-                      ? "/mypage/wrong-kanji"
-                      : canKatsuyou
-                        ? "/mypage/wrong-katsuyou"
-                        : null
-                : canTalk
-                  ? "/talk"
-                  : canWord
-                    ? "/word"
-                    : canKanji
-                      ? "/kanji"
-                      : canKatsuyou
-                        ? "/katsuyou"
-                        : null;
+        : canKanji
+          ? "/kanji"
+          : canKatsuyou
+            ? "/katsuyou"
+            : null
+    : weakest === "회화" && canTalk
+      ? "/talk"
+      : weakest === "단어" && canWord
+        ? "/word"
+        : weakest === "한자" && canKanji
+          ? "/kanji"
+          : weakest === "활용" && canKatsuyou
+            ? "/katsuyou"
+            : weakest === "복습" && canMyPage
+              ? canTalk
+                ? "/mypage/wrong-talk"
+                : canWord
+                  ? "/mypage/wrong-word"
+                  : canKanji
+                    ? "/mypage/wrong-kanji"
+                    : canKatsuyou
+                      ? "/mypage/wrong-katsuyou"
+                      : null
+              : canTalk
+                ? "/talk"
+                : canWord
+                  ? "/word"
+                  : canKanji
+                    ? "/kanji"
+                    : canKatsuyou
+                      ? "/katsuyou"
+                      : null;
 
-  const recommendedMainLabel =
-    isEmptyUser
-      ? canWord
-        ? "📝 첫 단어 루틴"
-        : canTalk
-          ? "🗣️ 첫 회화 루틴"
-          : canKanji
-            ? "🈯 첫 한자 루틴"
-            : canKatsuyou
-              ? "🔄 첫 활용 루틴"
-              : null
-      : weakest === "회화" && canTalk
-        ? "🗣️ 회화 시작"
-        : weakest === "단어" && canWord
-          ? "📝 단어 시작"
-          : weakest === "한자" && canKanji
-            ? "🈯 한자 시작"
-            : weakest === "활용" && canKatsuyou
-              ? "🔄 활용 시작"
-              : weakest === "복습" && canMyPage
-                ? "↪️ 오답 복습"
-                : canTalk
-                  ? "🗣️ 회화 시작"
-                  : canWord
-                    ? "📝 단어 시작"
-                    : canKanji
-                      ? "🈯 한자 시작"
-                      : canKatsuyou
-                        ? "🔄 활용 시작"
-                        : null;
+  const recommendedMainLabel = isEmptyUser
+    ? canWord
+      ? "📝 첫 단어 루틴"
+      : canTalk
+        ? "🗣️ 첫 회화 루틴"
+        : canKanji
+          ? "🈯 첫 한자 루틴"
+          : canKatsuyou
+            ? "🔄 첫 활용 루틴"
+            : null
+    : weakest === "회화" && canTalk
+      ? "🗣️ 회화 시작"
+      : weakest === "단어" && canWord
+        ? "📝 단어 시작"
+        : weakest === "한자" && canKanji
+          ? "🈯 한자 시작"
+          : weakest === "활용" && canKatsuyou
+            ? "🔄 활용 시작"
+            : weakest === "복습" && canMyPage
+              ? "↪️ 오답 복습"
+              : canTalk
+                ? "🗣️ 회화 시작"
+                : canWord
+                  ? "📝 단어 시작"
+                  : canKanji
+                    ? "🈯 한자 시작"
+                    : canKatsuyou
+                      ? "🔄 활용 시작"
+                      : null;
 
   const recommendedWrongHref = canMyPage
     ? canTalk
@@ -705,26 +703,26 @@ export default function HomePage() {
           ? "↪️ 한자 오답 루틴"
           : canKatsuyou
             ? "↪️ 활용 오답 루틴"
-            : null;
+            : null
+    : null;
 
-  const recommendationText =
-    isEmptyUser
-      ? "아직 학습 기록이 없어요. 오늘은 첫 루틴 하나만 가볍게 시작해보세요."
-      : stats.goalPercent >= 100
-        ? "오늘 목표 달성! 내일도 1세트부터 가볍게 이어가요."
-        : weakest === "회화"
-          ? "오늘은 회화 1세트로 말문부터 가볍게 열어보세요."
-          : weakest === "활용"
-            ? "오늘은 활용 1세트로 문장 감각을 채워보세요."
-            : weakest === "한자"
-              ? "오늘은 한자 1세트로 읽기 감각을 보강해보세요."
-              : weakest === "단어"
-                ? "오늘은 단어 1세트로 기본 어휘를 단단히 다져보세요."
-                : weakest === "복습"
-                  ? "오늘은 오답 복습부터 먼저 해보면 밸런스가 더 좋아집니다."
-                  : weakest === "꾸준함"
-                    ? "오늘은 짧게라도 한 세트부터 시작해서 흐름을 이어가보세요."
-                    : "오늘은 단어 또는 회화 중 편한 루틴부터 가볍게 시작해보세요.";
+  const recommendationText = isEmptyUser
+    ? "아직 학습 기록이 없어요. 오늘은 첫 루틴 하나만 가볍게 시작해보세요."
+    : stats.goalPercent >= 100
+      ? "오늘 목표 달성! 내일도 1세트부터 가볍게 이어가요."
+      : weakest === "회화"
+        ? "오늘은 회화 1세트로 말문부터 가볍게 열어보세요."
+        : weakest === "활용"
+          ? "오늘은 활용 1세트로 문장 감각을 채워보세요."
+          : weakest === "한자"
+            ? "오늘은 한자 1세트로 읽기 감각을 보강해보세요."
+            : weakest === "단어"
+              ? "오늘은 단어 1세트로 기본 어휘를 단단히 다져보세요."
+              : weakest === "복습"
+                ? "오늘은 오답 복습부터 먼저 해보면 밸런스가 더 좋아집니다."
+                : weakest === "꾸준함"
+                  ? "오늘은 짧게라도 한 세트부터 시작해서 흐름을 이어가보세요."
+                  : "오늘은 단어 또는 회화 중 편한 루틴부터 가볍게 시작해보세요.";
 
   const balanceSupportText = isEmptyUser
     ? "아직 학습 기록이 없어요. 단어, 한자, 회화 중 하나부터 시작하면 밸런스가 채워집니다."
