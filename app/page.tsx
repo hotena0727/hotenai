@@ -558,16 +558,17 @@ export default function HomePage() {
                     />
                     <Radar
                       dataKey="value"
-                      stroke={progressColors.main}
+                      stroke="#2563EB"
                       strokeWidth={2.5}
-                      fill={progressColors.main}
+                      fill="#2563EB"
                       fillOpacity={0.24}
                       dot={{
                         r: 4,
                         strokeWidth: 2,
-                        stroke: progressColors.main,
+                        stroke: "#2563EB",
                         fill: "#ffffff",
                       }}
+                    />
                     />
                   </RadarChart>
                 </ResponsiveContainer>
@@ -700,9 +701,8 @@ export default function HomePage() {
                     }
                   />
                   <p
-                    className={`mt-3 text-sm ${
-                      isToday ? "font-semibold text-gray-900" : "text-gray-500"
-                    }`}
+                    className={`mt-3 text-sm ${isToday ? "font-semibold text-gray-900" : "text-gray-500"
+                      }`}
                   >
                     {day.label}
                   </p>
@@ -862,9 +862,8 @@ export default function HomePage() {
                     <div className="flex min-h-[56px] flex-col justify-center">
                       <p className="text-base font-semibold">{routine.title}</p>
                       <p
-                        className={`mt-1 text-sm leading-6 ${
-                          isPrimary ? "text-gray-200" : "text-gray-600"
-                        }`}
+                        className={`mt-1 text-sm leading-6 ${isPrimary ? "text-gray-200" : "text-gray-600"
+                          }`}
                       >
                         {routine.desc}
                       </p>
