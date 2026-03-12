@@ -84,6 +84,28 @@ type SuggestedRoutine = {
   priority: number;
 };
 
+type HomeDashboardSummary = {
+  totalAttempts: number;
+  totalWrong: number;
+  wordCount: number;
+  kanjiCount: number;
+  katsuyouCount: number;
+  talkCount: number;
+  wordAvg: number;
+  kanjiAvg: number;
+  katsuyouAvg: number;
+  talkAvg: number;
+  recent7Days: DayBucket[];
+  streak: number;
+  todayCount: number;
+  activeDays7: number;
+  levelProgress: Array<{ level: string; count: number }>;
+  weightedWordWrong: number;
+  weightedKanjiWrong: number;
+  weightedKatsuyouWrong: number;
+  weightedTalkWrong: number;
+};
+
 function canAccess(
   userPlan: string | null | undefined,
   minPlan: PlanCode,
@@ -725,6 +747,7 @@ export default function HomePage() {
 
   const [profile, setProfile] = useState<HomeProfile | null>(null);
   const [attempts, setAttempts] = useState<QuizAttemptRow[]>([]);
+  const [dashboard, setDashboard] = useState<HomeDashboardSummary | null>(null);
   const [showCoursesSection, setShowCoursesSection] = useState(false);
 
   const [menuSettings, setMenuSettings] = useState<MenuSettings>({
@@ -857,6 +880,17 @@ export default function HomePage() {
           setShowCoursesSection(Boolean(pageRow?.show_courses_section));
         }
 
+        const { data: dashboardData, error: dashboardError } = await supabase.rpc(
+          "get_home_dashboard_summary",
+          { p_user_id: user.id }
+        );
+
+        if (dashboardError) {
+          console.error(dashboardError);
+        } else if (dashboardData) {
+          setDashboard(dashboardData as HomeDashboardSummary);
+        }
+
         const all = await fetchAllAttempts(user.id, 300);
         setAttempts(all);
       } catch (error) {
@@ -879,6 +913,40 @@ export default function HomePage() {
   const goalSets = Math.max(1, Number(profile?.daily_goal_sets || 3));
 
   const stats = useMemo(() => {
+    if (dashboard) {
+      const maxLevelCount = Math.max(
+        ...(dashboard.levelProgress || []).map((item) => item.count || 0),
+        1
+      );
+
+      return {
+        totalAttempts: Number(dashboard.totalAttempts || 0),
+        totalWrong: Number(dashboard.totalWrong || 0),
+        wordCount: Number(dashboard.wordCount || 0),
+        kanjiCount: Number(dashboard.kanjiCount || 0),
+        katsuyouCount: Number(dashboard.katsuyouCount || 0),
+        talkCount: Number(dashboard.talkCount || 0),
+        wordAvg: Number(dashboard.wordAvg || 0),
+        kanjiAvg: Number(dashboard.kanjiAvg || 0),
+        katsuyouAvg: Number(dashboard.katsuyouAvg || 0),
+        talkAvg: Number(dashboard.talkAvg || 0),
+        recent7Days: (dashboard.recent7Days || []).map((item) => ({
+          key: item.key,
+          label: item.label,
+          count: Number(item.count || 0),
+        })),
+        streak: Number(dashboard.streak || 0),
+        todayCount: Number(dashboard.todayCount || 0),
+        goalPercent: calcGoalPercent(Number(dashboard.todayCount || 0), goalSets),
+        levelProgress: (dashboard.levelProgress || []).map((item) => ({
+          level: item.level,
+          count: Number(item.count || 0),
+          widthPct: Math.round(((Number(item.count || 0) || 0) / maxLevelCount) * 100),
+        })),
+        activeDays7: Number(dashboard.activeDays7 || 0),
+      };
+    }
+
     const totalAttempts = attempts.length;
     const totalWrong = attempts.reduce(
       (sum, item) => sum + Number(item.wrong_count || 0),
@@ -920,7 +988,7 @@ export default function HomePage() {
       levelProgress,
       activeDays7,
     };
-  }, [attempts, goalSets]);
+  }, [dashboard, attempts, goalSets]);
 
   const todayMessage = useMemo(
     () => getTodayMessage(stats.totalAttempts, stats.totalWrong),
@@ -970,7 +1038,35 @@ export default function HomePage() {
     [balanceData]
   );
 
-  const wrongSummary = useMemo(() => buildWrongSummary(attempts), [attempts]);
+  const wrongSummary = useMemo(() => {
+    if (dashboard) {
+      const weightedWordWrong = Number(dashboard.weightedWordWrong || 0);
+      const weightedKanjiWrong = Number(dashboard.weightedKanjiWrong || 0);
+      const weightedKatsuyouWrong = Number(dashboard.weightedKatsuyouWrong || 0);
+      const weightedTalkWrong = Number(dashboard.weightedTalkWrong || 0);
+
+      const pairs: Array<{ kind: WrongSummary["topWrongKind"]; value: number }> = [
+        { kind: "word", value: weightedWordWrong },
+        { kind: "kanji", value: weightedKanjiWrong },
+        { kind: "katsuyou", value: weightedKatsuyouWrong },
+        { kind: "talk", value: weightedTalkWrong },
+      ].sort((a, b) => b.value - a.value);
+
+      return {
+        wordWrong: 0,
+        kanjiWrong: 0,
+        katsuyouWrong: 0,
+        talkWrong: 0,
+        weightedWordWrong,
+        weightedKanjiWrong,
+        weightedKatsuyouWrong,
+        weightedTalkWrong,
+        topWrongKind: pairs[0].value > 0 ? pairs[0].kind : null,
+      };
+    }
+
+    return buildWrongSummary(attempts);
+  }, [dashboard, attempts]);
 
   if (loading) {
     return (
@@ -1000,26 +1096,14 @@ export default function HomePage() {
   const planTheme = getPlanTheme(userPlan);
   const progressColors = getPlanProgressColors(userPlan);
 
-  const canWord = canAccess(
-    userPlan,
-    menuSettings.word_min_plan,
-    menuSettings.show_word
-  );
-  const canKanji = canAccess(
-    userPlan,
-    menuSettings.kanji_min_plan,
-    menuSettings.show_kanji
-  );
+  const canWord = canAccess(userPlan, menuSettings.word_min_plan, menuSettings.show_word);
+  const canKanji = canAccess(userPlan, menuSettings.kanji_min_plan, menuSettings.show_kanji);
   const canKatsuyou = canAccess(
     userPlan,
     menuSettings.katsuyou_min_plan,
     menuSettings.show_katsuyou
   );
-  const canTalk = canAccess(
-    userPlan,
-    menuSettings.talk_min_plan,
-    menuSettings.show_talk
-  );
+  const canTalk = canAccess(userPlan, menuSettings.talk_min_plan, menuSettings.show_talk);
   const canMyPage = canAccess(
     userPlan,
     menuSettings.mypage_min_plan,
