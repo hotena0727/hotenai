@@ -935,6 +935,31 @@ export default function HomePage() {
           ) : null}
         </div>
 
+        <div className="mt-10 rounded-3xl border border-gray-200 bg-gray-50/70 p-6">
+          <div className="flex items-center justify-between">
+            <p className="text-xl font-bold">📊 레벨 진행</p>
+            <p className="text-sm text-gray-500">최근 학습 기준</p>
+          </div>
+
+          <div className="mt-5 space-y-4">
+            {stats.levelProgress.map((item) => (
+              <div
+                key={item.level}
+                className="grid grid-cols-[48px_1fr_32px] items-center gap-3"
+              >
+                <p className="font-semibold text-gray-700">{item.level}</p>
+                <div className="h-3 rounded-full bg-white">
+                  <div
+                    className="h-3 rounded-full bg-blue-300"
+                    style={{ width: `${item.widthPct}%` }}
+                  />
+                </div>
+                <p className="text-right text-sm text-gray-600">{item.count}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        
         {suggestedRoutines.length > 0 ? (
           <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
             <p className="text-lg font-semibold">오늘의 추천 루틴</p>
@@ -1012,31 +1037,6 @@ export default function HomePage() {
             </div>
           </div>
         ) : null}
-
-        <div className="mt-10 rounded-3xl border border-gray-200 bg-gray-50/70 p-6">
-          <div className="flex items-center justify-between">
-            <p className="text-xl font-bold">📊 레벨 진행</p>
-            <p className="text-sm text-gray-500">최근 학습 기준</p>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            {stats.levelProgress.map((item) => (
-              <div
-                key={item.level}
-                className="grid grid-cols-[48px_1fr_32px] items-center gap-3"
-              >
-                <p className="font-semibold text-gray-700">{item.level}</p>
-                <div className="h-3 rounded-full bg-white">
-                  <div
-                    className="h-3 rounded-full bg-blue-300"
-                    style={{ width: `${item.widthPct}%` }}
-                  />
-                </div>
-                <p className="text-right text-sm text-gray-600">{item.count}</p>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {showCoursesSection ? (
           <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
