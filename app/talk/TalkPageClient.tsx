@@ -3,7 +3,8 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
+import { hasSeenHomeToday } from "@/lib/home-gate";
 import { supabase } from "@/lib/supabase";
 import { isPaidPlan, normalizePlan } from "@/lib/plans";
 import {
@@ -343,6 +344,8 @@ function playSfx(kind: "correct" | "wrong" | "reward") {
 }
 
 export default function TalkPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const reviewQid = searchParams.get("qid") || "";
@@ -352,6 +355,14 @@ export default function TalkPage() {
     .split(",")
     .map((v) => v.trim())
     .filter(Boolean);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasSeenHomeToday()) {
+      const fullNext = `${pathname || "/talk"}${window.location.search || ""}`;
+      router.replace(`/?next=${encodeURIComponent(fullNext)}`);
+    }
+  }, [router, pathname]);
 
   const [allRows, setAllRows] = useState<TalkCsvRow[]>([]);
   const [questions, setQuestions] = useState<TalkCsvRow[]>([]);
@@ -2493,8 +2504,8 @@ export default function TalkPage() {
                       }
                       disabled={recordLimitReached && pronStage !== "recording"}
                       className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${pronStage === "recording"
-                          ? "ring-4 ring-red-100"
-                          : "hover:shadow-md"
+                        ? "ring-4 ring-red-100"
+                        : "hover:shadow-md"
                         }`}
                       aria-label={
                         pronStage === "recording" ? "녹음 정지" : "녹음 시작"
@@ -2519,15 +2530,15 @@ export default function TalkPage() {
                       onClick={playRecordedPronunciation}
                       disabled={!recordedAudioUrl}
                       className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${isRecordedPlaying
-                          ? "ring-4 ring-gray-200 shadow-md"
-                          : "hover:shadow-md"
+                        ? "ring-4 ring-gray-200 shadow-md"
+                        : "hover:shadow-md"
                         }`}
                       aria-label="내 녹음 재생"
                     >
                       <span
                         className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${isRecordedPlaying
-                            ? "border-l-black"
-                            : "border-l-gray-700"
+                          ? "border-l-black"
+                          : "border-l-gray-700"
                           }`}
                       />
                     </button>

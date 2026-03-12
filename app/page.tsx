@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -28,6 +28,7 @@ import {
   type HomeDashboardSummary,
   type WrongSummary,
 } from "@/lib/home-dashboard";
+import { markHomeSeenToday } from "@/lib/home-gate";
 
 type HomeProfile = {
   id: string;
@@ -83,6 +84,7 @@ function getPlanProgressColors(plan: PlanCode) {
 
 export default function HomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [profile, setProfile] = useState<HomeProfile | null>(null);
   const [dashboard, setDashboard] = useState<HomeDashboardSummary | null>(null);
@@ -248,7 +250,14 @@ export default function HomePage() {
     }
   }, [errorMsg, router]);
 
+  useEffect(() => {
+    if (!loading && !errorMsg) {
+      markHomeSeenToday();
+    }
+  }, [loading, errorMsg]);
+
   const goalSets = Math.max(1, Number(profile?.daily_goal_sets || 3));
+  const nextHref = searchParams.get("next");
 
   const stats = useMemo(() => {
     const safeDashboard = dashboard ?? {
@@ -296,7 +305,10 @@ export default function HomePage() {
       })),
       streak: Number(safeDashboard.streak || 0),
       todayCount: Number(safeDashboard.todayCount || 0),
-      goalPercent: calcGoalPercent(Number(safeDashboard.todayCount || 0), goalSets),
+      goalPercent: calcGoalPercent(
+        Number(safeDashboard.todayCount || 0),
+        goalSets
+      ),
       levelProgress: (safeDashboard.levelProgress || []).map((item) => ({
         level: item.level,
         count: Number(item.count || 0),
@@ -366,7 +378,9 @@ export default function HomePage() {
 
     const weightedWordWrong = Number(safeDashboard.weightedWordWrong || 0);
     const weightedKanjiWrong = Number(safeDashboard.weightedKanjiWrong || 0);
-    const weightedKatsuyouWrong = Number(safeDashboard.weightedKatsuyouWrong || 0);
+    const weightedKatsuyouWrong = Number(
+      safeDashboard.weightedKatsuyouWrong || 0
+    );
     const weightedTalkWrong = Number(safeDashboard.weightedTalkWrong || 0);
 
     const pairs = [
@@ -389,14 +403,26 @@ export default function HomePage() {
   const planTheme = getPlanTheme(userPlan);
   const progressColors = getPlanProgressColors(userPlan);
 
-  const canWord = canAccess(userPlan, menuSettings.word_min_plan, menuSettings.show_word);
-  const canKanji = canAccess(userPlan, menuSettings.kanji_min_plan, menuSettings.show_kanji);
+  const canWord = canAccess(
+    userPlan,
+    menuSettings.word_min_plan,
+    menuSettings.show_word
+  );
+  const canKanji = canAccess(
+    userPlan,
+    menuSettings.kanji_min_plan,
+    menuSettings.show_kanji
+  );
   const canKatsuyou = canAccess(
     userPlan,
     menuSettings.katsuyou_min_plan,
     menuSettings.show_katsuyou
   );
-  const canTalk = canAccess(userPlan, menuSettings.talk_min_plan, menuSettings.show_talk);
+  const canTalk = canAccess(
+    userPlan,
+    menuSettings.talk_min_plan,
+    menuSettings.show_talk
+  );
   const canMyPage = canAccess(
     userPlan,
     menuSettings.mypage_min_plan,
@@ -530,6 +556,17 @@ export default function HomePage() {
           <p className="mt-3 text-base text-gray-600">
             오늘의 밸런스를 보고, 필요한 루틴부터 이어가세요.
           </p>
+
+          {nextHref ? (
+            <div className="mt-4">
+              <a
+                href={nextHref}
+                className="inline-flex rounded-2xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-800"
+              >
+                이어서 학습하기
+              </a>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
@@ -568,7 +605,6 @@ export default function HomePage() {
                         stroke: "#2563EB",
                         fill: "#ffffff",
                       }}
-                    />
                     />
                   </RadarChart>
                 </ResponsiveContainer>
@@ -701,8 +737,9 @@ export default function HomePage() {
                     }
                   />
                   <p
-                    className={`mt-3 text-sm ${isToday ? "font-semibold text-gray-900" : "text-gray-500"
-                      }`}
+                    className={`mt-3 text-sm ${
+                      isToday ? "font-semibold text-gray-900" : "text-gray-500"
+                    }`}
                   >
                     {day.label}
                   </p>
@@ -862,8 +899,9 @@ export default function HomePage() {
                     <div className="flex min-h-[56px] flex-col justify-center">
                       <p className="text-base font-semibold">{routine.title}</p>
                       <p
-                        className={`mt-1 text-sm leading-6 ${isPrimary ? "text-gray-200" : "text-gray-600"
-                          }`}
+                        className={`mt-1 text-sm leading-6 ${
+                          isPrimary ? "text-gray-200" : "text-gray-600"
+                        }`}
                       >
                         {routine.desc}
                       </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { WordQType, WordQuestion, WordRow } from "@/app/types/word";
@@ -10,6 +11,7 @@ import { buildWordAttemptPayload } from "@/lib/word-payload";
 import { loadPatternRows, filterPatternRows } from "@/lib/pattern-loader";
 import type { PatternRow } from "@/app/types/pattern";
 import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
+import { hasSeenHomeToday } from "@/lib/home-gate";
 
 const POS_GROUP_OPTIONS = [
   { value: "noun", label: "명사" },
@@ -86,6 +88,9 @@ const PRO_UPGRADE_URL = "/pro";
 const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 
 export default function WordPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [rows, setRows] = useState<WordRow[]>([]);
   const [patternRows, setPatternRows] = useState<PatternRow[]>([]);
   const [questions, setQuestions] = useState<WordQuestion[]>([]);
@@ -124,6 +129,14 @@ export default function WordPage() {
   const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
   const [limitMessage, setLimitMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasSeenHomeToday()) {
+      const next = encodeURIComponent(pathname || "/word");
+      router.replace(`/?next=${next}`);
+    }
+  }, [router, pathname]);
 
   const visiblePatterns = useMemo(
     () =>
@@ -612,7 +625,9 @@ export default function WordPage() {
         <h1 className="mt-4 text-4xl font-bold">📝 단어</h1>
 
         <div className="mt-8">
-          <p className="text-base sm:text-lg font-semibold text-gray-700">✅ 품사를 선택하세요</p>
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">
+            ✅ 품사를 선택하세요
+          </p>
           <div className="mt-3 grid grid-cols-5 gap-3">
             {POS_GROUP_OPTIONS.map((item) => {
               const active = selectedPosGroup === item.value;
@@ -623,11 +638,19 @@ export default function WordPage() {
                   onClick={() => setSelectedPosGroup(item.value)}
                   className={
                     active
-                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 sm:px-4 py-3 text-sm sm:text-lg font-semibold text-white"
-                      : "rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 text-sm sm:text-lg font-semibold text-gray-900"
+                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 py-3 text-sm font-semibold text-white sm:px-4 sm:text-lg"
+                      : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900 sm:px-4 sm:text-lg"
                   }
                 >
-                  <span className={item.value === "adj_i" || item.value === "adj_na" ? "text-[13px] leading-tight sm:text-base" : ""}>{item.label}</span>
+                  <span
+                    className={
+                      item.value === "adj_i" || item.value === "adj_na"
+                        ? "text-[13px] leading-tight sm:text-base"
+                        : ""
+                    }
+                  >
+                    {item.label}
+                  </span>
                 </button>
               );
             })}
@@ -656,7 +679,7 @@ export default function WordPage() {
                     return (
                       <label
                         key={item.value}
-                        className="flex items-center gap-3 text-base sm:text-lg text-gray-900"
+                        className="flex items-center gap-3 text-base text-gray-900 sm:text-lg"
                       >
                         <input
                           type="checkbox"
@@ -674,9 +697,15 @@ export default function WordPage() {
                   type="button"
                   onClick={makeNewQuiz}
                   disabled={isDailyLimitReached}
-                  className={isDailyLimitReached ? "mt-5 w-full rounded-2xl border border-red-200 bg-red-50 px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-red-600" : "mt-5 w-full rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"}
+                  className={
+                    isDailyLimitReached
+                      ? "mt-5 w-full rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
+                      : "mt-5 w-full rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
+                  }
                 >
-                  {isDailyLimitReached ? "오늘 이용 완료" : "🔄 기타 선택 적용(새 문제)"}
+                  {isDailyLimitReached
+                    ? "오늘 이용 완료"
+                    : "🔄 기타 선택 적용(새 문제)"}
                 </button>
               </div>
             ) : null}
@@ -684,7 +713,9 @@ export default function WordPage() {
         ) : null}
 
         <div className="mt-6">
-          <p className="text-base sm:text-lg font-semibold text-gray-700">✅ 유형을 선택하세요</p>
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">
+            ✅ 유형을 선택하세요
+          </p>
           <div
             className={
               selectedPosGroup === "other"
@@ -701,8 +732,8 @@ export default function WordPage() {
                   onClick={() => setSelectedQType(item.value)}
                   className={
                     active
-                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 sm:px-4 py-3 text-sm sm:text-xl font-semibold text-white"
-                      : "rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 text-sm sm:text-xl font-semibold text-gray-900"
+                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 py-3 text-sm font-semibold text-white sm:px-4 sm:text-xl"
+                      : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900 sm:px-4 sm:text-xl"
                   }
                 >
                   {item.label}
@@ -728,8 +759,8 @@ export default function WordPage() {
               <p
                 className={
                   isDailyLimitReached
-                    ? "text-xs sm:text-sm font-semibold text-red-700"
-                    : "text-xs sm:text-sm font-semibold text-gray-800"
+                    ? "text-xs font-semibold text-red-700 sm:text-sm"
+                    : "text-xs font-semibold text-gray-800 sm:text-sm"
                 }
               >
                 {isPaidPlan(userPlan)
@@ -752,7 +783,13 @@ export default function WordPage() {
                       : `오늘 ${remainingSets}세트 남음`}
               </p>
             </div>
-            <span className={isDailyLimitReached ? "shrink-0 text-sm sm:text-base text-red-500" : "shrink-0 text-sm sm:text-base text-gray-500"}>
+            <span
+              className={
+                isDailyLimitReached
+                  ? "shrink-0 text-sm text-red-500 sm:text-base"
+                  : "shrink-0 text-sm text-gray-500 sm:text-base"
+              }
+            >
               {planInfoOpen ? "⌄" : "›"}
             </span>
           </button>
@@ -761,8 +798,8 @@ export default function WordPage() {
             <div
               className={
                 isDailyLimitReached
-                  ? "mt-3 border-t border-red-200 pt-3 text-xs sm:text-sm leading-6 text-red-700"
-                  : "mt-3 border-t border-gray-200 pt-3 text-xs sm:text-sm leading-6 text-gray-600"
+                  ? "mt-3 border-t border-red-200 pt-3 text-xs leading-6 text-red-700 sm:text-sm"
+                  : "mt-3 border-t border-gray-200 pt-3 text-xs leading-6 text-gray-600 sm:text-sm"
               }
             >
               <p>
@@ -794,7 +831,9 @@ export default function WordPage() {
             className="flex w-full items-center gap-3 px-4 py-4 text-left"
           >
             <span className="text-lg">{patternOpen ? "⌄" : "›"}</span>
-            <span className="text-lg font-semibold">📌 필수패턴 (카드로 빠르게 익히기)</span>
+            <span className="text-lg font-semibold">
+              📌 필수패턴 (카드로 빠르게 익히기)
+            </span>
           </button>
 
           {patternOpen ? (
@@ -807,21 +846,39 @@ export default function WordPage() {
                     랜덤 1개 패턴
                   </div>
 
-                  <div
-                    className="rounded-3xl border border-gray-200 p-5"
-                  >
-                    <p className="text-2xl sm:text-3xl font-bold">{featuredPattern.title}</p>
-                    <p className="mt-4 text-xl sm:text-2xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{featuredPattern.jp}</span></p>
-                    <p className="mt-2 text-xl text-gray-700">{featuredPattern.kr}</p>
+                  <div className="rounded-3xl border border-gray-200 p-5">
+                    <p className="text-2xl font-bold sm:text-3xl">
+                      {featuredPattern.title}
+                    </p>
+                    <p className="mt-4 text-xl font-semibold sm:text-2xl">
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {featuredPattern.jp}
+                      </span>
+                    </p>
+                    <p className="mt-2 text-xl text-gray-700">
+                      {featuredPattern.kr}
+                    </p>
 
                     <div className="mt-6">
-                      <p className="text-base sm:text-xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{featuredPattern.ex1_jp}</span></p>
-                      <p className="mt-1 text-sm sm:text-lg text-gray-700">{featuredPattern.ex1_kr}</p>
+                      <p className="text-base font-semibold sm:text-xl">
+                        <span lang="ja" style={JA_FONT_STYLE}>
+                          {featuredPattern.ex1_jp}
+                        </span>
+                      </p>
+                      <p className="mt-1 text-sm text-gray-700 sm:text-lg">
+                        {featuredPattern.ex1_kr}
+                      </p>
                     </div>
 
                     <div className="mt-5">
-                      <p className="text-base sm:text-xl font-semibold"><span lang="ja" style={JA_FONT_STYLE}>{featuredPattern.ex2_jp}</span></p>
-                      <p className="mt-1 text-sm sm:text-lg text-gray-700">{featuredPattern.ex2_kr}</p>
+                      <p className="text-base font-semibold sm:text-xl">
+                        <span lang="ja" style={JA_FONT_STYLE}>
+                          {featuredPattern.ex2_jp}
+                        </span>
+                      </p>
+                      <p className="mt-1 text-sm text-gray-700 sm:text-lg">
+                        {featuredPattern.ex2_kr}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -836,14 +893,18 @@ export default function WordPage() {
               type="button"
               onClick={makeNewQuiz}
               disabled={isDailyLimitReached}
-              className={isDailyLimitReached ? "rounded-2xl border border-gray-200 bg-gray-100 px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-400" : "rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"}
+              className={
+                isDailyLimitReached
+                  ? "rounded-2xl border border-gray-200 bg-gray-100 px-3 py-3 text-sm font-semibold text-gray-400 sm:px-4 sm:py-4 sm:text-lg"
+                  : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
+              }
             >
               {isDailyLimitReached ? "오늘 이용 완료" : "🔄 새문제(랜덤 10문항)"}
             </button>
             <button
               type="button"
               onClick={resetExcludedWords}
-              className="rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
             >
               맞힌 단어 제외 초기화
             </button>
@@ -866,8 +927,11 @@ export default function WordPage() {
                 return (
                   <div key={`${q.jp_word}-${idx}`}>
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-xl sm:text-2xl font-semibold">
-                        {circleNumber(idx)} <span lang="ja" style={JA_FONT_STYLE}>{q.prompt}</span>
+                      <p className="text-xl font-semibold sm:text-2xl">
+                        {circleNumber(idx)}{" "}
+                        <span lang="ja" style={JA_FONT_STYLE}>
+                          {q.prompt}
+                        </span>
                       </p>
 
                       {q.qtype === "meaning" ? (
@@ -879,7 +943,9 @@ export default function WordPage() {
                           disabled={audioLoadingKey === `q-${idx}`}
                           className="shrink-0 rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
                         >
-                          {audioLoadingKey === `q-${idx}` ? "재생 중..." : "🔊 발음 듣기"}
+                          {audioLoadingKey === `q-${idx}`
+                            ? "재생 중..."
+                            : "🔊 발음 듣기"}
                         </button>
                       ) : null}
                     </div>
@@ -894,7 +960,7 @@ export default function WordPage() {
                         return (
                           <label
                             key={choice}
-                            className="flex items-center gap-3 text-base sm:text-lg text-gray-900"
+                            className="flex items-center gap-3 text-base text-gray-900 sm:text-lg"
                           >
                             <input
                               type="radio"
@@ -913,7 +979,9 @@ export default function WordPage() {
                                     : ""
                               }
                             >
-                              <span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
+                              <span lang="ja" style={JA_FONT_STYLE}>
+                                {choice}
+                              </span>
                             </span>
                           </label>
                         );
@@ -934,10 +1002,21 @@ export default function WordPage() {
                           {isRight ? "정답입니다." : "오답입니다."}
                         </p>
                         <p className="mt-2 text-sm text-gray-700">
-                          정답: <span lang="ja" style={JA_FONT_STYLE}>{correct}</span>
+                          정답:{" "}
+                          <span lang="ja" style={JA_FONT_STYLE}>
+                            {correct}
+                          </span>
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
-                          단어: <span lang="ja" style={JA_FONT_STYLE}>{q.jp_word}</span> / 읽기: <span lang="ja" style={JA_FONT_STYLE}>{q.reading}</span> / 뜻: {q.meaning}
+                          단어:{" "}
+                          <span lang="ja" style={JA_FONT_STYLE}>
+                            {q.jp_word}
+                          </span>{" "}
+                          / 읽기:{" "}
+                          <span lang="ja" style={JA_FONT_STYLE}>
+                            {q.reading}
+                          </span>{" "}
+                          / 뜻: {q.meaning}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
                           품사: {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)}
@@ -948,7 +1027,10 @@ export default function WordPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                speakJapanese(q.reading || q.jp_word, `answer-${idx}`)
+                                speakJapanese(
+                                  q.reading || q.jp_word,
+                                  `answer-${idx}`
+                                )
                               }
                               disabled={audioLoadingKey === `answer-${idx}`}
                               className="rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
@@ -962,8 +1044,12 @@ export default function WordPage() {
 
                         {q.example_jp || q.example_kr ? (
                           <div className="mt-3 rounded-xl bg-blue-50 p-3">
-                            <p className="text-sm text-blue-900">{q.example_jp}</p>
-                            <p className="mt-1 text-sm text-blue-900">{q.example_kr}</p>
+                            <p className="text-sm text-blue-900">
+                              {q.example_jp}
+                            </p>
+                            <p className="mt-1 text-sm text-blue-900">
+                              {q.example_kr}
+                            </p>
                           </div>
                         ) : null}
                       </div>
@@ -978,14 +1064,14 @@ export default function WordPage() {
                 <button
                   type="button"
                   onClick={handleSubmitAll}
-                  className="rounded-2xl bg-red-500 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-white"
+                  className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white sm:px-5 sm:py-4 sm:text-lg"
                 >
                   제출하고 채점하기
                 </button>
               ) : (
                 <>
                   <div ref={resultRef} className="rounded-2xl bg-green-50 p-4">
-                    <p className="text-base sm:text-lg font-semibold text-green-700">
+                    <p className="text-base font-semibold text-green-700 sm:text-lg">
                       점수: {score} / {questions.length}
                     </p>
                   </div>
@@ -993,12 +1079,12 @@ export default function WordPage() {
                   {isPerfect ? (
                     <>
                       <div className="rounded-2xl bg-green-50 p-4">
-                        <p className="text-base sm:text-lg font-semibold text-green-700">
+                        <p className="text-base font-semibold text-green-700 sm:text-lg">
                           🎉 완벽해요! 전부 정답입니다.
                         </p>
                       </div>
                       <div className="rounded-2xl bg-green-50 p-4">
-                        <p className="text-base sm:text-lg font-semibold text-green-700">
+                        <p className="text-base font-semibold text-green-700 sm:text-lg">
                           🎉 Perfect Streak! 10연속 정답!
                         </p>
                       </div>
@@ -1011,11 +1097,15 @@ export default function WordPage() {
                     </div>
                   )}
 
-                  <div className="text-sm text-gray-500">🧠 오늘 최고 콤보: {score}연속</div>
+                  <div className="text-sm text-gray-500">
+                    🧠 오늘 최고 콤보: {score}연속
+                  </div>
 
                   {showWrongNote ? (
                     <div className="mt-2">
-                      <h2 className="text-3xl font-bold text-gray-900">❌ 오답 노트</h2>
+                      <h2 className="text-3xl font-bold text-gray-900">
+                        ❌ 오답 노트
+                      </h2>
 
                       <div className="mt-4 space-y-4">
                         {wrongItems.slice(0, 3).map((item, i) => (
@@ -1025,12 +1115,16 @@ export default function WordPage() {
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <p className="text-xl sm:text-2xl font-bold">
-                                  Q{item.index + 1}. <span lang="ja" style={JA_FONT_STYLE}>{item.question.jp_word}</span>
+                                <p className="text-xl font-bold sm:text-2xl">
+                                  Q{item.index + 1}.{" "}
+                                  <span lang="ja" style={JA_FONT_STYLE}>
+                                    {item.question.jp_word}
+                                  </span>
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
-                                  {item.question.prompt} · 품사: {posLabel(item.question.pos)} ·
-                                  유형: {qtypeLabel(item.question.qtype)}
+                                  {item.question.prompt} · 품사:{" "}
+                                  {posLabel(item.question.pos)} · 유형:{" "}
+                                  {qtypeLabel(item.question.qtype)}
                                 </p>
                               </div>
                               <div className="rounded-full border border-gray-200 px-4 py-1 text-sm font-semibold">
@@ -1040,16 +1134,26 @@ export default function WordPage() {
 
                             <div className="mt-4 space-y-1 text-base sm:text-lg">
                               <p>
-                                <span className="font-semibold">내 답</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.selected}</span>
+                                <span className="font-semibold">내 답</span>　
+                                <span lang="ja" style={JA_FONT_STYLE}>
+                                  {item.selected}
+                                </span>
                               </p>
                               <p>
-                                <span className="font-semibold">정답</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.question.correct_text}</span>
+                                <span className="font-semibold">정답</span>　
+                                <span lang="ja" style={JA_FONT_STYLE}>
+                                  {item.question.correct_text}
+                                </span>
                               </p>
                               <p>
-                                <span className="font-semibold">발음</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.question.reading}</span>
+                                <span className="font-semibold">발음</span>　
+                                <span lang="ja" style={JA_FONT_STYLE}>
+                                  {item.question.reading}
+                                </span>
                               </p>
                               <p>
-                                <span className="font-semibold">뜻</span>　{item.question.meaning}
+                                <span className="font-semibold">뜻</span>　
+                                {item.question.meaning}
                               </p>
                             </div>
                           </div>
@@ -1068,7 +1172,7 @@ export default function WordPage() {
                     <button
                       type="button"
                       onClick={makeNewQuiz}
-                      className="rounded-2xl bg-red-500 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-white"
+                      className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white sm:px-5 sm:py-4 sm:text-lg"
                     >
                       다음 10문항 시작하기
                     </button>
@@ -1076,7 +1180,7 @@ export default function WordPage() {
                     <button
                       type="button"
                       onClick={handleRetryWrongOnly}
-                      className="rounded-2xl border border-gray-300 bg-white px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"
+                      className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800 sm:px-5 sm:py-4 sm:text-lg"
                     >
                       ❌ 틀린 문제만 다시 풀기
                     </button>
@@ -1086,8 +1190,18 @@ export default function WordPage() {
             </div>
           </div>
         ) : (
-          <div className={`mt-6 rounded-2xl border p-5 ${isDailyLimitReached ? "border-red-200 bg-red-50" : "border-gray-300 bg-white"}`}>
-            <p className={`text-sm ${isDailyLimitReached ? "text-red-700" : "text-gray-500"}`}>
+          <div
+            className={`mt-6 rounded-2xl border p-5 ${
+              isDailyLimitReached
+                ? "border-red-200 bg-red-50"
+                : "border-gray-300 bg-white"
+            }`}
+          >
+            <p
+              className={`text-sm ${
+                isDailyLimitReached ? "text-red-700" : "text-gray-500"
+              }`}
+            >
               {isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : "선택한 조건에 맞는 문제가 없습니다."}

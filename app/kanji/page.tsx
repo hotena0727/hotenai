@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/app/types/kanji";
@@ -8,6 +9,7 @@ import { loadKanjiRows } from "@/lib/kanji-loader";
 import { buildKanjiQuiz } from "@/lib/kanji-quiz";
 import { buildKanjiAttemptPayload } from "@/lib/kanji-payload";
 import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
+import { hasSeenHomeToday } from "@/lib/home-gate";
 
 const LEVEL_OPTIONS = ["N5", "N4", "N3", "N2", "N1"] as const;
 
@@ -47,6 +49,9 @@ const PRO_UPGRADE_URL = "/pro";
 const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 
 export default function KanjiPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [rows, setRows] = useState<KanjiRow[]>([]);
   const [questions, setQuestions] = useState<KanjiQuestion[]>([]);
 
@@ -78,6 +83,14 @@ export default function KanjiPage() {
   const [limitMessage, setLimitMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasSeenHomeToday()) {
+      const next = encodeURIComponent(pathname || "/kanji");
+      router.replace(`/?next=${next}`);
+    }
+  }, [router, pathname]);
+
   const wrongItems = questions
     .map((q, idx) => ({
       question: q,
@@ -86,7 +99,8 @@ export default function KanjiPage() {
     }))
     .filter((item) => submitted && item.selected !== item.question.correct_text);
 
-  const isPerfect = submitted && questions.length > 0 && score === questions.length;
+  const isPerfect =
+    submitted && questions.length > 0 && score === questions.length;
 
   const isDailyLimitReached =
     !isPaidPlan(userPlan) && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
@@ -113,10 +127,12 @@ export default function KanjiPage() {
       audio.preload = "auto";
       audio.volume = 1;
       audio.onended = () => {
-        if (activeSfxAudioRef.current === audio) activeSfxAudioRef.current = null;
+        if (activeSfxAudioRef.current === audio)
+          activeSfxAudioRef.current = null;
       };
       audio.onerror = () => {
-        if (activeSfxAudioRef.current === audio) activeSfxAudioRef.current = null;
+        if (activeSfxAudioRef.current === audio)
+          activeSfxAudioRef.current = null;
       };
 
       activeSfxAudioRef.current = audio;
@@ -294,7 +310,9 @@ export default function KanjiPage() {
         return;
       }
 
-      const blockedWords = Object.keys(excludedWords).filter((k) => excludedWords[k]);
+      const blockedWords = Object.keys(excludedWords).filter(
+        (k) => excludedWords[k]
+      );
 
       const quiz = buildKanjiQuiz({
         rows,
@@ -512,7 +530,9 @@ export default function KanjiPage() {
         <h1 className="mt-4 text-4xl font-bold">🈯 한자</h1>
 
         <div className="mt-8">
-          <p className="text-base sm:text-lg font-semibold text-gray-700">✅ 레벨을 선택하세요</p>
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">
+            ✅ 레벨을 선택하세요
+          </p>
           <div className="mt-3 grid grid-cols-5 gap-3">
             {LEVEL_OPTIONS.map((level) => {
               const active = selectedLevel === level;
@@ -523,8 +543,8 @@ export default function KanjiPage() {
                   onClick={() => setSelectedLevel(level)}
                   className={
                     active
-                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 sm:px-4 py-3 text-sm sm:text-lg font-semibold text-white"
-                      : "rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 text-sm sm:text-lg font-semibold text-gray-900"
+                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 py-3 text-sm font-semibold text-white sm:px-4 sm:text-lg"
+                      : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900 sm:px-4 sm:text-lg"
                   }
                 >
                   {level}
@@ -535,7 +555,9 @@ export default function KanjiPage() {
         </div>
 
         <div className="mt-6">
-          <p className="text-base sm:text-lg font-semibold text-gray-700">✅ 유형을 선택하세요</p>
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">
+            ✅ 유형을 선택하세요
+          </p>
           <div className="mt-3 grid grid-cols-3 gap-3">
             {QTYPE_OPTIONS.map((item) => {
               const active = selectedQType === item.value;
@@ -546,8 +568,8 @@ export default function KanjiPage() {
                   onClick={() => setSelectedQType(item.value)}
                   className={
                     active
-                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 sm:px-4 py-3 text-sm sm:text-xl font-semibold text-white"
-                      : "rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 text-sm sm:text-xl font-semibold text-gray-900"
+                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 py-3 text-sm font-semibold text-white sm:px-4 sm:text-xl"
+                      : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900 sm:px-4 sm:text-xl"
                   }
                 >
                   {item.label}
@@ -573,8 +595,8 @@ export default function KanjiPage() {
               <p
                 className={
                   isDailyLimitReached
-                    ? "text-xs sm:text-sm font-semibold text-red-700"
-                    : "text-xs sm:text-sm font-semibold text-gray-800"
+                    ? "text-xs font-semibold text-red-700 sm:text-sm"
+                    : "text-xs font-semibold text-gray-800 sm:text-sm"
                 }
               >
                 {isPaidPlan(userPlan)
@@ -600,8 +622,8 @@ export default function KanjiPage() {
             <span
               className={
                 isDailyLimitReached
-                  ? "shrink-0 text-sm sm:text-base text-red-500"
-                  : "shrink-0 text-sm sm:text-base text-gray-500"
+                  ? "shrink-0 text-sm text-red-500 sm:text-base"
+                  : "shrink-0 text-sm text-gray-500 sm:text-base"
               }
             >
               {planInfoOpen ? "⌄" : "›"}
@@ -612,8 +634,8 @@ export default function KanjiPage() {
             <div
               className={
                 isDailyLimitReached
-                  ? "mt-3 border-t border-red-200 pt-3 text-xs sm:text-sm leading-6 text-red-700"
-                  : "mt-3 border-t border-gray-200 pt-3 text-xs sm:text-sm leading-6 text-gray-600"
+                  ? "mt-3 border-t border-red-200 pt-3 text-xs leading-6 text-red-700 sm:text-sm"
+                  : "mt-3 border-t border-gray-200 pt-3 text-xs leading-6 text-gray-600 sm:text-sm"
               }
             >
               <p>
@@ -646,8 +668,8 @@ export default function KanjiPage() {
               disabled={isDailyLimitReached}
               className={
                 isDailyLimitReached
-                  ? "rounded-2xl border border-red-200 bg-red-50 px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-red-600"
-                  : "rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"
+                  ? "rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
+                  : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
               }
             >
               {isDailyLimitReached ? "오늘 이용 완료" : "🔄 새문제(랜덤 10문항)"}
@@ -655,7 +677,7 @@ export default function KanjiPage() {
             <button
               type="button"
               onClick={resetExcludedWords}
-              className="rounded-2xl border border-gray-300 bg-white px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"
+              className="rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
             >
               맞힌 단어 제외 초기화
             </button>
@@ -702,8 +724,11 @@ export default function KanjiPage() {
                 return (
                   <div key={`${q.jp_word}-${idx}`}>
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-xl sm:text-2xl font-semibold">
-                        {circleNumber(idx)} <span lang="ja" style={JA_FONT_STYLE}>{q.prompt}</span>
+                      <p className="text-xl font-semibold sm:text-2xl">
+                        {circleNumber(idx)}{" "}
+                        <span lang="ja" style={JA_FONT_STYLE}>
+                          {q.prompt}
+                        </span>
                       </p>
 
                       {q.qtype === "meaning" ? (
@@ -715,7 +740,9 @@ export default function KanjiPage() {
                           disabled={audioLoadingKey === `q-${idx}`}
                           className="shrink-0 rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
                         >
-                          {audioLoadingKey === `q-${idx}` ? "재생 중..." : "🔊 발음 듣기"}
+                          {audioLoadingKey === `q-${idx}`
+                            ? "재생 중..."
+                            : "🔊 발음 듣기"}
                         </button>
                       ) : null}
                     </div>
@@ -730,7 +757,7 @@ export default function KanjiPage() {
                         return (
                           <label
                             key={choice}
-                            className="flex items-center gap-3 text-base sm:text-lg text-gray-900"
+                            className="flex items-center gap-3 text-base text-gray-900 sm:text-lg"
                           >
                             <input
                               type="radio"
@@ -749,7 +776,9 @@ export default function KanjiPage() {
                                     : ""
                               }
                             >
-                              <span lang="ja" style={JA_FONT_STYLE}>{choice}</span>
+                              <span lang="ja" style={JA_FONT_STYLE}>
+                                {choice}
+                              </span>
                             </span>
                           </label>
                         );
@@ -770,10 +799,21 @@ export default function KanjiPage() {
                           {isRight ? "정답입니다." : "오답입니다."}
                         </p>
                         <p className="mt-2 text-sm text-gray-700">
-                          정답: <span lang="ja" style={JA_FONT_STYLE}>{correct}</span>
+                          정답:{" "}
+                          <span lang="ja" style={JA_FONT_STYLE}>
+                            {correct}
+                          </span>
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
-                          단어: <span lang="ja" style={JA_FONT_STYLE}>{q.jp_word}</span> / 읽기: <span lang="ja" style={JA_FONT_STYLE}>{q.reading}</span> / 뜻: {q.meaning}
+                          단어:{" "}
+                          <span lang="ja" style={JA_FONT_STYLE}>
+                            {q.jp_word}
+                          </span>{" "}
+                          / 읽기:{" "}
+                          <span lang="ja" style={JA_FONT_STYLE}>
+                            {q.reading}
+                          </span>{" "}
+                          / 뜻: {q.meaning}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
                           레벨: {q.level} / 유형: {qtypeLabel(q.qtype)}
@@ -807,14 +847,14 @@ export default function KanjiPage() {
                 <button
                   type="button"
                   onClick={handleSubmitAll}
-                  className="rounded-2xl bg-red-500 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-white"
+                  className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white sm:px-5 sm:py-4 sm:text-lg"
                 >
                   제출하고 채점하기
                 </button>
               ) : (
                 <>
                   <div ref={resultRef} className="rounded-2xl bg-green-50 p-4">
-                    <p className="text-base sm:text-lg font-semibold text-green-700">
+                    <p className="text-base font-semibold text-green-700 sm:text-lg">
                       점수: {score} / {questions.length}
                     </p>
                   </div>
@@ -822,12 +862,12 @@ export default function KanjiPage() {
                   {isPerfect ? (
                     <>
                       <div className="rounded-2xl bg-green-50 p-4">
-                        <p className="text-base sm:text-lg font-semibold text-green-700">
+                        <p className="text-base font-semibold text-green-700 sm:text-lg">
                           🎉 완벽해요! 전부 정답입니다.
                         </p>
                       </div>
                       <div className="rounded-2xl bg-green-50 p-4">
-                        <p className="text-base sm:text-lg font-semibold text-green-700">
+                        <p className="text-base font-semibold text-green-700 sm:text-lg">
                           🎉 Perfect Streak! 10연속 정답!
                         </p>
                       </div>
@@ -840,11 +880,15 @@ export default function KanjiPage() {
                     </div>
                   )}
 
-                  <div className="text-sm text-gray-500">🧠 오늘 최고 콤보: {score}연속</div>
+                  <div className="text-sm text-gray-500">
+                    🧠 오늘 최고 콤보: {score}연속
+                  </div>
 
                   {wrongItems.length > 0 ? (
                     <div className="mt-2">
-                      <h2 className="text-3xl font-bold text-gray-900">❌ 오답 노트</h2>
+                      <h2 className="text-3xl font-bold text-gray-900">
+                        ❌ 오답 노트
+                      </h2>
 
                       <div className="mt-4 space-y-4">
                         {wrongItems.slice(0, 3).map((item, i) => (
@@ -854,8 +898,11 @@ export default function KanjiPage() {
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <p className="text-xl sm:text-2xl font-bold">
-                                  Q{item.index + 1}. <span lang="ja" style={JA_FONT_STYLE}>{item.question.jp_word}</span>
+                                <p className="text-xl font-bold sm:text-2xl">
+                                  Q{item.index + 1}.{" "}
+                                  <span lang="ja" style={JA_FONT_STYLE}>
+                                    {item.question.jp_word}
+                                  </span>
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
                                   {item.question.prompt} · 레벨: {item.question.level} · 유형:{" "}
@@ -869,16 +916,26 @@ export default function KanjiPage() {
 
                             <div className="mt-4 space-y-1 text-base sm:text-lg">
                               <p>
-                                <span className="font-semibold">내 답</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.selected}</span>
+                                <span className="font-semibold">내 답</span>　
+                                <span lang="ja" style={JA_FONT_STYLE}>
+                                  {item.selected}
+                                </span>
                               </p>
                               <p>
-                                <span className="font-semibold">정답</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.question.correct_text}</span>
+                                <span className="font-semibold">정답</span>　
+                                <span lang="ja" style={JA_FONT_STYLE}>
+                                  {item.question.correct_text}
+                                </span>
                               </p>
                               <p>
-                                <span className="font-semibold">발음</span>　<span lang="ja" style={JA_FONT_STYLE}>{item.question.reading}</span>
+                                <span className="font-semibold">발음</span>　
+                                <span lang="ja" style={JA_FONT_STYLE}>
+                                  {item.question.reading}
+                                </span>
                               </p>
                               <p>
-                                <span className="font-semibold">뜻</span>　{item.question.meaning}
+                                <span className="font-semibold">뜻</span>　
+                                {item.question.meaning}
                               </p>
                             </div>
                           </div>
@@ -897,7 +954,7 @@ export default function KanjiPage() {
                     <button
                       type="button"
                       onClick={makeNewQuiz}
-                      className="rounded-2xl bg-red-500 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-white"
+                      className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white sm:px-5 sm:py-4 sm:text-lg"
                     >
                       다음 10문항 시작하기
                     </button>
@@ -905,7 +962,7 @@ export default function KanjiPage() {
                     <button
                       type="button"
                       onClick={handleRetryWrongOnly}
-                      className="rounded-2xl border border-gray-300 bg-white px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-lg font-semibold text-gray-800"
+                      className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800 sm:px-5 sm:py-4 sm:text-lg"
                     >
                       ❌ 틀린 문제만 다시 풀기
                     </button>
@@ -917,10 +974,16 @@ export default function KanjiPage() {
         ) : (
           <div
             className={`mt-6 rounded-2xl border p-5 ${
-              isDailyLimitReached ? "border-red-200 bg-red-50" : "border-gray-300 bg-white"
+              isDailyLimitReached
+                ? "border-red-200 bg-red-50"
+                : "border-gray-300 bg-white"
             }`}
           >
-            <p className={`text-sm ${isDailyLimitReached ? "text-red-700" : "text-gray-500"}`}>
+            <p
+              className={`text-sm ${
+                isDailyLimitReached ? "text-red-700" : "text-gray-500"
+              }`}
+            >
               {isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : "선택한 조건에 맞는 문제가 없습니다."}
