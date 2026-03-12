@@ -385,16 +385,6 @@ export default function HomePage() {
     };
   }, [dashboard]);
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-white text-gray-900">
-        <div className="mx-auto max-w-3xl px-4 py-6">
-          <p className="text-sm text-gray-600">불러오는 중...</p>
-        </div>
-      </main>
-    );
-  }
-
   const userPlan = profile?.plan || "free";
   const planTheme = getPlanTheme(userPlan);
   const progressColors = getPlanProgressColors(userPlan);
@@ -490,6 +480,16 @@ export default function HomePage() {
     : stats.activeDays7 <= 2
       ? "루틴은 짧게라도 이어가는 게 중요해요."
       : "좋아요. 최근 루틴이 조금씩 이어지고 있어요.";
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-white text-gray-900">
+        <div className="mx-auto max-w-3xl px-4 py-6">
+          <p className="text-sm text-gray-600">불러오는 중...</p>
+        </div>
+      </main>
+    );
+  }
 
   if (errorMsg === "로그인이 필요합니다.") {
     return null;
@@ -700,8 +700,9 @@ export default function HomePage() {
                     }
                   />
                   <p
-                    className={`mt-3 text-sm ${isToday ? "font-semibold text-gray-900" : "text-gray-500"
-                      }`}
+                    className={`mt-3 text-sm ${
+                      isToday ? "font-semibold text-gray-900" : "text-gray-500"
+                    }`}
                   >
                     {day.label}
                   </p>
@@ -861,8 +862,9 @@ export default function HomePage() {
                     <div className="flex min-h-[56px] flex-col justify-center">
                       <p className="text-base font-semibold">{routine.title}</p>
                       <p
-                        className={`mt-1 text-sm leading-6 ${isPrimary ? "text-gray-200" : "text-gray-600"
-                          }`}
+                        className={`mt-1 text-sm leading-6 ${
+                          isPrimary ? "text-gray-200" : "text-gray-600"
+                        }`}
                       >
                         {routine.desc}
                       </p>
