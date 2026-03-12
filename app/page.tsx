@@ -550,19 +550,6 @@ export default function HomePage() {
     return "방금 보던 학습 흐름으로 바로 돌아갑니다.";
   }, [nextHref]);
 
-  const studyCardCount = [canWord, canKanji, canKatsuyou, canTalk].filter(
-    Boolean
-  ).length;
-
-  const studyGridClass =
-    studyCardCount <= 1
-      ? "mt-10 grid grid-cols-1 gap-4"
-      : studyCardCount === 2
-        ? "mt-10 grid grid-cols-2 gap-4"
-        : studyCardCount === 3
-          ? "mt-10 grid grid-cols-2 gap-4 lg:grid-cols-3"
-          : "mt-10 grid grid-cols-2 gap-4 xl:grid-cols-4";
-
   if (loading) {
     return (
       <main className="min-h-screen bg-white text-gray-900">
@@ -712,30 +699,6 @@ export default function HomePage() {
               </div>
 
               <div className="rounded-2xl border border-gray-200 bg-white p-4">
-                <p className="text-xs font-semibold text-gray-500">오늘 목표</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">
-                  {stats.goalPercent}%
-                </p>
-                <p className="mt-1 text-sm text-gray-600">
-                  {stats.todayCount}세트 / 목표 {goalSets}세트
-                </p>
-
-                <div className="mt-3 h-2 rounded-full bg-gray-100">
-                  <div
-                    className="h-2 rounded-full transition-all"
-                    style={{
-                      width: `${stats.goalPercent}%`,
-                      backgroundColor: progressColors.main,
-                    }}
-                  />
-                </div>
-
-                <div className="mt-4 inline-flex rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  🔥 연속 학습 {stats.streak}일
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs font-semibold text-gray-500">세부 점수</p>
 
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -777,6 +740,29 @@ export default function HomePage() {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 grid grid-cols-1 gap-6">
+          <div className="flex flex-col items-center">
+            <div
+              className="flex h-44 w-44 items-center justify-center rounded-full shadow-sm"
+              style={{
+                background: `conic-gradient(${progressColors.main} ${
+                  (stats.goalPercent / 100) * 360
+                }deg, ${progressColors.rest} 0deg)`,
+              }}
+            >
+              <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
+                <p className="text-3xl font-bold">{stats.goalPercent}%</p>
+                <p className="mt-1 text-sm text-gray-600">오늘 목표</p>
+                <p className="mt-1 text-xs text-gray-500">{goalSets}세트 기준</p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-full border border-gray-200 bg-white px-5 py-2 text-lg font-semibold">
+              🔥 {stats.streak}일
             </div>
           </div>
         </div>
@@ -825,7 +811,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className={studyGridClass}>
+        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
           {canWord ? (
             <div className="flex h-full flex-col rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-6 transition hover:shadow-md">
               <div className="flex items-start justify-between gap-3">
