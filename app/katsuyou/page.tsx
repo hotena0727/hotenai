@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { hasSeenHomeToday } from "@/lib/home-gate";
 import { supabase } from "@/lib/supabase";
 import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type {
@@ -66,6 +68,9 @@ const PRO_UPGRADE_URL = "/pro";
 const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 
 export default function KatsuyouPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [reviewMode, setReviewMode] = useState(false);
   const [reviewQids, setReviewQids] = useState<string[]>([]);
   const [reviewPos, setReviewPos] = useState("");
@@ -103,6 +108,14 @@ export default function KatsuyouPage() {
   const [limitMessage, setLimitMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasSeenHomeToday()) {
+      const fullNext = `${pathname || "/katsuyou"}${window.location.search || ""}`;
+      router.replace(`/?next=${encodeURIComponent(fullNext)}`);
+    }
+  }, [router, pathname]);
+
   const wrongItems = questions
     .map((q, idx) => ({
       question: q,
@@ -111,7 +124,8 @@ export default function KatsuyouPage() {
     }))
     .filter((item) => submitted && item.selected !== item.question.correct_text);
 
-  const isPerfect = submitted && questions.length > 0 && score === questions.length;
+  const isPerfect =
+    submitted && questions.length > 0 && score === questions.length;
 
   const isDailyLimitReached =
     !isPaidPlan(userPlan) && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
@@ -632,7 +646,7 @@ export default function KatsuyouPage() {
         ) : null}
 
         <div className="mt-8">
-          <p className="text-base sm:text-lg font-semibold text-gray-700">✅ 품사를 선택하세요</p>
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">✅ 품사를 선택하세요</p>
           <div className="mt-3 grid grid-cols-3 gap-3">
             {POS_OPTIONS.map((item) => {
               const active = selectedPos === item.value;
@@ -655,7 +669,7 @@ export default function KatsuyouPage() {
         </div>
 
         <div className="mt-6">
-          <p className="text-base sm:text-lg font-semibold text-gray-700">✅ 방향을 선택하세요</p>
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">✅ 방향을 선택하세요</p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {QTYPE_OPTIONS.map((item) => {
               const active = selectedQType === item.value;
