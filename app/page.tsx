@@ -818,8 +818,8 @@ export default function HomePage() {
                       active
                         ? isToday
                           ? "h-6 rounded-full border border-blue-400 bg-blue-300"
-                            ? "h-6 rounded-full border border-blue-200 bg-blue-100"
-                            : "h-6 rounded-full border border-gray-300 bg-white"
+                          : "h-6 rounded-full border border-blue-200 bg-blue-100"
+                        : "h-6 rounded-full border border-gray-300 bg-white"
                     }
                   />
                   <p className="mt-3 text-sm text-gray-500">{day.label}</p>
@@ -877,229 +877,229 @@ export default function HomePage() {
                 </div>
                 <a
                   href="/word"
-                  className="shrink-0 rounded-2xl border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-gray-800"y-800"
+                  className="shrink-0 rounded-2xl border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-gray-800" y-800"
                 >
-                  단어 시작
-                </a>
-              </div>
+                단어 시작
+              </a>
+            </div>
             </div>
           ) : null}
 
-          {canKanji ? (
-            <div className="rounded-3xl border border-green-200 bg-gradient-to-r from-green-50 to-white p-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-2xl font-bold">🈯 한자</p>
-                  <p className="mt-2 text-sm text-gray-600">
-                    레벨별 한자 문제를 풀며 읽기와 뜻을 익혀보세요.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold">{stats.kanjiCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-end justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">평균 점수</p>
-                  <p className="mt-1 text-2xl font-bold">{stats.kanjiAvg}%</p>
-                </div>
-                <a
-                  href="/kanji"
-                  className="rounded-2xl border border-green-200 bg-white px-4 py-2 text-sm text-gray-800"
-                >
-                  한자 시작
-                </a>
-              </div>
-            </div>
-          ) : null}
-
-          {canKatsuyou ? (
-            <div className="rounded-3xl border border-rose-200 bg-gradient-to-r from-rose-50 to-white p-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-2xl font-bold">🔄 활용</p>
-                  <p className="mt-2 text-sm text-gray-600">
-                    い형용사·な형용사·동사의 기본형을 문제로 익혀보세요.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold">{stats.katsuyouCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-end justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">평균 점수</p>
-                  <p className="mt-1 text-2xl font-bold">
-                    {stats.katsuyouAvg}%
-                  </p>
-                </div>
-                <a
-                  href="/katsuyou"
-                  className="rounded-2xl border border-rose-200 bg-white px-4 py-2 text-sm text-gray-800"
-                >
-                  활용 시작
-                </a>
-              </div>
-            </div>
-          ) : null}
-
-          {canTalk ? (
-            <div className="rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-50 to-white p-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-2xl font-bold">🗣️ 회화</p>
-                  <p className="mt-2 text-sm text-gray-600">
-                    실제 대화형 문제로 말문을 자연스럽게 열어보세요.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold">{stats.talkCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-end justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">평균 점수</p>
-                  <p className="mt-1 text-2xl font-bold">{stats.talkAvg}%</p>
-                </div>
-                <a
-                  href="/talk"
-                  className="rounded-2xl border border-purple-200 bg-white px-4 py-2 text-sm text-gray-800"
-                >
-                  회화 시작
-                </a>
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        {recommendedMainHref || recommendedWrongHref ? (
-          <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
-            <p className="text-lg font-semibold">오늘의 추천 루틴</p>
-            <p className="mt-2 text-sm text-gray-600">
-              오늘 목표 달성에 가장 가볍게 이어가기 좋은 루틴부터 시작해보세요.
-            </p>
-
-            <div className="mt-5 rounded-2xl border border-gray-200 p-4">
-              <p className="text-base font-medium">{recommendationText}</p>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {recommendedMainHref && recommendedMainLabel ? (
-                <a
-                  href={recommendedMainHref}
-                  className="rounded-2xl bg-gray-900 px-5 py-4 text-center text-base font-semibold text-white"
-                >
-                  {recommendedMainLabel}
-                </a>
-              ) : null}
-
-              {recommendedWrongHref && recommendedWrongLabel ? (
-                <a
-                  href={recommendedWrongHref}
-                  className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
-                >
-                  {recommendedWrongLabel}
-                </a>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-
-        {showCoursesSection ? (
-          <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+        {canKanji ? (
+          <div className="rounded-3xl border border-green-200 bg-gradient-to-r from-green-50 to-white p-6">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-lg font-semibold">강의 카탈로그</p>
+                <p className="text-2xl font-bold">🈯 한자</p>
                 <p className="mt-2 text-sm text-gray-600">
-                  지금 열려 있는 강의를 한눈에 보고, 원하는 강의를 골라
-                  들어가 보세요.
+                  레벨별 한자 문제를 풀며 읽기와 뜻을 익혀보세요.
                 </p>
               </div>
-
-              <a
-                href="/courses"
-                className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
-              >
-                전체 강의 보기
-              </a>
+              <div className="text-right">
+                <p className="text-xl font-bold">{stats.kanjiCount}</p>
+                <p className="text-xs text-gray-500">학습 횟수</p>
+              </div>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-base font-medium text-gray-900">
-                입문 강의부터 패턴, 회화, 실전 강의까지 카탈로그형으로 정리해
-                두었습니다.
-              </p>
-              <p className="mt-2 text-sm text-gray-600">
-                아직 수강 등록 전이어도 어떤 강의가 있는지 먼저 둘러볼 수
-                있습니다.
-              </p>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="mt-5 flex items-end justify-between">
+              <div>
+                <p className="text-sm text-gray-500">평균 점수</p>
+                <p className="mt-1 text-2xl font-bold">{stats.kanjiAvg}%</p>
+              </div>
               <a
-                href="/courses"
-                className="rounded-2xl bg-black px-5 py-4 text-center text-base font-semibold text-white"
+                href="/kanji"
+                className="rounded-2xl border border-green-200 bg-white px-4 py-2 text-sm text-gray-800"
               >
-                📚 강의 카탈로그 보기
-              </a>
-              <a
-                href="/classroom"
-                className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
-              >
-                🎓 나의 강의실로 이동
+                한자 시작
               </a>
             </div>
           </div>
         ) : null}
 
-        {canMyPage ? (
-          <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+        {canKatsuyou ? (
+          <div className="rounded-3xl border border-rose-200 bg-gradient-to-r from-rose-50 to-white p-6">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-lg font-semibold">최근 학습 요약</p>
+                <p className="text-2xl font-bold">🔄 활용</p>
                 <p className="mt-2 text-sm text-gray-600">
-                  최근 저장된 학습 결과를 빠르게 확인하세요.
+                  い형용사·な형용사·동사의 기본형을 문제로 익혀보세요.
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xl font-bold">{stats.katsuyouCount}</p>
+                <p className="text-xs text-gray-500">학습 횟수</p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-end justify-between">
+              <div>
+                <p className="text-sm text-gray-500">평균 점수</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {stats.katsuyouAvg}%
                 </p>
               </div>
               <a
-                href="/mypage"
-                className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+                href="/katsuyou"
+                className="rounded-2xl border border-rose-200 bg-white px-4 py-2 text-sm text-gray-800"
               >
-                MY 보기
+                활용 시작
               </a>
             </div>
+          </div>
+        ) : null}
 
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-2xl border border-gray-200 p-4">
-                <p className="text-xs text-gray-500">총 학습 횟수</p>
-                <p className="mt-2 text-2xl font-bold">
-                  {stats.totalAttempts}
+        {canTalk ? (
+          <div className="rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-50 to-white p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-2xl font-bold">🗣️ 회화</p>
+                <p className="mt-2 text-sm text-gray-600">
+                  실제 대화형 문제로 말문을 자연스럽게 열어보세요.
                 </p>
               </div>
-              <div className="rounded-2xl border border-gray-200 p-4">
-                <p className="text-xs text-gray-500">총 오답 수</p>
-                <p className="mt-2 text-2xl font-bold">{stats.totalWrong}</p>
+              <div className="text-right">
+                <p className="text-xl font-bold">{stats.talkCount}</p>
+                <p className="text-xs text-gray-500">학습 횟수</p>
               </div>
-              <div className="rounded-2xl border border-gray-200 p-4">
-                <p className="text-xs text-gray-500">단어 + 한자 + 활용</p>
-                <p className="mt-2 text-2xl font-bold">
-                  {stats.wordCount + stats.kanjiCount + stats.katsuyouCount}
-                </p>
+            </div>
+
+            <div className="mt-5 flex items-end justify-between">
+              <div>
+                <p className="text-sm text-gray-500">평균 점수</p>
+                <p className="mt-1 text-2xl font-bold">{stats.talkAvg}%</p>
               </div>
-              <div className="rounded-2xl border border-gray-200 p-4">
-                <p className="text-xs text-gray-500">회화</p>
-                <p className="mt-2 text-2xl font-bold">{stats.talkCount}</p>
-              </div>
+              <a
+                href="/talk"
+                className="rounded-2xl border border-purple-200 bg-white px-4 py-2 text-sm text-gray-800"
+              >
+                회화 시작
+              </a>
             </div>
           </div>
         ) : null}
       </div>
-    </main>
+
+      {recommendedMainHref || recommendedWrongHref ? (
+        <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
+          <p className="text-lg font-semibold">오늘의 추천 루틴</p>
+          <p className="mt-2 text-sm text-gray-600">
+            오늘 목표 달성에 가장 가볍게 이어가기 좋은 루틴부터 시작해보세요.
+          </p>
+
+          <div className="mt-5 rounded-2xl border border-gray-200 p-4">
+            <p className="text-base font-medium">{recommendationText}</p>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {recommendedMainHref && recommendedMainLabel ? (
+              <a
+                href={recommendedMainHref}
+                className="rounded-2xl bg-gray-900 px-5 py-4 text-center text-base font-semibold text-white"
+              >
+                {recommendedMainLabel}
+              </a>
+            ) : null}
+
+            {recommendedWrongHref && recommendedWrongLabel ? (
+              <a
+                href={recommendedWrongHref}
+                className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
+              >
+                {recommendedWrongLabel}
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {showCoursesSection ? (
+        <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-lg font-semibold">강의 카탈로그</p>
+              <p className="mt-2 text-sm text-gray-600">
+                지금 열려 있는 강의를 한눈에 보고, 원하는 강의를 골라
+                들어가 보세요.
+              </p>
+            </div>
+
+            <a
+              href="/courses"
+              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+            >
+              전체 강의 보기
+            </a>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <p className="text-base font-medium text-gray-900">
+              입문 강의부터 패턴, 회화, 실전 강의까지 카탈로그형으로 정리해
+              두었습니다.
+            </p>
+            <p className="mt-2 text-sm text-gray-600">
+              아직 수강 등록 전이어도 어떤 강의가 있는지 먼저 둘러볼 수
+              있습니다.
+            </p>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <a
+              href="/courses"
+              className="rounded-2xl bg-black px-5 py-4 text-center text-base font-semibold text-white"
+            >
+              📚 강의 카탈로그 보기
+            </a>
+            <a
+              href="/classroom"
+              className="rounded-2xl border border-gray-300 px-5 py-4 text-center text-base font-semibold text-gray-900"
+            >
+              🎓 나의 강의실로 이동
+            </a>
+          </div>
+        </div>
+      ) : null}
+
+      {canMyPage ? (
+        <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-semibold">최근 학습 요약</p>
+              <p className="mt-2 text-sm text-gray-600">
+                최근 저장된 학습 결과를 빠르게 확인하세요.
+              </p>
+            </div>
+            <a
+              href="/mypage"
+              className="rounded-2xl border border-gray-300 px-4 py-2 text-sm text-gray-800"
+            >
+              MY 보기
+            </a>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500">총 학습 횟수</p>
+              <p className="mt-2 text-2xl font-bold">
+                {stats.totalAttempts}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500">총 오답 수</p>
+              <p className="mt-2 text-2xl font-bold">{stats.totalWrong}</p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500">단어 + 한자 + 활용</p>
+              <p className="mt-2 text-2xl font-bold">
+                {stats.wordCount + stats.kanjiCount + stats.katsuyouCount}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500">회화</p>
+              <p className="mt-2 text-2xl font-bold">{stats.talkCount}</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+    </main >
   );
 }
