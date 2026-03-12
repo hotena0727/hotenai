@@ -98,7 +98,10 @@ function calcAvg(
 
 function getTodayMessage(totalAttempts: number, totalWrong: number) {
   if (totalAttempts === 0) {
-    return "오늘의 첫 루틴부터 가볍게 시작해봅시다.";
+    return "아직 학습 기록이 없어요. 오늘 첫 루틴부터 가볍게 시작해봅시다.";
+  }
+  if (totalAttempts < 5) {
+    return "좋아요. 데이터가 조금씩 쌓이고 있어요. 오늘 한 세트만 더 해볼까요?";
   }
   if (totalWrong === 0) {
     return "좋아요. 오늘 흐름이 아주 좋습니다.";
@@ -599,57 +602,87 @@ export default function HomePage() {
     menuSettings.show_mypage
   );
 
+  const isEmptyUser = stats.totalAttempts === 0;
+  const isLightDataUser = stats.totalAttempts > 0 && stats.totalAttempts < 5;
+  const isDormantWeek = stats.activeDays7 === 0;
+
+  const untouchedAreas: string[] = [];
+  if (canWord && stats.wordCount === 0) untouchedAreas.push("단어");
+  if (canKanji && stats.kanjiCount === 0) untouchedAreas.push("한자");
+  if (canKatsuyou && stats.katsuyouCount === 0) untouchedAreas.push("활용");
+  if (canTalk && stats.talkCount === 0) untouchedAreas.push("회화");
+
   const weakest = balanceSummary.weaknesses[0] || "";
 
   const recommendedMainHref =
-    weakest === "회화" && canTalk
-      ? "/talk"
-      : weakest === "단어" && canWord
+    isEmptyUser
+      ? canWord
         ? "/word"
-        : weakest === "한자" && canKanji
-          ? "/kanji"
-          : weakest === "활용" && canKatsuyou
-            ? "/katsuyou"
-            : weakest === "복습" && canMyPage
-              ? canTalk
-                ? "/mypage/wrong-talk"
-                : canWord
-                  ? "/mypage/wrong-word"
-                  : canKanji
-                    ? "/mypage/wrong-kanji"
-                    : canKatsuyou
-                      ? "/mypage/wrong-katsuyou"
-                      : null
-              : canTalk
-                ? "/talk"
-                : canWord
-                  ? "/word"
-                  : canKanji
-                    ? "/kanji"
-                    : canKatsuyou
-                      ? "/katsuyou"
-                      : null;
+        : canTalk
+          ? "/talk"
+          : canKanji
+            ? "/kanji"
+            : canKatsuyou
+              ? "/katsuyou"
+              : null
+      : weakest === "회화" && canTalk
+        ? "/talk"
+        : weakest === "단어" && canWord
+          ? "/word"
+          : weakest === "한자" && canKanji
+            ? "/kanji"
+            : weakest === "활용" && canKatsuyou
+              ? "/katsuyou"
+              : weakest === "복습" && canMyPage
+                ? canTalk
+                  ? "/mypage/wrong-talk"
+                  : canWord
+                    ? "/mypage/wrong-word"
+                    : canKanji
+                      ? "/mypage/wrong-kanji"
+                      : canKatsuyou
+                        ? "/mypage/wrong-katsuyou"
+                        : null
+                : canTalk
+                  ? "/talk"
+                  : canWord
+                    ? "/word"
+                    : canKanji
+                      ? "/kanji"
+                      : canKatsuyou
+                        ? "/katsuyou"
+                        : null;
 
   const recommendedMainLabel =
-    weakest === "회화" && canTalk
-      ? "🗣️ 회화 시작"
-      : weakest === "단어" && canWord
-        ? "📝 단어 시작"
-        : weakest === "한자" && canKanji
-          ? "🈯 한자 시작"
-          : weakest === "활용" && canKatsuyou
-            ? "🔄 활용 시작"
-            : weakest === "복습" && canMyPage
-              ? "↪️ 오답 복습"
-              : canTalk
-                ? "🗣️ 회화 시작"
-                : canWord
-                  ? "📝 단어 시작"
-                  : canKanji
-                    ? "🈯 한자 시작"
-                    : canKatsuyou
-                      ? "🔄 활용 시작"
-                      : null;
+    isEmptyUser
+      ? canWord
+        ? "📝 첫 단어 루틴"
+        : canTalk
+          ? "🗣️ 첫 회화 루틴"
+          : canKanji
+            ? "🈯 첫 한자 루틴"
+            : canKatsuyou
+              ? "🔄 첫 활용 루틴"
+              : null
+      : weakest === "회화" && canTalk
+        ? "🗣️ 회화 시작"
+        : weakest === "단어" && canWord
+          ? "📝 단어 시작"
+          : weakest === "한자" && canKanji
+            ? "🈯 한자 시작"
+            : weakest === "활용" && canKatsuyou
+              ? "🔄 활용 시작"
+              : weakest === "복습" && canMyPage
+                ? "↪️ 오답 복습"
+                : canTalk
+                  ? "🗣️ 회화 시작"
+                  : canWord
+                    ? "📝 단어 시작"
+                    : canKanji
+                      ? "🈯 한자 시작"
+                      : canKatsuyou
+                        ? "🔄 활용 시작"
+                        : null;
 
   const recommendedWrongHref = canMyPage
     ? canTalk
@@ -675,21 +708,53 @@ export default function HomePage() {
             : null;
 
   const recommendationText =
-    stats.goalPercent >= 100
-      ? "오늘 목표 달성! 내일도 1세트부터 가볍게 이어가요."
-      : weakest === "회화"
-        ? "오늘은 회화 1세트로 말문부터 가볍게 열어보세요."
-        : weakest === "활용"
-          ? "오늘은 활용 1세트로 문장 감각을 채워보세요."
-          : weakest === "한자"
-            ? "오늘은 한자 1세트로 읽기 감각을 보강해보세요."
-            : weakest === "단어"
-              ? "오늘은 단어 1세트로 기본 어휘를 단단히 다져보세요."
-              : weakest === "복습"
-                ? "오늘은 오답 복습부터 먼저 해보면 밸런스가 더 좋아집니다."
-                : weakest === "꾸준함"
-                  ? "오늘은 짧게라도 한 세트부터 시작해서 흐름을 이어가보세요."
-                  : "오늘은 짧게라도 한 세트부터 시작해보세요.";
+    isEmptyUser
+      ? "아직 학습 기록이 없어요. 오늘은 첫 루틴 하나만 가볍게 시작해보세요."
+      : stats.goalPercent >= 100
+        ? "오늘 목표 달성! 내일도 1세트부터 가볍게 이어가요."
+        : weakest === "회화"
+          ? "오늘은 회화 1세트로 말문부터 가볍게 열어보세요."
+          : weakest === "활용"
+            ? "오늘은 활용 1세트로 문장 감각을 채워보세요."
+            : weakest === "한자"
+              ? "오늘은 한자 1세트로 읽기 감각을 보강해보세요."
+              : weakest === "단어"
+                ? "오늘은 단어 1세트로 기본 어휘를 단단히 다져보세요."
+                : weakest === "복습"
+                  ? "오늘은 오답 복습부터 먼저 해보면 밸런스가 더 좋아집니다."
+                  : weakest === "꾸준함"
+                    ? "오늘은 짧게라도 한 세트부터 시작해서 흐름을 이어가보세요."
+                    : "오늘은 단어 또는 회화 중 편한 루틴부터 가볍게 시작해보세요.";
+
+  const balanceSupportText = isEmptyUser
+    ? "아직 학습 기록이 없어요. 단어, 한자, 회화 중 하나부터 시작하면 밸런스가 채워집니다."
+    : isLightDataUser
+      ? untouchedAreas.length > 0
+        ? `${untouchedAreas.join(", ")} 영역의 데이터가 아직 적어요. 몇 세트만 더 쌓이면 밸런스가 더 정확해집니다.`
+        : "아직 데이터가 많지 않아요. 몇 세트만 더 쌓이면 밸런스가 더 정확해집니다."
+      : `${balanceSummary.weaknesses.join(", ")} 영역을 조금 더 보강하면 전체 흐름이 더 단단해집니다.`;
+
+  const strengthLabel = isEmptyUser ? "시작 전" : "강점";
+  const strengthValue = isEmptyUser
+    ? "첫 루틴을 시작해보세요"
+    : balanceSummary.strengths.join(", ");
+
+  const weaknessLabel = isEmptyUser ? "추천 시작" : "보완";
+  const weaknessValue = isEmptyUser
+    ? canWord
+      ? "단어, 회화"
+      : canTalk
+        ? "회화, 한자"
+        : "가벼운 루틴부터"
+    : isLightDataUser && untouchedAreas.length > 0
+      ? untouchedAreas.slice(0, 2).join(", ")
+      : balanceSummary.weaknesses.join(", ");
+
+  const weeklySupportText = isDormantWeek
+    ? "이번 주는 아직 조용하네요. 오늘 한 세트부터 다시 시작해볼까요?"
+    : stats.activeDays7 <= 2
+      ? "루틴은 짧게라도 이어가는 게 중요해요."
+      : "좋아요. 최근 루틴이 조금씩 이어지고 있어요.";
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
@@ -763,16 +828,20 @@ export default function HomePage() {
             <div className="flex flex-col gap-3 sm:gap-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                  <p className="text-xs font-semibold text-emerald-700">강점</p>
+                  <p className="text-xs font-semibold text-emerald-700">
+                    {strengthLabel}
+                  </p>
                   <p className="mt-1 text-base font-bold leading-6 text-gray-900">
-                    {balanceSummary.strengths.join(", ")}
+                    {strengthValue}
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-xs font-semibold text-amber-700">보완</p>
+                  <p className="text-xs font-semibold text-amber-700">
+                    {weaknessLabel}
+                  </p>
                   <p className="mt-1 text-base font-bold leading-6 text-gray-900">
-                    {balanceSummary.weaknesses.join(", ")}
+                    {weaknessValue}
                   </p>
                 </div>
               </div>
@@ -782,8 +851,7 @@ export default function HomePage() {
                   오늘의 한 줄 진단
                 </p>
                 <p className="mt-1 text-sm leading-6 text-gray-700">
-                  {balanceSummary.weaknesses.join(", ")} 영역을 조금 더 보강하면
-                  전체 흐름이 더 단단해집니다.
+                  {balanceSupportText}
                 </p>
               </div>
 
@@ -892,6 +960,10 @@ export default function HomePage() {
                 </div>
               );
             })}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            {weeklySupportText}
           </div>
         </div>
 
