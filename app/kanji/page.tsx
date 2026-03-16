@@ -1,7 +1,9 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/app/types/kanji";
@@ -51,15 +53,12 @@ const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 export default function KanjiPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
-  const isReviewMode = searchParams.get("review") === "1";
-  const reviewQids = (searchParams.get("qids") || "")
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-  const reviewQtype = (searchParams.get("qtype") || "").trim();
-  const reviewLevel = (searchParams.get("level") || "").trim().toUpperCase();
+  const [reviewReady, setReviewReady] = useState(false);
+  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [reviewQids, setReviewQids] = useState<string[]>([]);
+  const [reviewQtype, setReviewQtype] = useState("");
+  const [reviewLevel, setReviewLevel] = useState("");
 
   const [rows, setRows] = useState<KanjiRow[]>([]);
   const [questions, setQuestions] = useState<KanjiQuestion[]>([]);
@@ -102,6 +101,25 @@ export default function KanjiPage() {
     }
   }, [router, pathname]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const review = params.get("review") === "1";
+    const qids = (params.get("qids") || "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    const qtype = (params.get("qtype") || "").trim();
+    const level = (params.get("level") || "").trim().toUpperCase();
+
+    setIsReviewMode(review);
+    setReviewQids(qids);
+    setReviewQtype(qtype);
+    setReviewLevel(level);
+    setReviewReady(true);
+  }, []);
+
   const wrongItems = questions
     .map((q, idx) => ({
       question: q,
@@ -138,12 +156,14 @@ export default function KanjiPage() {
       audio.preload = "auto";
       audio.volume = 1;
       audio.onended = () => {
-        if (activeSfxAudioRef.current === audio)
+        if (activeSfxAudioRef.current === audio) {
           activeSfxAudioRef.current = null;
+        }
       };
       audio.onerror = () => {
-        if (activeSfxAudioRef.current === audio)
+        if (activeSfxAudioRef.current === audio) {
           activeSfxAudioRef.current = null;
+        }
       };
 
       activeSfxAudioRef.current = audio;
@@ -181,10 +201,12 @@ export default function KanjiPage() {
       const itemKey = String((row as { item_key?: string }).item_key || "").trim();
       const itemKeyOk = itemKey ? qidSet.has(itemKey) : false;
       const jpWordOk = qidSet.has(String(row.jp_word || "").trim());
-      const qtypeOk =
-        !reviewQtype || reviewQtype === String((row as { qtype?: string }).qtype || "").trim();
-      const levelOk =
-        !reviewLevel || reviewLevel === String(row.level || "").trim().toUpperCase();
+
+      const rowQtype = String((row as { qtype?: string }).qtype || "").trim();
+      const qtypeOk = !reviewQtype || reviewQtype === rowQtype;
+
+      const rowLevel = String(row.level || "").trim().toUpperCase();
+      const levelOk = !reviewLevel || reviewLevel === rowLevel;
 
       return (itemKeyOk || jpWordOk) && qtypeOk && levelOk;
     });
@@ -425,6 +447,7 @@ export default function KanjiPage() {
   };
 
   useEffect(() => {
+    if (!reviewReady) return;
     if (loading || rows.length === 0) return;
 
     if (!didAutoCreateRef.current) {
@@ -433,7 +456,16 @@ export default function KanjiPage() {
 
     generateQuiz();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, rows, selectedLevel, selectedQType, isReviewMode, reviewRows, reviewQtype]);
+  }, [
+    reviewReady,
+    loading,
+    rows,
+    selectedLevel,
+    selectedQType,
+    isReviewMode,
+    reviewRows,
+    reviewQtype,
+  ]);
 
   const makeNewQuiz = () => {
     if (isReviewMode) {
@@ -531,6 +563,7 @@ export default function KanjiPage() {
     nextScore: number;
   }) => {
     if (currentQuestions.length === 0) return;
+
     try {
       setSaving(true);
       setSaveMessage("결과 저장 중...");
@@ -594,7 +627,7 @@ export default function KanjiPage() {
     }
   };
 
-  if (loading) {
+  if (loading || !reviewReady) {
     return (
       <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
         <div className="mx-auto max-w-3xl">
@@ -774,6 +807,7 @@ export default function KanjiPage() {
                   ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
                   : "🔄 새문제(랜덤 10문항)"}
             </button>
+
             <button
               type="button"
               onClick={resetExcludedWords}
@@ -902,12 +936,14 @@ export default function KanjiPage() {
                         >
                           {isRight ? "정답입니다." : "오답입니다."}
                         </p>
+
                         <p className="mt-2 text-sm text-gray-700">
                           정답:{" "}
                           <span lang="ja" style={JA_FONT_STYLE}>
                             {correct}
                           </span>
                         </p>
+
                         <p className="mt-1 text-sm text-gray-700">
                           단어:{" "}
                           <span lang="ja" style={JA_FONT_STYLE}>
@@ -919,6 +955,7 @@ export default function KanjiPage() {
                           </span>{" "}
                           / 뜻: {q.meaning}
                         </p>
+
                         <p className="mt-1 text-sm text-gray-700">
                           레벨: {q.level} / 유형: {qtypeLabel(q.qtype)}
                         </p>
