@@ -32,6 +32,7 @@ export async function loadTalkRows(): Promise<TalkCsvRow[]> {
       partner_mp3: clean(row.partner_mp3),
       partner_kr: clean(row.partner_kr),
       answer_jp: clean(row.answer_jp),
+      answer_yomi: clean(row.answer_yomi),
       answer_mp3: clean(row.answer_mp3),
       answer_kr: clean(row.answer_kr),
       d1_jp: clean(row.d1_jp),

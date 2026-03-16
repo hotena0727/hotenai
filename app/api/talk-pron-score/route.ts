@@ -253,6 +253,7 @@ export async function POST(req: Request) {
     const form = await req.formData();
     const inputFile = form.get("file");
     const answerJp = String(form.get("answer_jp") || "").trim();
+    const answerYomi = String(form.get("answer_yomi") || "").trim();
 
     if (
       !inputFile ||
@@ -271,6 +272,8 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    const scoringTarget = answerYomi || answerJp;
 
     const name =
       inputFile instanceof File && inputFile.name
@@ -320,7 +323,7 @@ export async function POST(req: Request) {
     }
 
     const transcript = String(rawText || "").trim();
-    const score = similarityScore(transcript, answerJp);
+    const score = similarityScore(transcript, scoringTarget);
     const feedback = makeFeedback(score, answerJp, transcript);
 
     return Response.json({
@@ -330,11 +333,14 @@ export async function POST(req: Request) {
       model: TRANSCRIBE_MODEL,
       debug: {
         fileName: name,
-        strict_answer: normJp(answerJp),
+        answer_jp: answerJp,
+        answer_yomi: answerYomi,
+        scoring_target: scoringTarget,
+        strict_answer: normJp(scoringTarget),
         strict_transcript: normJp(transcript),
-        loose_answer: normJpLoose(answerJp),
+        loose_answer: normJpLoose(scoringTarget),
         loose_transcript: normJpLoose(transcript),
-        read_answer: toReadingLike(answerJp),
+        read_answer: toReadingLike(scoringTarget),
         read_transcript: toReadingLike(transcript),
       },
     });
@@ -344,9 +350,8 @@ export async function POST(req: Request) {
 
     return Response.json(
       {
-        error: `[서버 내부 오류] ${
-          message || "말하기 점수를 계산하지 못했습니다."
-        }`,
+        error: `[서버 내부 오류] ${message || "말하기 점수를 계산하지 못했습니다."
+          }`,
       },
       { status: 500 }
     );

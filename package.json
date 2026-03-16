@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
+    "csv-parse": "^6.1.0",
+    "csv-stringify": "^6.6.0",
     "jszip": "^3.10.1",
+    "kuromoji": "^0.1.2",
     "next": "16.1.6",
     "openai": "^6.27.0",
     "papaparse": "^5.5.3",

@@ -713,7 +713,11 @@ export default function TalkPage() {
     }
   };
 
-  const scorePronunciation = async (audioBlob: Blob, answerJp: string) => {
+  const scorePronunciation = async (
+    audioBlob: Blob,
+    answerJp: string,
+    answerYomi: string
+  ) => {
     try {
       setPronScoring(true);
       setPronChecked(false);
@@ -725,6 +729,7 @@ export default function TalkPage() {
       const form = new FormData();
       form.append("file", audioBlob, "speech.wav");
       form.append("answer_jp", answerJp);
+      form.append("answer_yomi", answerYomi);
 
       const res = await fetch("/api/talk-pron-score", {
         method: "POST",
@@ -814,7 +819,11 @@ export default function TalkPage() {
       setSpokenSentenceCount((prev) => prev + 1);
 
       if (currentQuestion?.answer_jp) {
-        await scorePronunciation(wavBlob, currentQuestion.answer_jp);
+        await scorePronunciation(
+          wavBlob,
+          currentQuestion.answer_jp,
+          currentQuestion.answer_yomi
+        );
       }
     } catch (error) {
       console.error(error);

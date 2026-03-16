@@ -10,6 +10,7 @@ export type TalkCsvRow = {
   partner_mp3: string;
   partner_kr: string;
   answer_jp: string;
+  answer_yomi: string;
   answer_mp3: string;
   answer_kr: string;
   d1_jp: string;
