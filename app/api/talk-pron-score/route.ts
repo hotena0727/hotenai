@@ -173,6 +173,8 @@ export async function POST(req: Request) {
       );
     }
 
+    const scoringTarget = answerYomi || answerJp;
+
     const name =
       inputFile instanceof File && inputFile.name
         ? inputFile.name
@@ -221,13 +223,7 @@ export async function POST(req: Request) {
     }
 
     const transcript = String(rawText || "").trim();
-
-    const scoreAgainstJp = similarityScore(transcript, answerJp);
-    const scoreAgainstYomi = answerYomi
-      ? similarityScore(transcript, answerYomi)
-      : 0;
-
-    const score = Math.max(scoreAgainstJp, scoreAgainstYomi);
+    const score = similarityScore(transcript, scoringTarget);
     const feedback = makeFeedback(score, answerJp, transcript);
 
     return Response.json({
