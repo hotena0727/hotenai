@@ -228,9 +228,6 @@ export async function POST(req: Request) {
       : 0;
 
     const score = Math.max(scoreAgainstJp, scoreAgainstYomi);
-    const pickedTarget =
-      scoreAgainstJp >= scoreAgainstYomi ? answerJp : answerYomi || answerJp;
-
     const feedback = makeFeedback(score, answerJp, transcript);
 
     return Response.json({
@@ -238,27 +235,6 @@ export async function POST(req: Request) {
       score,
       feedback,
       model: TRANSCRIBE_MODEL,
-      debug: {
-        fileName: name,
-        answer_jp: answerJp,
-        answer_yomi: answerYomi,
-
-        score_against_jp: scoreAgainstJp,
-        score_against_yomi: scoreAgainstYomi,
-        picked_target: pickedTarget,
-
-        strict_answer_jp: normJp(answerJp),
-        strict_answer_yomi: normJp(answerYomi || ""),
-        strict_transcript: normJp(transcript),
-
-        loose_answer_jp: normJpLoose(answerJp),
-        loose_answer_yomi: normJpLoose(answerYomi || ""),
-        loose_transcript: normJpLoose(transcript),
-
-        read_answer_jp: toReadingLike(answerJp),
-        read_answer_yomi: toReadingLike(answerYomi || ""),
-        read_transcript: toReadingLike(transcript),
-      },
     });
   } catch (error) {
     console.error("talk-pron-score error:", error);
