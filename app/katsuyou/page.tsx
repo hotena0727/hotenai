@@ -15,6 +15,14 @@ import { loadKatsuyouRows } from "@/lib/katsuyou-loader";
 import { buildKatsuyouQuiz } from "@/lib/katsuyou-quiz";
 import { buildKatsuyouAttemptPayload } from "@/lib/katsuyou-payload";
 import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
+import {
+  clearDailyState,
+  loadAppProgress,
+  loadDailyState,
+  saveAppProgress,
+  saveDailyState,
+  todayKST,
+} from "@/lib/progress";
 
 const POS_OPTIONS: Array<{ value: KatsuyouPos; label: string }> = [
   { value: "i_adj", label: "い형용사" },
@@ -29,6 +37,15 @@ const QTYPE_OPTIONS: Array<{ value: KatsuyouQType; label: string }> = [
 
 type AnswerMap = Record<number, string>;
 type ExcludedWordMap = Record<string, boolean>;
+
+type KatsuyouSavedSet = {
+  questions: KatsuyouQuestion[];
+  answers: AnswerMap;
+  selectedPos: KatsuyouPos;
+  selectedQType: KatsuyouQType;
+  submitted: boolean;
+  score: number;
+};
 
 function qtypeLabel(qtype: KatsuyouQType): string {
   switch (qtype) {
@@ -92,10 +109,12 @@ export default function KatsuyouPage() {
   const [excludedWords, setExcludedWords] = useState<ExcludedWordMap>({});
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(true);
+  const [dailyStateLoaded, setDailyStateLoaded] = useState(false);
 
   const [debugOpen, setDebugOpen] = useState(false);
 
   const didAutoCreateRef = useRef(false);
+  const restoringRef = useRef(false);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
   const activeSfxAudioRef = useRef<HTMLAudioElement | null>(null);
   const resultRef = useRef<HTMLDivElement | null>(null);
@@ -111,7 +130,9 @@ export default function KatsuyouPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!hasSeenHomeToday()) {
-      const fullNext = `${pathname || "/katsuyou"}${window.location.search || ""}`;
+      const fullNext = `${pathname || "/katsuyou"}${
+        window.location.search || ""
+      }`;
       router.replace(`/?next=${encodeURIComponent(fullNext)}`);
     }
   }, [router, pathname]);
@@ -145,17 +166,19 @@ export default function KatsuyouPage() {
         kind === "perfect"
           ? `${BASE_SFX_URL}/perfect.mp3`
           : kind === "correct"
-            ? `${BASE_SFX_URL}/correct.mp3`
-            : `${BASE_SFX_URL}/wrong.mp3`;
+          ? `${BASE_SFX_URL}/correct.mp3`
+          : `${BASE_SFX_URL}/wrong.mp3`;
 
       const audio = new Audio(src);
       audio.preload = "auto";
       audio.volume = 1;
       audio.onended = () => {
-        if (activeSfxAudioRef.current === audio) activeSfxAudioRef.current = null;
+        if (activeSfxAudioRef.current === audio)
+          activeSfxAudioRef.current = null;
       };
       audio.onerror = () => {
-        if (activeSfxAudioRef.current === audio) activeSfxAudioRef.current = null;
+        if (activeSfxAudioRef.current === audio)
+          activeSfxAudioRef.current = null;
       };
 
       activeSfxAudioRef.current = audio;
@@ -341,6 +364,72 @@ export default function KatsuyouPage() {
     }
   };
 
+  const persistKatsuyouSet = async (params?: {
+    nextQuestions?: KatsuyouQuestion[];
+    nextAnswers?: AnswerMap;
+    nextSubmitted?: boolean;
+    nextScore?: number;
+    nextPos?: KatsuyouPos;
+    nextQType?: KatsuyouQType;
+  }) => {
+    try {
+      const qList = params?.nextQuestions ?? questions;
+      const aMap = params?.nextAnswers ?? answers;
+      const nextSubmitted = params?.nextSubmitted ?? submitted;
+      const nextScore = params?.nextScore ?? score;
+      const nextPos = params?.nextPos ?? selectedPos;
+      const nextQType = params?.nextQType ?? selectedQType;
+
+      if (!qList.length) return;
+
+      const qids = qList
+        .map((q) => String(q.item_key || "").trim())
+        .filter(Boolean);
+
+      if (!qids.length) return;
+
+      await saveDailyState(
+        {
+          date: todayKST(),
+          key: `${nextPos}|${nextQType}|katsuyou`,
+          stage: nextPos,
+          tag: nextQType,
+          sub: "all",
+          set_qids: qids,
+          idx: 0,
+        },
+        "katsuyou"
+      );
+
+      const appProgress = await loadAppProgress("katsuyou");
+      await saveAppProgress("katsuyou", {
+        ...appProgress,
+        last_set: {
+          questions: qList,
+          answers: aMap,
+          selectedPos: nextPos,
+          selectedQType: nextQType,
+          submitted: nextSubmitted,
+          score: nextScore,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const clearKatsuyouSavedSet = async () => {
+    try {
+      await clearDailyState("katsuyou");
+      const appProgress = await loadAppProgress("katsuyou");
+      const nextProgress = { ...appProgress };
+      delete nextProgress.last_set;
+      await saveAppProgress("katsuyou", nextProgress);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const generateQuiz = () => {
     try {
       if (isDailyLimitReached) {
@@ -351,7 +440,9 @@ export default function KatsuyouPage() {
         return;
       }
 
-      const blockedWords = Object.keys(excludedWords).filter((k) => excludedWords[k]);
+      const blockedWords = Object.keys(excludedWords).filter(
+        (k) => excludedWords[k]
+      );
 
       const quiz = buildKatsuyouQuiz({
         rows,
@@ -373,6 +464,17 @@ export default function KatsuyouPage() {
       setSaveMessage("");
       setAudioError("");
       setAudioLoadingKey("");
+
+      if (!reviewMode) {
+        void persistKatsuyouSet({
+          nextQuestions: quiz,
+          nextAnswers: {},
+          nextSubmitted: false,
+          nextScore: 0,
+          nextPos: selectedPos,
+          nextQType: selectedQType,
+        });
+      }
     } catch (error) {
       console.error(error);
       setQuestions([]);
@@ -431,8 +533,71 @@ export default function KatsuyouPage() {
   };
 
   useEffect(() => {
+    const restoreKatsuyouState = async () => {
+      if (!reviewReady || loading || rows.length === 0) return;
+
+      try {
+        if (reviewMode) {
+          setDailyStateLoaded(true);
+          return;
+        }
+
+        const ds = await loadDailyState("katsuyou");
+        const appProgress = await loadAppProgress("katsuyou");
+        const lastSet = appProgress?.last_set as
+          | Partial<KatsuyouSavedSet>
+          | undefined;
+
+        if (
+          !ds ||
+          !lastSet ||
+          !Array.isArray(lastSet.questions) ||
+          lastSet.questions.length === 0
+        ) {
+          setDailyStateLoaded(true);
+          return;
+        }
+
+        restoringRef.current = true;
+
+        setSelectedPos(
+          lastSet.selectedPos === "i_adj" ||
+            lastSet.selectedPos === "na_adj" ||
+            lastSet.selectedPos === "verb"
+            ? lastSet.selectedPos
+            : "i_adj"
+        );
+
+        setSelectedQType(
+          lastSet.selectedQType === "kr2jp" ||
+            lastSet.selectedQType === "jp2kr"
+            ? lastSet.selectedQType
+            : "kr2jp"
+        );
+
+        setQuestions(lastSet.questions as KatsuyouQuestion[]);
+        setAnswers((lastSet.answers as AnswerMap) || {});
+        setSubmitted(Boolean(lastSet.submitted));
+        setScore(Number(lastSet.score || 0));
+        setSaveMessage("");
+        setAudioError("");
+        setAudioLoadingKey("");
+      } catch (error) {
+        console.error(error);
+      } finally {
+        restoringRef.current = false;
+        setDailyStateLoaded(true);
+      }
+    };
+
+    void restoreKatsuyouState();
+  }, [reviewReady, loading, rows, reviewMode]);
+
+  useEffect(() => {
     if (!reviewReady) return;
     if (loading || rows.length === 0) return;
+    if (!dailyStateLoaded) return;
+    if (restoringRef.current) return;
 
     if (!didAutoCreateRef.current) {
       didAutoCreateRef.current = true;
@@ -443,12 +608,15 @@ export default function KatsuyouPage() {
       return;
     }
 
+    if (questions.length > 0) return;
+
     generateQuiz();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     reviewReady,
     loading,
     rows,
+    dailyStateLoaded,
     selectedPos,
     selectedQType,
     reviewMode,
@@ -459,6 +627,7 @@ export default function KatsuyouPage() {
 
   const makeNewQuiz = () => {
     if (reviewMode) {
+      void clearKatsuyouSavedSet();
       window.location.href = "/katsuyou";
       return;
     }
@@ -477,10 +646,24 @@ export default function KatsuyouPage() {
 
   const handleSelectChoice = (index: number, choice: string) => {
     if (submitted) return;
-    setAnswers((prev) => ({
-      ...prev,
+
+    const nextAnswers = {
+      ...answers,
       [index]: choice,
-    }));
+    };
+
+    setAnswers(nextAnswers);
+
+    if (!reviewMode) {
+      void persistKatsuyouSet({
+        nextQuestions: questions,
+        nextAnswers,
+        nextSubmitted: false,
+        nextScore: score,
+        nextPos: selectedPos,
+        nextQType: selectedQType,
+      });
+    }
   };
 
   const handleSubmitAll = () => {
@@ -519,6 +702,17 @@ export default function KatsuyouPage() {
 
     setSubmitted(true);
 
+    if (!reviewMode) {
+      void persistKatsuyouSet({
+        nextQuestions: questions,
+        nextAnswers: answers,
+        nextSubmitted: true,
+        nextScore,
+        nextPos: selectedPos,
+        nextQType: selectedQType,
+      });
+    }
+
     void autoSaveResult({
       currentQuestions: questions,
       currentAnswers: answers,
@@ -540,6 +734,17 @@ export default function KatsuyouPage() {
     setScore(0);
     setAudioError("");
     setAudioLoadingKey("");
+
+    if (!reviewMode) {
+      void persistKatsuyouSet({
+        nextQuestions,
+        nextAnswers: {},
+        nextSubmitted: false,
+        nextScore: 0,
+        nextPos: selectedPos,
+        nextQType: selectedQType,
+      });
+    }
   };
 
   const autoSaveResult = async ({
@@ -579,7 +784,9 @@ export default function KatsuyouPage() {
         user_id: user.id,
         user_email: user.email ?? "",
         pos: selectedPos,
-        pos_mode: `활용 · ${posLabel(selectedPos)} · ${qtypeLabel(selectedQType)}`,
+        pos_mode: `활용 · ${posLabel(selectedPos)} · ${qtypeLabel(
+          selectedQType
+        )}`,
         quiz_len: currentQuestions.length,
         score: nextScore,
         wrongList,
@@ -602,6 +809,10 @@ export default function KatsuyouPage() {
         );
       }
 
+      if (!reviewMode) {
+        await clearKatsuyouSavedSet();
+      }
+
       setSaveMessage("결과가 저장되었습니다.");
     } catch (error) {
       console.error(error);
@@ -611,7 +822,7 @@ export default function KatsuyouPage() {
     }
   };
 
-  if (loading || !reviewReady) {
+  if (loading || !reviewReady || !dailyStateLoaded) {
     return (
       <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
         <div className="mx-auto max-w-3xl">
@@ -638,7 +849,9 @@ export default function KatsuyouPage() {
 
         {reviewMode ? (
           <div className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3">
-            <p className="text-sm font-semibold text-orange-700">오답 복습 모드</p>
+            <p className="text-sm font-semibold text-orange-700">
+              오답 복습 모드
+            </p>
             <p className="mt-1 text-sm text-orange-600">
               오답노트에서 선택한 활용 문제만 다시 풀고 있습니다.
             </p>
@@ -646,7 +859,9 @@ export default function KatsuyouPage() {
         ) : null}
 
         <div className="mt-8">
-          <p className="text-base font-semibold text-gray-700 sm:text-lg">✅ 품사를 선택하세요</p>
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">
+            ✅ 품사를 선택하세요
+          </p>
           <div className="mt-3 grid grid-cols-3 gap-3">
             {POS_OPTIONS.map((item) => {
               const active = selectedPos === item.value;
@@ -669,7 +884,9 @@ export default function KatsuyouPage() {
         </div>
 
         <div className="mt-6">
-          <p className="text-base font-semibold text-gray-700 sm:text-lg">✅ 방향을 선택하세요</p>
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">
+            ✅ 방향을 선택하세요
+          </p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {QTYPE_OPTIONS.map((item) => {
               const active = selectedQType === item.value;
@@ -725,10 +942,10 @@ export default function KatsuyouPage() {
                 {isPaidPlan(userPlan)
                   ? "자세한 이용 안내 보기"
                   : isDailyLimitReached
-                    ? "오늘 이용 완료"
-                    : remainingSets === 1
-                      ? "오늘 1세트 남음"
-                      : `오늘 ${remainingSets}세트 남음`}
+                  ? "오늘 이용 완료"
+                  : remainingSets === 1
+                  ? "오늘 1세트 남음"
+                  : `오늘 ${remainingSets}세트 남음`}
               </p>
             </div>
             <span
@@ -754,8 +971,8 @@ export default function KatsuyouPage() {
                 {isPaidPlan(userPlan)
                   ? "유료 플랜은 단어·한자·활용을 제한 없이 이용할 수 있습니다."
                   : isDailyLimitReached
-                    ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
-                    : `FREE는 단어·한자·활용을 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+                  ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
+                  : `FREE는 단어·한자·활용을 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
@@ -787,8 +1004,8 @@ export default function KatsuyouPage() {
               {reviewMode
                 ? "일반 활용 문제로 돌아가기"
                 : isDailyLimitReached
-                  ? "오늘 이용 완료"
-                  : "🔄 새문제(랜덤 10문항)"}
+                ? "오늘 이용 완료"
+                : "🔄 새문제(랜덤 10문항)"}
             </button>
             <button
               type="button"
@@ -807,16 +1024,23 @@ export default function KatsuyouPage() {
             className="flex w-full items-center gap-3 px-4 py-4 text-left"
           >
             <span className="text-lg">{debugOpen ? "⌄" : "›"}</span>
-            <span className="text-lg font-semibold">🔎 디버그: 품사별 단어 수</span>
+            <span className="text-lg font-semibold">
+              🔎 디버그: 품사별 단어 수
+            </span>
           </button>
 
           {debugOpen ? (
             <div className="border-t border-gray-200 px-4 py-4">
               <div className="grid grid-cols-3 gap-3 text-center">
                 {POS_OPTIONS.map((item) => (
-                  <div key={item.value} className="rounded-2xl border border-gray-200 p-4">
+                  <div
+                    key={item.value}
+                    className="rounded-2xl border border-gray-200 p-4"
+                  >
                     <p className="text-lg font-bold">{item.label}</p>
-                    <p className="mt-2 text-sm text-gray-600">{posCounts[item.value]}개</p>
+                    <p className="mt-2 text-sm text-gray-600">
+                      {posCounts[item.value]}개
+                    </p>
                   </div>
                 ))}
               </div>
@@ -826,7 +1050,9 @@ export default function KatsuyouPage() {
 
         {!isDailyLimitReached && questions.length > 0 ? (
           <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
-            {audioError ? <p className="mb-4 text-sm text-red-500">{audioError}</p> : null}
+            {audioError ? (
+              <p className="mb-4 text-sm text-red-500">{audioError}</p>
+            ) : null}
 
             <div className="space-y-8">
               {questions.map((q, idx) => {
@@ -852,7 +1078,9 @@ export default function KatsuyouPage() {
                           disabled={audioLoadingKey === `q-${idx}`}
                           className="shrink-0 rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
                         >
-                          {audioLoadingKey === `q-${idx}` ? "재생 중..." : "🔊 발음 듣기"}
+                          {audioLoadingKey === `q-${idx}`
+                            ? "재생 중..."
+                            : "🔊 발음 듣기"}
                         </button>
                       ) : null}
                     </div>
@@ -861,7 +1089,8 @@ export default function KatsuyouPage() {
                       {q.choices.map((choice) => {
                         const checked = selectedChoice === choice;
                         const isCorrectChoice = submitted && choice === correct;
-                        const isWrongChoice = submitted && checked && choice !== correct;
+                        const isWrongChoice =
+                          submitted && checked && choice !== correct;
 
                         return (
                           <label
@@ -881,8 +1110,8 @@ export default function KatsuyouPage() {
                                 isCorrectChoice
                                   ? "font-semibold text-green-600"
                                   : isWrongChoice
-                                    ? "font-semibold text-red-600"
-                                    : ""
+                                  ? "font-semibold text-red-600"
+                                  : ""
                               }
                             >
                               <span lang="ja" style={JA_FONT_STYLE}>
@@ -901,8 +1130,8 @@ export default function KatsuyouPage() {
                             isRight
                               ? "text-sm font-semibold text-green-600"
                               : isWrong
-                                ? "text-sm font-semibold text-red-600"
-                                : "text-sm text-gray-500"
+                              ? "text-sm font-semibold text-red-600"
+                              : "text-sm text-gray-500"
                           }
                         >
                           {isRight ? "정답입니다." : "오답입니다."}
@@ -926,8 +1155,7 @@ export default function KatsuyouPage() {
                                 {q.reading}
                               </span>
                             </>
-                          ) : null}
-                          {" "}
+                          ) : null}{" "}
                           / 한국어: {q.kr_word}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
@@ -938,7 +1166,12 @@ export default function KatsuyouPage() {
                           <div className="mt-3">
                             <button
                               type="button"
-                              onClick={() => speakJapanese(q.reading || q.jp_word, `answer-${idx}`)}
+                              onClick={() =>
+                                speakJapanese(
+                                  q.reading || q.jp_word,
+                                  `answer-${idx}`
+                                )
+                              }
                               disabled={audioLoadingKey === `answer-${idx}`}
                               className="rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
                             >
@@ -988,21 +1221,28 @@ export default function KatsuyouPage() {
                   ) : (
                     <div className="rounded-2xl bg-yellow-50 p-4">
                       <p className="text-base font-semibold text-yellow-800">
-                        💪 괜찮아요! 틀린 문제는 성장의 재료예요. 다시 한 번 도전해봐요.
+                        💪 괜찮아요! 틀린 문제는 성장의 재료예요. 다시 한 번
+                        도전해봐요.
                       </p>
                     </div>
                   )}
 
-                  <div className="text-sm text-gray-500">🧠 오늘 최고 콤보: {score}연속</div>
+                  <div className="text-sm text-gray-500">
+                    🧠 오늘 최고 콤보: {score}연속
+                  </div>
 
                   {wrongItems.length > 0 ? (
                     <div className="mt-2">
-                      <h2 className="text-3xl font-bold text-gray-900">❌ 오답 노트</h2>
+                      <h2 className="text-3xl font-bold text-gray-900">
+                        ❌ 오답 노트
+                      </h2>
 
                       <div className="mt-4 space-y-4">
                         {wrongItems.slice(0, 3).map((item, i) => (
                           <div
-                            key={`${item.question.item_key || item.question.jp_word}-${i}`}
+                            key={`${
+                              item.question.item_key || item.question.jp_word
+                            }-${i}`}
                             className="rounded-3xl border border-gray-200 bg-white p-5"
                           >
                             <div className="flex items-start justify-between gap-3">
@@ -1014,7 +1254,8 @@ export default function KatsuyouPage() {
                                   </span>
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
-                                  {item.question.prompt} · 품사: {posLabel(item.question.pos)} · 유형:{" "}
+                                  {item.question.prompt} · 품사:{" "}
+                                  {posLabel(item.question.pos)} · 유형:{" "}
                                   {qtypeLabel(item.question.qtype)}
                                 </p>
                               </div>
@@ -1045,7 +1286,8 @@ export default function KatsuyouPage() {
                                 </p>
                               ) : null}
                               <p>
-                                <span className="font-semibold">뜻</span> {item.question.kr_word}
+                                <span className="font-semibold">뜻</span>{" "}
+                                {item.question.kr_word}
                               </p>
                             </div>
                           </div>
@@ -1066,7 +1308,9 @@ export default function KatsuyouPage() {
                       onClick={makeNewQuiz}
                       className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white sm:px-5 sm:py-4 sm:text-lg"
                     >
-                      {reviewMode ? "일반 활용 문제로 돌아가기" : "다음 10문항 시작하기"}
+                      {reviewMode
+                        ? "일반 활용 문제로 돌아가기"
+                        : "다음 10문항 시작하기"}
                     </button>
 
                     <button
@@ -1078,7 +1322,12 @@ export default function KatsuyouPage() {
                     </button>
                   </div>
 
-                  {saving ? <p className="text-sm text-gray-400">저장 중...</p> : null}
+                  {saving ? (
+                    <p className="text-sm text-gray-400">저장 중...</p>
+                  ) : null}
+                  {saveMessage ? (
+                    <p className="text-sm text-gray-500">{saveMessage}</p>
+                  ) : null}
                 </>
               )}
             </div>
@@ -1086,15 +1335,21 @@ export default function KatsuyouPage() {
         ) : (
           <div
             className={`mt-6 rounded-2xl border p-5 ${
-              isDailyLimitReached ? "border-red-200 bg-red-50" : "border-gray-300 bg-white"
+              isDailyLimitReached
+                ? "border-red-200 bg-red-50"
+                : "border-gray-300 bg-white"
             }`}
           >
-            <p className={`text-sm ${isDailyLimitReached ? "text-red-700" : "text-gray-500"}`}>
+            <p
+              className={`text-sm ${
+                isDailyLimitReached ? "text-red-700" : "text-gray-500"
+              }`}
+            >
               {isDailyLimitReached
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : reviewMode
-                  ? "선택한 오답 문제를 찾지 못했습니다."
-                  : "선택한 조건에 맞는 문제가 없습니다."}
+                ? "선택한 오답 문제를 찾지 못했습니다."
+                : "선택한 조건에 맞는 문제가 없습니다."}
             </p>
           </div>
         )}

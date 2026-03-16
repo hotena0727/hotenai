@@ -33,6 +33,7 @@ export type ProgressAll = {
   talk?: AppProgress;
   word?: AppProgress;
   kanji?: AppProgress;
+  katsuyou?: AppProgress;
   [key: string]: unknown;
 };
 
@@ -106,7 +107,7 @@ export async function saveProgressAll(
 }
 
 export async function loadAppProgress<T extends AppProgress = AppProgress>(
-  appKey: "talk" | "word" | "kanji",
+  appKey: "talk" | "word" | "kanji" | "katsuyou",
   userId?: string
 ): Promise<T> {
   const all = await loadProgressAll(userId);
@@ -118,7 +119,7 @@ export async function loadAppProgress<T extends AppProgress = AppProgress>(
 }
 
 export async function saveAppProgress(
-  appKey: "talk" | "word" | "kanji",
+  appKey: "talk" | "word" | "kanji" | "katsuyou",
   appProgress: AppProgress,
   userId?: string
 ): Promise<boolean> {
@@ -132,7 +133,10 @@ export async function saveAppProgress(
 
 export function ensureRecentTurns(turns: unknown): RecentTurn[] {
   let list = Array.isArray(turns) ? turns.filter(Boolean) : [];
-  list = list.filter((item): item is Partial<RecentTurn> => typeof item === "object" && item !== null);
+  list = list.filter(
+    (item): item is Partial<RecentTurn> =>
+      typeof item === "object" && item !== null
+  );
 
   const normalized: RecentTurn[] = list.map((item) => ({
     qid: String(item.qid || ""),
@@ -140,8 +144,7 @@ export function ensureRecentTurns(turns: unknown): RecentTurn[] {
     partner_jp: String(item.partner_jp || ""),
     selected: String(item.selected || ""),
     correct: String(item.correct || ""),
-    ok:
-      item.ok === true ? true : item.ok === false ? false : null,
+    ok: item.ok === true ? true : item.ok === false ? false : null,
   }));
 
   while (normalized.length < 2) {
@@ -152,7 +155,7 @@ export function ensureRecentTurns(turns: unknown): RecentTurn[] {
 }
 
 export async function loadRecentTurns(
-  appKey: "talk" | "word" | "kanji" = "talk",
+  appKey: "talk" | "word" | "kanji" | "katsuyou" = "talk",
   userId?: string
 ): Promise<RecentTurn[]> {
   const appProgress = await loadAppProgress(appKey, userId);
@@ -161,7 +164,7 @@ export async function loadRecentTurns(
 
 export async function saveRecentTurns(
   turns: RecentTurn[],
-  appKey: "talk" | "word" | "kanji" = "talk",
+  appKey: "talk" | "word" | "kanji" | "katsuyou" = "talk",
   userId?: string
 ): Promise<boolean> {
   const appProgress = await loadAppProgress(appKey, userId);
@@ -174,7 +177,7 @@ export async function saveRecentTurns(
 
 export async function pushRecentTurn(
   turn: Partial<RecentTurn>,
-  appKey: "talk" | "word" | "kanji" = "talk",
+  appKey: "talk" | "word" | "kanji" | "katsuyou" = "talk",
   userId?: string
 ): Promise<boolean> {
   const current = await loadRecentTurns(appKey, userId);
@@ -199,7 +202,7 @@ export function todayKST(): string {
 }
 
 export async function loadDailyState(
-  appKey: "talk" | "word" | "kanji" = "talk",
+  appKey: "talk" | "word" | "kanji" | "katsuyou" = "talk",
   userId?: string
 ): Promise<DailyState | null> {
   const appProgress = await loadAppProgress(appKey, userId);
@@ -225,7 +228,7 @@ export async function loadDailyState(
 
 export async function saveDailyState(
   state: DailyState,
-  appKey: "talk" | "word" | "kanji" = "talk",
+  appKey: "talk" | "word" | "kanji" | "katsuyou" = "talk",
   userId?: string
 ): Promise<boolean> {
   const appProgress = await loadAppProgress(appKey, userId);
@@ -244,7 +247,7 @@ export async function saveDailyState(
 }
 
 export async function clearDailyState(
-  appKey: "talk" | "word" | "kanji" = "talk",
+  appKey: "talk" | "word" | "kanji" | "katsuyou" = "talk",
   userId?: string
 ): Promise<boolean> {
   const appProgress = await loadAppProgress(appKey, userId);

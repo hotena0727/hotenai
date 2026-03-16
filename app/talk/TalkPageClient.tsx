@@ -9,8 +9,10 @@ import { supabase } from "@/lib/supabase";
 import { isPaidPlan, normalizePlan } from "@/lib/plans";
 import {
   clearDailyState,
+  loadAppProgress,
   loadDailyState,
   pushRecentTurn,
+  saveAppProgress,
   saveDailyState,
   todayKST,
 } from "@/lib/progress";
@@ -35,11 +37,11 @@ import {
 } from "@/lib/talk-usage";
 
 const QUIZ_SET_SIZE = 10;
-const BASE_AUDIO_URL = "https://hotena.com/hotena/app/mp3/";
 const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx/";
 const DAILY_TALK_LISTEN_LIMIT = 3;
 const DAILY_TALK_RECORD_LIMIT = 3;
 const UPGRADE_URL = "/pricing";
+
 let activeSfxAudio: HTMLAudioElement | null = null;
 
 type ReviewModeType = "wrong" | "random" | "old" | "mixed";
@@ -87,17 +89,6 @@ function reviewModeLabel(mode: ReviewModeType) {
     default:
       return "랜덤";
   }
-}
-
-function fakeTranscript(answer: string) {
-  return answer || "-";
-}
-
-function fakePronComment(score: number, answer: string) {
-  if (score >= 90) return `🎯 いいですね\n🗣️ ${answer} 의 발음이 또렷합니다.`;
-  if (score >= 70)
-    return `🎯 좋습니다\n🗣️ ${answer} 를 조금만 더 또박또박 말해보세요.`;
-  return `🎯 천천히 다시\n🗣️ ${answer} 를 2~3번 따라 말해보세요.`;
 }
 
 function formatSeconds(totalSeconds: number) {
@@ -164,36 +155,6 @@ function encodeWav(samples: Float32Array, sampleRate: number) {
   }
 
   return new Blob([view], { type: "audio/wav" });
-}
-
-function EmojiBox({
-  src,
-  size = "small",
-}: {
-  src: string;
-  size?: "small" | "large";
-}) {
-  const boxClass =
-    size === "small" ? "h-12 w-12 rounded-xl" : "h-20 w-20 rounded-2xl";
-
-  return (
-    <div
-      className={`${boxClass} overflow-hidden border border-gray-200 bg-white flex items-center justify-center text-2xl`}
-    >
-      {src ? (
-        <img
-          src={src}
-          alt="내 이모티콘"
-          className="h-full w-full object-cover"
-          onError={(e) => {
-            e.currentTarget.style.display = "none";
-          }}
-        />
-      ) : (
-        <span>🙂</span>
-      )}
-    </div>
-  );
 }
 
 function TitleImage({
@@ -343,6 +304,10 @@ function playSfx(kind: "correct" | "wrong" | "reward") {
   }
 }
 
+function makeCompletedSubKey(stage: string, tag: string, sub: string) {
+  return `${stage}|||${tag}|||${sub}`;
+}
+
 export default function TalkPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -405,13 +370,15 @@ export default function TalkPage() {
 
   const [dailyStateLoaded, setDailyStateLoaded] = useState(false);
   const [reviewNotice, setReviewNotice] = useState("");
+  const [finishMessage, setFinishMessage] = useState("");
+  const [completedSubsMap, setCompletedSubsMap] = useState<
+    Record<string, boolean>
+  >({});
 
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewModeType, setReviewModeType] =
     useState<ReviewModeType>("wrong");
-
-  const [myEmojiUrl] = useState("/images/my-emoji.png");
 
   const [pronStage, setPronStage] = useState<PronStage>("idle");
   const [pronChecked, setPronChecked] = useState(false);
@@ -743,6 +710,7 @@ export default function TalkPage() {
       } catch {
         data = {};
       }
+
       if (!res.ok) {
         throw new Error(
           String(data?.error || raw || "말하기 점수를 계산하지 못했습니다.")
@@ -758,6 +726,7 @@ export default function TalkPage() {
       setPronTranscript(transcript || "-");
       setPronFeedback(feedback);
       setPronError("");
+
       if (Number.isFinite(score) && score >= 100) {
         playSfx("correct");
       }
@@ -892,6 +861,15 @@ export default function TalkPage() {
         const cleaned = await loadTalkRows();
         setAllRows(cleaned);
 
+        const talkProgress = await loadAppProgress("talk");
+        const completedMap =
+          talkProgress?.completed_subs &&
+            typeof talkProgress.completed_subs === "object" &&
+            !Array.isArray(talkProgress.completed_subs)
+            ? (talkProgress.completed_subs as Record<string, boolean>)
+            : {};
+        setCompletedSubsMap(completedMap);
+
         const stages = getStageOptions(cleaned);
         setStageOptions(stages);
 
@@ -1009,7 +987,6 @@ export default function TalkPage() {
   }, []);
 
   const isCorrect = submitted && selected === currentQuestion?.answer_jp;
-  const isWrong = submitted && selected !== currentQuestion?.answer_jp;
   const isPro = isPaidPlan(userPlan);
   const listenLimitReached = !isPro && listenUsed >= DAILY_TALK_LISTEN_LIMIT;
   const recordLimitReached = !isPro && recordUsed >= DAILY_TALK_RECORD_LIMIT;
@@ -1040,6 +1017,15 @@ export default function TalkPage() {
     allRows.find((item) => item.sub === sub)?.sub_kr ||
     sub;
 
+  const getSubOptionLabelWithDone = (item: SubOption) => {
+    const completedKey = makeCompletedSubKey(
+      selectedStage,
+      selectedTag,
+      item.value
+    );
+    return completedSubsMap[completedKey] ? `[완] ${item.label}` : item.label;
+  };
+
   const getTodayMissionText = () => {
     if (spokenSentenceCount >= 7) {
       return "좋아요. 오늘은 이미 충분히 말했어요. 정답 문장을 3번만 더 또렷하게 따라가 봅시다.";
@@ -1048,6 +1034,41 @@ export default function TalkPage() {
       return "좋아요. 오늘은 정답 문장을 자신 있게 한 번 더 입 밖으로 꺼내봅시다.";
     }
     return "오늘은 입을 7번만 열어봅시다.";
+  };
+
+  const markCompletedSub = async (
+    stage: string,
+    tag: string,
+    sub: string
+  ) => {
+    if (!stage || !tag || !sub || sub === "전체") return;
+
+    const key = makeCompletedSubKey(stage, tag, sub);
+
+    setCompletedSubsMap((prev) => ({
+      ...prev,
+      [key]: true,
+    }));
+
+    try {
+      const appProgress = await loadAppProgress("talk");
+      const prevMap =
+        appProgress?.completed_subs &&
+          typeof appProgress.completed_subs === "object" &&
+          !Array.isArray(appProgress.completed_subs)
+          ? (appProgress.completed_subs as Record<string, boolean>)
+          : {};
+
+      await saveAppProgress("talk", {
+        ...appProgress,
+        completed_subs: {
+          ...prevMap,
+          [key]: true,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   useEffect(() => {
@@ -1093,6 +1114,7 @@ export default function TalkPage() {
         setScore(0);
         setWrongList([]);
         setSaveDone(false);
+        setFinishMessage("");
         setCoachOpen(false);
         setCoachAnswer("");
         setCoachError("");
@@ -1199,23 +1221,6 @@ export default function TalkPage() {
     }
   };
 
-  const handlePronCheck = () => {
-    if (!currentQuestion) return;
-    if (!recordedAudioUrl) {
-      setPronError("먼저 녹음을 완료해 주세요.");
-      return;
-    }
-    if (pronScoring) {
-      setPronError("점수 계산 중입니다. 잠시만 기다려 주세요.");
-      return;
-    }
-    if (!pronChecked) {
-      setPronError("점수 계산이 아직 완료되지 않았습니다.");
-      return;
-    }
-    setPronError("");
-  };
-
   const handleAskCustomCoach = async () => {
     if (!currentQuestion) return;
     if (!isPro) {
@@ -1254,17 +1259,20 @@ export default function TalkPage() {
 
   const handleStageChange = (stage: string) => {
     setSelectedStage(stage);
+    setFinishMessage("");
   };
 
   const handleTagChange = (tag: string) => {
     setSelectedTag(tag);
     setSelectedSub("전체");
+    setFinishMessage("");
   };
 
   const startReviewMode = async () => {
     if (allRows.length === 0) return;
 
     let reviewRows: TalkCsvRow[] = [];
+
     if (reviewQids.length > 0) {
       const qidSet = new Set(reviewQids);
       reviewRows = allRows.filter((item) => qidSet.has(item.qid));
@@ -1279,6 +1287,7 @@ export default function TalkPage() {
     }
 
     const first = reviewRows[0];
+
     restoringRef.current = true;
 
     setSelectedStage(first.stage || "");
@@ -1292,6 +1301,7 @@ export default function TalkPage() {
     setScore(0);
     setWrongList([]);
     setSaveDone(false);
+    setFinishMessage("");
     setCoachOpen(false);
     setCoachAnswer("");
     setCoachError("");
@@ -1334,6 +1344,7 @@ export default function TalkPage() {
     setIsReviewing(false);
     setReviewNotice("");
     setReviewPanelOpen(false);
+    setFinishMessage("");
 
     let pool = allRows.filter(
       (row) => row.stage === selectedStage && row.tag === selectedTag
@@ -1412,10 +1423,7 @@ export default function TalkPage() {
       picked = pool.slice(0, Math.min(5, pool.length));
     } else if (reviewModeType === "mixed") {
       const oldPart = pool.slice(0, Math.min(3, pool.length));
-      const randomPart = shuffleArray(pool).slice(
-        0,
-        Math.min(2, pool.length)
-      );
+      const randomPart = shuffleArray(pool).slice(0, Math.min(2, pool.length));
       const merged = [...oldPart, ...randomPart];
       const seen = new Set<string>();
       picked = merged.filter((row) => {
@@ -1438,6 +1446,7 @@ export default function TalkPage() {
     setSubmitted(false);
     setScore(0);
     setSaveDone(false);
+    setFinishMessage("");
     setCoachOpen(false);
     setCoachAnswer("");
     setCoachError("");
@@ -1544,7 +1553,8 @@ export default function TalkPage() {
         return;
       }
 
-      const displaySub = selectedSub === "전체" ? "전체" : getSubLabel(selectedSub);
+      const displaySub =
+        selectedSub === "전체" ? "전체" : getSubLabel(selectedSub);
 
       const payload = buildTalkAttemptPayload({
         user_id: user.id,
@@ -1566,9 +1576,23 @@ export default function TalkPage() {
       }
 
       await clearDailyState("talk");
+
       setSaveDone(true);
-      setViewMode("done");
-      alert("결과가 저장되었습니다.");
+
+      if (isReviewing) {
+        alert("복습 세트가 완료되었습니다.");
+        setQuestions([]);
+        setCurrentIndex(0);
+        setCurrentChoices([]);
+        setSelected("");
+        setSubmitted(false);
+        setReviewNotice("복습 세트를 완료했습니다.");
+        setIsReviewing(false);
+        setViewMode("select");
+      } else {
+        setViewMode("done");
+        alert("결과가 저장되었습니다.");
+      }
     } catch (error) {
       console.error(error);
       alert("결과 저장 중 오류가 발생했습니다.");
@@ -1648,6 +1672,7 @@ export default function TalkPage() {
     restoringRef.current = false;
     resumedOnceRef.current = false;
     reviewStartedRef.current = false;
+
     setViewMode("select");
     setQuestions([]);
     setCurrentIndex(0);
@@ -1664,6 +1689,7 @@ export default function TalkPage() {
     setCoachQuestion("");
     setAudioError("");
     setAudioLoadingKey("");
+    setFinishMessage("");
     resetPronunciationState();
     setReviewNotice("");
     setDailyStateLoaded(false);
@@ -1903,13 +1929,16 @@ export default function TalkPage() {
               <div className="relative mt-2">
                 <select
                   value={selectedSub}
-                  onChange={(e) => setSelectedSub(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedSub(e.target.value);
+                    setFinishMessage("");
+                  }}
                   className="w-full appearance-none rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-11 text-base font-medium text-gray-900 shadow-sm outline-none transition focus:border-gray-300 focus:ring-4 focus:ring-gray-100"
                 >
                   <option value="전체">전체</option>
                   {subOptions.map((item) => (
                     <option key={item.value} value={item.value}>
-                      {item.label}
+                      {getSubOptionLabelWithDone(item)}
                     </option>
                   ))}
                 </select>
@@ -1940,6 +1969,12 @@ export default function TalkPage() {
             >
               시작하기
             </button>
+
+            {finishMessage ? (
+              <div className="mt-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-sm font-medium text-green-700">
+                {finishMessage}
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -1989,7 +2024,7 @@ export default function TalkPage() {
                 onClick={makeQuizSet}
                 className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold"
               >
-                🔄 새 세트
+                {isReviewing ? "🔄 일반 세트로 전환" : "🔄 새 세트"}
               </button>
 
               <button
@@ -2182,7 +2217,7 @@ export default function TalkPage() {
                     : "border-gray-300 hover:bg-gray-50";
                 } else if (isSelected && isCorrect) {
                   className += "border-green-600 bg-green-50";
-                } else if (isSelected && isWrong) {
+                } else if (isSelected && !isCorrect) {
                   className += "border-red-600 bg-red-50";
                 } else if (isAnswer) {
                   className += "border-green-600 bg-green-50";
@@ -2696,7 +2731,7 @@ export default function TalkPage() {
           </section>
         ) : null}
 
-        {!submitted && saveDone ? (
+        {!submitted && saveDone && !isReviewing ? (
           <div className="mt-8">
             <p className="text-sm text-blue-600">결과 저장이 완료되었습니다.</p>
           </div>

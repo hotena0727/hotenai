@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/app/types/kanji";
@@ -51,6 +51,15 @@ const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 export default function KanjiPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const isReviewMode = searchParams.get("review") === "1";
+  const reviewQids = (searchParams.get("qids") || "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  const reviewQtype = (searchParams.get("qtype") || "").trim();
+  const reviewLevel = (searchParams.get("level") || "").trim().toUpperCase();
 
   const [rows, setRows] = useState<KanjiRow[]>([]);
   const [questions, setQuestions] = useState<KanjiQuestion[]>([]);
@@ -86,7 +95,9 @@ export default function KanjiPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!hasSeenHomeToday()) {
-      const next = encodeURIComponent(pathname || "/kanji");
+      const next = encodeURIComponent(
+        `${pathname || "/kanji"}${window.location.search || ""}`
+      );
       router.replace(`/?next=${next}`);
     }
   }, [router, pathname]);
@@ -161,6 +172,24 @@ export default function KanjiPage() {
     return map;
   }, [rows]);
 
+  const reviewRows = useMemo(() => {
+    if (!isReviewMode || reviewQids.length === 0) return [] as KanjiRow[];
+
+    const qidSet = new Set(reviewQids);
+
+    return rows.filter((row) => {
+      const itemKey = String((row as { item_key?: string }).item_key || "").trim();
+      const itemKeyOk = itemKey ? qidSet.has(itemKey) : false;
+      const jpWordOk = qidSet.has(String(row.jp_word || "").trim());
+      const qtypeOk =
+        !reviewQtype || reviewQtype === String((row as { qtype?: string }).qtype || "").trim();
+      const levelOk =
+        !reviewLevel || reviewLevel === String(row.level || "").trim().toUpperCase();
+
+      return (itemKeyOk || jpWordOk) && qtypeOk && levelOk;
+    });
+  }, [rows, isReviewMode, reviewQids, reviewQtype, reviewLevel]);
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -178,6 +207,22 @@ export default function KanjiPage() {
 
     void init();
   }, []);
+
+  useEffect(() => {
+    if (!isReviewMode) return;
+
+    if (
+      reviewQtype === "reading" ||
+      reviewQtype === "meaning" ||
+      reviewQtype === "kr2jp"
+    ) {
+      setSelectedQType(reviewQtype);
+    }
+
+    if (["N5", "N4", "N3", "N2", "N1"].includes(reviewLevel)) {
+      setSelectedLevel(reviewLevel);
+    }
+  }, [isReviewMode, reviewQtype, reviewLevel]);
 
   useEffect(() => {
     const loadPlanAndUsage = async () => {
@@ -243,14 +288,14 @@ export default function KanjiPage() {
   }, []);
 
   useEffect(() => {
-    if (isDailyLimitReached) {
+    if (!isReviewMode && isDailyLimitReached) {
       setQuestions([]);
       setAnswers({});
       setSubmitted(false);
       setScore(0);
       setSaveMessage("");
     }
-  }, [isDailyLimitReached]);
+  }, [isDailyLimitReached, isReviewMode]);
 
   useEffect(() => {
     if (!submitted) return;
@@ -302,6 +347,45 @@ export default function KanjiPage() {
 
   const generateQuiz = () => {
     try {
+      if (isReviewMode) {
+        if (reviewRows.length === 0) {
+          setQuestions([]);
+          setAnswers({});
+          setSubmitted(false);
+          setScore(0);
+          setSaveMessage("복습할 문제가 없습니다.");
+          setAudioError("");
+          setAudioLoadingKey("");
+          return;
+        }
+
+        const blockedWords = Object.keys(excludedWords).filter(
+          (k) => excludedWords[k]
+        );
+
+        const reviewQtypeValue: KanjiQType =
+          reviewQtype === "meaning" || reviewQtype === "kr2jp"
+            ? reviewQtype
+            : "reading";
+
+        const quiz = buildKanjiQuiz({
+          rows: reviewRows,
+          qtype: reviewQtypeValue,
+          level: "",
+          excludedWords: blockedWords,
+          size: reviewRows.length,
+        });
+
+        setQuestions(quiz);
+        setAnswers({});
+        setSubmitted(false);
+        setScore(0);
+        setSaveMessage(quiz.length === 0 ? "복습할 문제가 없습니다." : "");
+        setAudioError("");
+        setAudioLoadingKey("");
+        return;
+      }
+
       if (isDailyLimitReached) {
         setLimitMessage(
           "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
@@ -349,9 +433,15 @@ export default function KanjiPage() {
 
     generateQuiz();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, rows, selectedLevel, selectedQType]);
+  }, [loading, rows, selectedLevel, selectedQType, isReviewMode, reviewRows, reviewQtype]);
 
   const makeNewQuiz = () => {
+    if (isReviewMode) {
+      setSaveMessage("오답노트 복습에서는 전달된 문제만 풉니다.");
+      generateQuiz();
+      return;
+    }
+
     generateQuiz();
     setSaveMessage("");
     setTimeout(() => {
@@ -529,6 +619,12 @@ export default function KanjiPage() {
       <div className="mx-auto max-w-3xl">
         <h1 className="mt-4 text-4xl font-bold">🈯 한자</h1>
 
+        {isReviewMode ? (
+          <p className="mt-3 text-sm font-semibold text-blue-600">
+            오답노트 복습 모드 · 선택한 문제만 출제됩니다.
+          </p>
+        ) : null}
+
         <div className="mt-8">
           <p className="text-base font-semibold text-gray-700 sm:text-lg">
             ✅ 레벨을 선택하세요
@@ -581,7 +677,7 @@ export default function KanjiPage() {
 
         <div
           className={
-            isDailyLimitReached
+            !isReviewMode && isDailyLimitReached
               ? "mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 sm:px-4 sm:py-4"
               : "mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 sm:px-4 sm:py-4"
           }
@@ -594,7 +690,7 @@ export default function KanjiPage() {
             <div className="min-w-0">
               <p
                 className={
-                  isDailyLimitReached
+                  !isReviewMode && isDailyLimitReached
                     ? "text-xs font-semibold text-red-700 sm:text-sm"
                     : "text-xs font-semibold text-gray-800 sm:text-sm"
                 }
@@ -605,14 +701,14 @@ export default function KanjiPage() {
               </p>
               <p
                 className={
-                  isDailyLimitReached
+                  !isReviewMode && isDailyLimitReached
                     ? "mt-1 text-xs text-red-600"
                     : "mt-1 text-xs text-gray-500"
                 }
               >
                 {isPaidPlan(userPlan)
                   ? "자세한 이용 안내 보기"
-                  : isDailyLimitReached
+                  : !isReviewMode && isDailyLimitReached
                     ? "오늘 이용 완료"
                     : remainingSets === 1
                       ? "오늘 1세트 남음"
@@ -621,7 +717,7 @@ export default function KanjiPage() {
             </div>
             <span
               className={
-                isDailyLimitReached
+                !isReviewMode && isDailyLimitReached
                   ? "shrink-0 text-sm text-red-500 sm:text-base"
                   : "shrink-0 text-sm text-gray-500 sm:text-base"
               }
@@ -633,7 +729,7 @@ export default function KanjiPage() {
           {planInfoOpen ? (
             <div
               className={
-                isDailyLimitReached
+                !isReviewMode && isDailyLimitReached
                   ? "mt-3 border-t border-red-200 pt-3 text-xs leading-6 text-red-700 sm:text-sm"
                   : "mt-3 border-t border-gray-200 pt-3 text-xs leading-6 text-gray-600 sm:text-sm"
               }
@@ -641,14 +737,14 @@ export default function KanjiPage() {
               <p>
                 {isPaidPlan(userPlan)
                   ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
-                  : isDailyLimitReached
+                  : !isReviewMode && isDailyLimitReached
                     ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
                     : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
 
-          {isDailyLimitReached ? (
+          {!isReviewMode && isDailyLimitReached ? (
             <div className="mt-3">
               <a
                 href={PRO_UPGRADE_URL}
@@ -665,14 +761,18 @@ export default function KanjiPage() {
             <button
               type="button"
               onClick={makeNewQuiz}
-              disabled={isDailyLimitReached}
+              disabled={!isReviewMode && isDailyLimitReached}
               className={
-                isDailyLimitReached
+                !isReviewMode && isDailyLimitReached
                   ? "rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
                   : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
               }
             >
-              {isDailyLimitReached ? "오늘 이용 완료" : "🔄 새문제(랜덤 10문항)"}
+              {!isReviewMode && isDailyLimitReached
+                ? "오늘 이용 완료"
+                : isReviewMode
+                  ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
+                  : "🔄 새문제(랜덤 10문항)"}
             </button>
             <button
               type="button"
@@ -708,10 +808,14 @@ export default function KanjiPage() {
           ) : null}
         </div>
 
-        {!isDailyLimitReached && questions.length > 0 ? (
+        {questions.length > 0 ? (
           <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
             {audioError ? (
               <p className="mb-4 text-sm text-red-500">{audioError}</p>
+            ) : null}
+
+            {saveMessage ? (
+              <p className="mb-4 text-sm text-blue-600">{saveMessage}</p>
             ) : null}
 
             <div className="space-y-8">
@@ -868,7 +972,7 @@ export default function KanjiPage() {
                       </div>
                       <div className="rounded-2xl bg-green-50 p-4">
                         <p className="text-base font-semibold text-green-700 sm:text-lg">
-                          🎉 Perfect Streak! 10연속 정답!
+                          🎉 Perfect Streak! {questions.length}연속 정답!
                         </p>
                       </div>
                     </>
@@ -881,7 +985,7 @@ export default function KanjiPage() {
                   )}
 
                   <div className="text-sm text-gray-500">
-                    🧠 오늘 최고 콤보: {score}연속
+                    🧠 이번 최고 콤보: {score}연속
                   </div>
 
                   {wrongItems.length > 0 ? (
@@ -956,7 +1060,9 @@ export default function KanjiPage() {
                       onClick={makeNewQuiz}
                       className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white sm:px-5 sm:py-4 sm:text-lg"
                     >
-                      다음 10문항 시작하기
+                      {isReviewMode
+                        ? "선택한 복습 문제 다시 시작하기"
+                        : "다음 10문항 시작하기"}
                     </button>
 
                     <button
@@ -974,19 +1080,23 @@ export default function KanjiPage() {
         ) : (
           <div
             className={`mt-6 rounded-2xl border p-5 ${
-              isDailyLimitReached
+              !isReviewMode && isDailyLimitReached
                 ? "border-red-200 bg-red-50"
                 : "border-gray-300 bg-white"
             }`}
           >
             <p
               className={`text-sm ${
-                isDailyLimitReached ? "text-red-700" : "text-gray-500"
+                !isReviewMode && isDailyLimitReached
+                  ? "text-red-700"
+                  : "text-gray-500"
               }`}
             >
-              {isDailyLimitReached
+              {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
-                : "선택한 조건에 맞는 문제가 없습니다."}
+                : isReviewMode
+                  ? "선택한 오답 문제를 찾지 못했습니다."
+                  : "선택한 조건에 맞는 문제가 없습니다."}
             </p>
           </div>
         )}

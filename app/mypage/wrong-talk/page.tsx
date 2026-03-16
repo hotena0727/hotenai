@@ -5,26 +5,30 @@ import { fetchAttemptsByPrefix, type QuizAttemptRow } from "@/lib/attempts";
 import { supabase } from "@/lib/supabase";
 
 const JA_FONT_STYLE = {
-  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
+  fontFamily:
+    '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
 } as const;
 
 type TalkWrongItem = {
   app: "talk";
+  qtype?: "choice";
   item_key: string;
+  qid: string;
   selected?: string;
   correct?: string;
 
-  // 회화에서 자주 쓰일 수 있는 필드들
-  theme?: string;
-  topic?: string;
-  situation?: string;
-  prompt?: string;
-  question_jp?: string;
-  question_kr?: string;
-  jp_word?: string;
+  stage?: string;
+  tag?: string;
+  tag_kr?: string;
+  sub?: string;
+  sub_kr?: string;
+
+  situation_kr?: string;
+  partner_jp?: string;
+  partner_kr?: string;
   answer_jp?: string;
   answer_kr?: string;
-  reading?: string;
+  explain_kr?: string;
 };
 
 type FlattenedWrongItem = TalkWrongItem & {
@@ -51,28 +55,6 @@ function formatDate(value?: string): string {
   } catch {
     return value;
   }
-}
-
-function displayTitle(item: FlattenedWrongItem): string {
-  return (
-    item.question_jp ||
-    item.prompt ||
-    item.jp_word ||
-    item.answer_jp ||
-    item.theme ||
-    item.topic ||
-    "회화 오답"
-  );
-}
-
-function displaySubTitle(item: FlattenedWrongItem): string {
-  return (
-    item.question_kr ||
-    item.answer_kr ||
-    item.situation ||
-    item.topic ||
-    "-"
-  );
 }
 
 function WrongPageTabs({
@@ -116,7 +98,8 @@ export default function WrongTalkPage() {
   const [attempts, setAttempts] = useState<QuizAttemptRow[]>([]);
 
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-  const [selectedTheme, setSelectedTheme] = useState("전체");
+  const [selectedTag, setSelectedTag] = useState("전체");
+  const [selectedSub, setSelectedSub] = useState("전체");
   const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
@@ -135,7 +118,7 @@ export default function WrongTalkPage() {
           return;
         }
 
-        const rows = await fetchAttemptsByPrefix(user.id, "회화", 50);
+        const rows = await fetchAttemptsByPrefix(user.id, "회화", 100);
         setAttempts(rows);
       } catch (error) {
         console.error(error);
@@ -173,47 +156,61 @@ export default function WrongTalkPage() {
     return rows;
   }, [attempts]);
 
-  const themeOptions = useMemo(() => {
+  const tagOptions = useMemo(() => {
     const values = Array.from(
-      new Set(
-        flattened
-          .map((item) => String(item.theme || item.topic || "").trim())
-          .filter(Boolean)
-      )
+      new Set(flattened.map((item) => String(item.tag_kr || item.tag || "").trim()).filter(Boolean))
     );
     return ["전체", ...values];
   }, [flattened]);
+
+  const subOptions = useMemo(() => {
+    const base = flattened.filter((item) => {
+      const tagLabel = String(item.tag_kr || item.tag || "").trim();
+      return selectedTag === "전체" || tagLabel === selectedTag;
+    });
+
+    const values = Array.from(
+      new Set(base.map((item) => String(item.sub_kr || item.sub || "").trim()).filter(Boolean))
+    );
+
+    return ["전체", ...values];
+  }, [flattened, selectedTag]);
 
   const filteredItems = useMemo(() => {
     const q = searchText.trim().toLowerCase();
 
     return flattened.filter((item) => {
-      const themeValue = String(item.theme || item.topic || "").trim();
-      const themeOk = selectedTheme === "전체" || themeValue === selectedTheme;
+      const tagLabel = String(item.tag_kr || item.tag || "").trim();
+      const subLabel = String(item.sub_kr || item.sub || "").trim();
+
+      const tagOk = selectedTag === "전체" || tagLabel === selectedTag;
+      const subOk = selectedSub === "전체" || subLabel === selectedSub;
 
       const haystack = [
-        item.theme || "",
-        item.topic || "",
-        item.situation || "",
-        item.prompt || "",
-        item.question_jp || "",
-        item.question_kr || "",
-        item.jp_word || "",
+        item.stage || "",
+        item.tag || "",
+        item.tag_kr || "",
+        item.sub || "",
+        item.sub_kr || "",
+        item.situation_kr || "",
+        item.partner_jp || "",
+        item.partner_kr || "",
         item.answer_jp || "",
         item.answer_kr || "",
         item.selected || "",
         item.correct || "",
+        item.explain_kr || "",
       ]
         .join(" ")
         .toLowerCase();
 
       const searchOk = !q || haystack.includes(q);
-      return themeOk && searchOk;
+      return tagOk && subOk && searchOk;
     });
-  }, [flattened, selectedTheme, searchText]);
+  }, [flattened, selectedTag, selectedSub, searchText]);
 
   const makeSelectionKey = (item: FlattenedWrongItem) =>
-    `${item.app}|${item.item_key}`;
+    `${item.app}|${item.qid}`;
 
   const toggleKey = (key: string) => {
     setSelectedKeys((prev) =>
@@ -238,19 +235,23 @@ export default function WrongTalkPage() {
       return;
     }
 
-    const itemKeys = filteredItems
-      .filter((item) => selectedKeys.includes(makeSelectionKey(item)))
-      .map((item) => item.item_key);
+    const qids = Array.from(
+      new Set(
+        filteredItems
+          .filter((item) => selectedKeys.includes(makeSelectionKey(item)))
+          .map((item) => item.qid)
+          .filter(Boolean)
+      )
+    );
 
-    if (itemKeys.length === 0) {
+    if (qids.length === 0) {
       alert("복습할 문제를 찾지 못했습니다.");
       return;
     }
 
-    const qids = encodeURIComponent(itemKeys.join(","));
-    const theme = encodeURIComponent(selectedTheme === "전체" ? "" : selectedTheme);
-
-    window.location.href = `/talk?review=1&qids=${qids}&theme=${theme}`;
+    window.location.href = `/talk?review=1&qids=${encodeURIComponent(
+      qids.join(",")
+    )}`;
   };
 
   if (loading) {
@@ -284,7 +285,7 @@ export default function WrongTalkPage() {
         <section className="mt-4">
           <h1 className="text-3xl font-bold">회화 오답노트</h1>
           <p className="mt-3 text-base text-gray-600">
-            막혔던 회화 표현만 다시 골라, 오늘 복습 루틴으로 차분히 정리해보세요.
+            막혔던 회화 표현만 다시 골라 복습할 수 있습니다.
           </p>
           <WrongPageTabs current="talk" />
         </section>
@@ -303,7 +304,7 @@ export default function WrongTalkPage() {
           </div>
 
           <p className="mt-4 text-sm text-gray-600">
-            대답이 막혔던 회화 문제만 다시 골라 복습할 수 있습니다.
+            유형과 상황 기준으로 좁혀서, 필요한 회화만 다시 복습해보세요.
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">
@@ -334,7 +335,8 @@ export default function WrongTalkPage() {
             <button
               type="button"
               onClick={() => {
-                setSelectedTheme("전체");
+                setSelectedTag("전체");
+                setSelectedSub("전체");
                 setSearchText("");
                 setSelectedKeys([]);
               }}
@@ -354,22 +356,50 @@ export default function WrongTalkPage() {
 
         <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <div>
-            <p className="text-sm font-semibold text-gray-700">테마</p>
+            <p className="text-sm font-semibold text-gray-700">유형</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {themeOptions.map((item) => {
-                const active = selectedTheme === item;
+              {tagOptions.map((item) => {
+                const active = selectedTag === item;
 
                 return (
                   <button
                     key={item}
                     type="button"
                     onClick={() => {
-                      setSelectedTheme(item);
+                      setSelectedTag(item);
+                      setSelectedSub("전체");
                       setSelectedKeys([]);
                     }}
                     className={
                       active
                         ? "rounded-full border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
+                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+                    }
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-gray-100 pt-5">
+            <p className="text-sm font-semibold text-gray-700">상황</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {subOptions.map((item) => {
+                const active = selectedSub === item;
+
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSub(item);
+                      setSelectedKeys([]);
+                    }}
+                    className={
+                      active
+                        ? "rounded-full border border-green-500 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700"
                         : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
                     }
                   >
@@ -389,7 +419,7 @@ export default function WrongTalkPage() {
                 setSearchText(e.target.value);
                 setSelectedKeys([]);
               }}
-              placeholder="테마, 질문, 정답, 내가 말한 답으로 검색"
+              placeholder="상황, 상대말, 정답, 내가 고른 답으로 검색"
               className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-400"
             />
           </div>
@@ -397,9 +427,11 @@ export default function WrongTalkPage() {
 
         {flattened.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <p className="text-lg font-semibold text-gray-900">좋아요. 저장된 회화 오답이 아직 없습니다.</p>
+            <p className="text-lg font-semibold text-gray-900">
+              저장된 회화 오답이 아직 없습니다.
+            </p>
             <p className="mt-2 text-sm text-gray-600">
-              회화 문제를 풀고 다시 오면, 막혔던 문제들이 여기에 정리됩니다.
+              회화 훈련을 하고 다시 오면, 막혔던 문제들이 여기에 정리됩니다.
             </p>
             <a
               href="/talk"
@@ -410,9 +442,11 @@ export default function WrongTalkPage() {
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <p className="text-lg font-semibold text-gray-900">현재 필터 조건에 맞는 오답이 없습니다.</p>
+            <p className="text-lg font-semibold text-gray-900">
+              현재 조건에 맞는 오답이 없습니다.
+            </p>
             <p className="mt-2 text-sm text-gray-600">
-              테마를 넓히거나 검색어를 비워 다시 확인해보세요.
+              유형/상황을 넓히거나 검색어를 비워 다시 확인해보세요.
             </p>
           </div>
         ) : (
@@ -422,7 +456,7 @@ export default function WrongTalkPage() {
 
               return (
                 <div
-                  key={`${item.attempt_id}-${item.item_key}-${idx}`}
+                  key={`${item.attempt_id}-${item.qid}-${idx}`}
                   className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
@@ -436,9 +470,7 @@ export default function WrongTalkPage() {
                     </label>
 
                     <a
-                      href={`/talk?review=1&qids=${encodeURIComponent(item.item_key)}&theme=${encodeURIComponent(
-                        item.theme || item.topic || ""
-                      )}`}
+                      href={`/talk?review=1&qids=${encodeURIComponent(item.qid)}`}
                       className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
                     >
                       이 문제만 복습
@@ -447,32 +479,41 @@ export default function WrongTalkPage() {
 
                   <div className="flex flex-wrap gap-2 text-xs text-gray-500">
                     <span className="rounded-full bg-gray-100 px-2 py-1">
-                      {item.theme || item.topic || "회화"}
+                      {item.tag_kr || item.tag || "회화"}
+                    </span>
+                    <span className="rounded-full bg-gray-100 px-2 py-1">
+                      {item.sub_kr || item.sub || "상황"}
                     </span>
                     <span className="rounded-full bg-gray-100 px-2 py-1">
                       {formatDate(item.created_at)}
                     </span>
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                    <p className="text-sm font-medium text-blue-800">문제</p>
+                  <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                    <p className="text-sm font-medium text-gray-700">상황</p>
+                    <p className="mt-1 text-sm text-gray-800">
+                      {item.situation_kr || "-"}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                    <p className="text-sm font-medium text-blue-800">상대(말)</p>
                     <p className="mt-1 text-base font-bold text-gray-900">
                       <span lang="ja" style={JA_FONT_STYLE}>
-                        {displayTitle(item)}
+                        {item.partner_jp || "-"}
                       </span>
                     </p>
-                    <p className="mt-2 text-sm text-gray-600">{displaySubTitle(item)}</p>
-                    {item.reading ? (
-                      <p className="mt-1 text-sm text-gray-600">
-                        읽기: <span lang="ja" style={JA_FONT_STYLE}>{item.reading}</span>
-                      </p>
-                    ) : null}
+                    <p className="mt-2 text-sm text-gray-600">
+                      {item.partner_kr || "-"}
+                    </p>
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
                     <p className="text-sm font-medium text-red-700">내가 고른 답</p>
                     <p className="mt-1 text-sm text-gray-800">
-                      <span lang="ja" style={JA_FONT_STYLE}>{item.selected || "-"}</span>
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.selected || "-"}
+                      </span>
                     </p>
                   </div>
 
@@ -483,15 +524,19 @@ export default function WrongTalkPage() {
                         {item.correct || item.answer_jp || "-"}
                       </span>
                     </p>
-                    {item.answer_kr ? (
-                      <p className="mt-1 text-sm text-gray-600">{item.answer_kr}</p>
-                    ) : null}
+                    <p className="mt-1 text-sm text-gray-600">
+                      {item.answer_kr || "-"}
+                    </p>
                   </div>
 
-                  {item.situation ? (
-                    <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                      <p className="text-sm font-medium text-gray-700">상황</p>
-                      <p className="mt-1 text-sm text-gray-700">{item.situation}</p>
+                  {item.explain_kr ? (
+                    <div className="mt-3 rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+                      <p className="text-sm font-medium text-yellow-800">
+                        원포인트 설명
+                      </p>
+                      <p className="mt-1 text-sm text-gray-800">
+                        {item.explain_kr}
+                      </p>
                     </div>
                   ) : null}
                 </div>
