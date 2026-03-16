@@ -188,17 +188,15 @@ export default function WordPage() {
 
     return rows.filter((row) => {
       const itemKey = String((row as { item_key?: string }).item_key || "").trim();
-      const itemKeyOk = itemKey ? qidSet.has(itemKey) : false;
-      const jpWordOk = qidSet.has(String(row.jp_word || "").trim());
-      const qtypeOk =
-        !reviewQtype ||
-        reviewQtype === String((row as { qtype?: string }).qtype || "").trim();
-      const posOk =
-        !reviewPos || reviewPos === String(row.pos || "").trim().toLowerCase();
+      const jpWord = String(row.jp_word || "").trim();
+      const rowPos = String(row.pos || "").trim().toLowerCase();
 
-      return (itemKeyOk || jpWordOk) && qtypeOk && posOk;
+      const idMatched = (itemKey && qidSet.has(itemKey)) || qidSet.has(jpWord);
+      const posMatched = !reviewPos || reviewPos === rowPos;
+
+      return Boolean(idMatched && posMatched);
     });
-  }, [rows, isReviewMode, reviewQids, reviewQtype, reviewPos]);
+  }, [rows, isReviewMode, reviewQids, reviewPos]);
 
   const visibleQtypes =
     selectedPosGroup === "other"
@@ -1332,14 +1330,14 @@ export default function WordPage() {
         ) : (
           <div
             className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
-                ? "border-red-200 bg-red-50"
-                : "border-gray-300 bg-white"
+              ? "border-red-200 bg-red-50"
+              : "border-gray-300 bg-white"
               }`}
           >
             <p
               className={`text-sm ${!isReviewMode && isDailyLimitReached
-                  ? "text-red-700"
-                  : "text-gray-500"
+                ? "text-red-700"
+                : "text-gray-500"
                 }`}
             >
               {!isReviewMode && isDailyLimitReached
