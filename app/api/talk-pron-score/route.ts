@@ -38,8 +38,57 @@ function normJpLoose(text: string) {
     );
 }
 
+function escapeRegExp(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const PHRASE_READING_RULES: Array<[string, string]> = [
+  ["また来たくなると思います", "またきたくなるとおもいます"],
+  ["来たくなると思います", "きたくなるとおもいます"],
+  ["思ったより気楽に入れました", "おもったよりきらくにはいれました"],
+  ["行ってみたいです", "いってみたいです"],
+  ["いいと思います", "いいとおもいます"],
+  ["そう思います", "そうおもいます"],
+];
+
+const WORD_READING_RULES: Array<[string, string]> = [
+  ["多分", "たぶん"],
+  ["思った", "おもった"],
+  ["思います", "おもいます"],
+  ["思う", "おもう"],
+  ["来たくなる", "きたくなる"],
+  ["来たい", "きたい"],
+  ["来ます", "きます"],
+  ["来る", "くる"],
+  ["気楽", "きらく"],
+  ["入れました", "はいれました"],
+  ["入ります", "はいります"],
+  ["入れる", "はいれる"],
+  ["入る", "はいる"],
+  ["良かった", "よかった"],
+  ["良い", "いい"],
+  ["行きたい", "いきたい"],
+  ["行きます", "いきます"],
+  ["行く", "いく"],
+  ["雰囲気", "ふんいき"],
+];
+
+function applyReadingRules(text: string) {
+  let out = String(text || "");
+
+  for (const [from, to] of PHRASE_READING_RULES) {
+    out = out.replace(new RegExp(escapeRegExp(from), "g"), to);
+  }
+
+  for (const [from, to] of WORD_READING_RULES) {
+    out = out.replace(new RegExp(escapeRegExp(from), "g"), to);
+  }
+
+  return out;
+}
+
 function replaceCommonVariants(text: string) {
-  return normJpLoose(text)
+  return normJpLoose(applyReadingRules(text))
     .replace(/ふいんき/g, "ふんいき")
     .replace(/を/g, "お");
 }
@@ -113,7 +162,7 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const scoreRead = scoreByDistance(aRead, bRead);
 
   const weighted = Math.round(
-    scoreStrict * 0.05 + scoreLoose * 0.10 + scoreRead * 0.85
+    scoreStrict * 0.05 + scoreLoose * 0.1 + scoreRead * 0.85
   );
 
   return weighted < floorToZero
@@ -173,18 +222,27 @@ export async function POST(req: Request) {
       );
     }
 
-    const scoringTarget = answerYomi || answerJp;
-
     const name =
       inputFile instanceof File && inputFile.name
         ? inputFile.name
         : "speech.wav";
 
+    const prompt = [
+      `정답 문장: ${answerJp}`,
+      answerYomi ? `정답 읽기: ${answerYomi}` : "",
+      "일본어 음성을 전사하세요.",
+      "동음이의어 한자가 가능하면 정답 문장에 가까운 표기를 우선하세요.",
+      "다만 최종 채점은 읽기 기준으로 진행됩니다.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
     const fd = new FormData();
     fd.append("file", inputFile, name);
     fd.append("model", TRANSCRIBE_MODEL);
     fd.append("language", "ja");
-    fd.append("response_format", "text");
+    fd.append("response_format", "json");
+    fd.append("prompt", prompt);
 
     let sttRes: Response;
     try {
@@ -222,8 +280,27 @@ export async function POST(req: Request) {
       );
     }
 
-    const transcript = String(rawText || "").trim();
-    const score = similarityScore(transcript, scoringTarget);
+    let transcript = "";
+    try {
+      const parsed = rawText ? JSON.parse(rawText) : {};
+      transcript = String(parsed?.text || "").trim();
+    } catch {
+      transcript = "";
+    }
+
+    if (!transcript) {
+      return Response.json(
+        { error: "전사 결과가 비어 있습니다." },
+        { status: 500 }
+      );
+    }
+
+    const scoreAgainstJp = similarityScore(transcript, answerJp);
+    const scoreAgainstYomi = answerYomi
+      ? similarityScore(transcript, answerYomi)
+      : 0;
+
+    const score = Math.max(scoreAgainstJp, scoreAgainstYomi);
     const feedback = makeFeedback(score, answerJp, transcript);
 
     return Response.json({
