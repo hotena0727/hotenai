@@ -203,8 +203,8 @@ export default function WordPage() {
   const visibleQtypes =
     selectedPosGroup === "other"
       ? QTYPE_OPTIONS.filter(
-          (item) => item.value === "meaning" || item.value === "kr2jp"
-        )
+        (item) => item.value === "meaning" || item.value === "kr2jp"
+      )
       : QTYPE_OPTIONS;
 
   const wrongItems = questions
@@ -236,8 +236,8 @@ export default function WordPage() {
         kind === "perfect"
           ? `${BASE_SFX_URL}/perfect.mp3`
           : kind === "correct"
-          ? `${BASE_SFX_URL}/correct.mp3`
-          : `${BASE_SFX_URL}/wrong.mp3`;
+            ? `${BASE_SFX_URL}/correct.mp3`
+            : `${BASE_SFX_URL}/wrong.mp3`;
 
       const audio = new Audio(src);
       audio.preload = "auto";
@@ -455,10 +455,6 @@ export default function WordPage() {
           return;
         }
 
-        const blockedWords = Object.keys(excludedWords).filter(
-          (k) => excludedWords[k]
-        );
-
         const reviewQtypeValue: WordQType =
           reviewQtype === "meaning" || reviewQtype === "kr2jp"
             ? (reviewQtype as WordQType)
@@ -468,7 +464,7 @@ export default function WordPage() {
           rows: reviewRows,
           qtype: reviewQtypeValue,
           posGroup: "",
-          excludedWords: blockedWords,
+          excludedWords: [],
           size: reviewRows.length,
         });
 
@@ -838,8 +834,8 @@ export default function WordPage() {
                   {!isReviewMode && isDailyLimitReached
                     ? "오늘 이용 완료"
                     : isReviewMode
-                    ? "🔄 선택한 복습 문제 다시 불러오기"
-                    : "🔄 기타 선택 적용(새 문제)"}
+                      ? "🔄 선택한 복습 문제 다시 불러오기"
+                      : "🔄 기타 선택 적용(새 문제)"}
                 </button>
               </div>
             ) : null}
@@ -911,10 +907,10 @@ export default function WordPage() {
                 {isPaidPlan(userPlan)
                   ? "자세한 이용 안내 보기"
                   : !isReviewMode && isDailyLimitReached
-                  ? "오늘 이용 완료"
-                  : remainingSets === 1
-                  ? "오늘 1세트 남음"
-                  : `오늘 ${remainingSets}세트 남음`}
+                    ? "오늘 이용 완료"
+                    : remainingSets === 1
+                      ? "오늘 1세트 남음"
+                      : `오늘 ${remainingSets}세트 남음`}
               </p>
             </div>
             <span
@@ -940,8 +936,8 @@ export default function WordPage() {
                 {isPaidPlan(userPlan)
                   ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
                   : !isReviewMode && isDailyLimitReached
-                  ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
-                  : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+                    ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
+                    : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
@@ -1036,8 +1032,8 @@ export default function WordPage() {
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 이용 완료"
                 : isReviewMode
-                ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
-                : "🔄 새문제(랜덤 10문항)"}
+                  ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
+                  : "🔄 새문제(랜덤 10문항)"}
             </button>
             <button
               type="button"
@@ -1117,8 +1113,8 @@ export default function WordPage() {
                                 isCorrectChoice
                                   ? "font-semibold text-green-600"
                                   : isWrongChoice
-                                  ? "font-semibold text-red-600"
-                                  : ""
+                                    ? "font-semibold text-red-600"
+                                    : ""
                               }
                             >
                               <span lang="ja" style={JA_FONT_STYLE}>
@@ -1137,8 +1133,8 @@ export default function WordPage() {
                             isRight
                               ? "text-sm font-semibold text-green-600"
                               : isWrong
-                              ? "text-sm font-semibold text-red-600"
-                              : "text-sm text-gray-500"
+                                ? "text-sm font-semibold text-red-600"
+                                : "text-sm text-gray-500"
                           }
                         >
                           {isRight ? "정답입니다." : "오답입니다."}
@@ -1276,25 +1272,25 @@ export default function WordPage() {
 
                             <div className="mt-4 space-y-1 text-base sm:text-lg">
                               <p>
-                                <span className="font-semibold">내 답</span>　
+                                <span className="font-semibold">내 답</span>
                                 <span lang="ja" style={JA_FONT_STYLE}>
                                   {item.selected}
                                 </span>
                               </p>
                               <p>
-                                <span className="font-semibold">정답</span>　
+                                <span className="font-semibold">정답</span>
                                 <span lang="ja" style={JA_FONT_STYLE}>
                                   {item.question.correct_text}
                                 </span>
                               </p>
                               <p>
-                                <span className="font-semibold">발음</span>　
+                                <span className="font-semibold">발음</span>
                                 <span lang="ja" style={JA_FONT_STYLE}>
                                   {item.question.reading}
                                 </span>
                               </p>
                               <p>
-                                <span className="font-semibold">뜻</span>　
+                                <span className="font-semibold">뜻</span>
                                 {item.question.meaning}
                               </p>
                             </div>
@@ -1335,24 +1331,22 @@ export default function WordPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${
-              !isReviewMode && isDailyLimitReached
+            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
                 ? "border-red-200 bg-red-50"
                 : "border-gray-300 bg-white"
-            }`}
+              }`}
           >
             <p
-              className={`text-sm ${
-                !isReviewMode && isDailyLimitReached
+              className={`text-sm ${!isReviewMode && isDailyLimitReached
                   ? "text-red-700"
                   : "text-gray-500"
-              }`}
+                }`}
             >
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : isReviewMode
-                ? "선택한 오답 문제를 찾지 못했습니다."
-                : "선택한 조건에 맞는 문제가 없습니다."}
+                  ? "선택한 오답 문제를 찾지 못했습니다."
+                  : "선택한 조건에 맞는 문제가 없습니다."}
             </p>
           </div>
         )}

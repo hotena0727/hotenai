@@ -381,10 +381,6 @@ export default function KanjiPage() {
           return;
         }
 
-        const blockedWords = Object.keys(excludedWords).filter(
-          (k) => excludedWords[k]
-        );
-
         const reviewQtypeValue: KanjiQType =
           reviewQtype === "meaning" || reviewQtype === "kr2jp"
             ? reviewQtype
@@ -394,7 +390,7 @@ export default function KanjiPage() {
           rows: reviewRows,
           qtype: reviewQtypeValue,
           level: "",
-          excludedWords: blockedWords,
+          excludedWords: [],
           size: reviewRows.length,
         });
 
@@ -1057,25 +1053,25 @@ export default function KanjiPage() {
 
                             <div className="mt-4 space-y-1 text-base sm:text-lg">
                               <p>
-                                <span className="font-semibold">내 답</span>　
+                                <span className="font-semibold">내 답</span>
                                 <span lang="ja" style={JA_FONT_STYLE}>
                                   {item.selected}
                                 </span>
                               </p>
                               <p>
-                                <span className="font-semibold">정답</span>　
+                                <span className="font-semibold">정답</span>
                                 <span lang="ja" style={JA_FONT_STYLE}>
                                   {item.question.correct_text}
                                 </span>
                               </p>
                               <p>
-                                <span className="font-semibold">발음</span>　
+                                <span className="font-semibold">발음</span>
                                 <span lang="ja" style={JA_FONT_STYLE}>
                                   {item.question.reading}
                                 </span>
                               </p>
                               <p>
-                                <span className="font-semibold">뜻</span>　
+                                <span className="font-semibold">뜻</span>
                                 {item.question.meaning}
                               </p>
                             </div>
@@ -1116,23 +1112,21 @@ export default function KanjiPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${
-              !isReviewMode && isDailyLimitReached
-                ? "border-red-200 bg-red-50"
-                : "border-gray-300 bg-white"
-            }`}
+            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
+              ? "border-red-200 bg-red-50"
+              : "border-gray-300 bg-white"
+              }`}
           >
             <p
-              className={`text-sm ${
-                !isReviewMode && isDailyLimitReached
-                  ? "text-red-700"
-                  : "text-gray-500"
-              }`}
+              className={`text-sm ${!isReviewMode && isDailyLimitReached
+                ? "text-red-700"
+                : "text-gray-500"
+                }`}
             >
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : isReviewMode
-                  ? "선택한 오답 문제를 찾지 못했습니다."
+                  ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
                   : "선택한 조건에 맞는 문제가 없습니다."}
             </p>
           </div>
