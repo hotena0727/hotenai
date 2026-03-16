@@ -83,6 +83,76 @@ function scoreByDistance(a: string, b: string) {
   return 100 * (1 - dist / Math.max(a.length, b.length, 1));
 }
 
+function countOccurrences(text: string, pattern: RegExp) {
+  const matches = text.match(pattern);
+  return matches ? matches.length : 0;
+}
+
+function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
+  const raw = String(rawTranscript || "").trim();
+  const norm = String(normalizedReading || "");
+
+  const fillerCount = countOccurrences(
+    raw,
+    /(えっと|ええと|あの|その|うーん|えーと|ま|なんか)/g
+  );
+
+  // 같은 글자 연속 반복: たたぶん, そそう  같은 형태
+  let repeatedCharCount = 0;
+  for (let i = 1; i < norm.length; i += 1) {
+    if (norm[i] === norm[i - 1]) {
+      repeatedCharCount += 1;
+    }
+  }
+
+  // 1~2글자 토막 반복 탐지
+  let repeatedFragmentCount = 0;
+  for (let size = 1; size <= 2; size += 1) {
+    for (let i = 0; i + size * 2 <= norm.length; i += 1) {
+      const a = norm.slice(i, i + size);
+      const b = norm.slice(i + size, i + size * 2);
+      if (a && a === b) {
+        repeatedFragmentCount += 1;
+      }
+    }
+  }
+
+  // raw 기준 같은 토큰 반복
+  const rawTokens = raw
+    .normalize("NFKC")
+    .split(/[\s\u3000、。,.!?！？]+/)
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+  let repeatedTokenCount = 0;
+  for (let i = 1; i < rawTokens.length; i += 1) {
+    if (rawTokens[i] === rawTokens[i - 1]) {
+      repeatedTokenCount += 1;
+    }
+  }
+
+  const penalty =
+    fillerCount * 4 +
+    repeatedCharCount * 3 +
+    repeatedFragmentCount * 4 +
+    repeatedTokenCount * 8;
+
+  const hasFlowIssue =
+    fillerCount > 0 ||
+    repeatedCharCount > 0 ||
+    repeatedFragmentCount > 0 ||
+    repeatedTokenCount > 0;
+
+  return {
+    fillerCount,
+    repeatedCharCount,
+    repeatedFragmentCount,
+    repeatedTokenCount,
+    penalty,
+    hasFlowIssue,
+  };
+}
+
 function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const aStrict = normJp(a);
   const bStrict = normJp(b);
@@ -95,8 +165,14 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const aRead = toReadingLike(a);
   const bRead = toReadingLike(b);
 
+  const flow = analyzeSpeechFlow(a, aRead);
+
+  // 발음 자체는 맞더라도 더듬음/반복이 있으면 100점 제한
   if (aRead && bRead && aRead === bRead) {
-    return 100;
+    const cappedPerfect = flow.hasFlowIssue
+      ? Math.max(88, 100 - flow.penalty)
+      : 100;
+    return cappedPerfect;
   }
 
   const bb = bigrams(bRead);
@@ -112,9 +188,15 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const scoreLoose = scoreByDistance(aLoose, bLoose);
   const scoreRead = scoreByDistance(aRead, bRead);
 
-  const weighted = Math.round(
+  let weighted = Math.round(
     scoreStrict * 0.05 + scoreLoose * 0.1 + scoreRead * 0.85
   );
+
+  weighted -= flow.penalty;
+
+  if (flow.hasFlowIssue && weighted >= 100) {
+    weighted = 96;
+  }
 
   return weighted < floorToZero
     ? 0
@@ -151,12 +233,26 @@ function makeDetailedFeedback(
   actualReading: string
 ) {
   const diff = getFirstDiffInfo(expectedReading, actualReading);
+  const flow = analyzeSpeechFlow(transcript, actualReading);
+
+  const flowComment = flow.hasFlowIssue
+    ? `\n💡 이번에는 끊지 말고 한 호흡으로 더 자연스럽게 말해 보세요.`
+    : "";
 
   if (score >= 100) {
-    return `🎯 아주 좋습니다\n🗣️ ${answer} 를 정확하게 말했어요.`;
+    return `🎯 아주 좋습니다\n🗣️ ${answer} 를 정확하고 자연스럽게 말했어요.`;
   }
 
   if (score >= 90) {
+    if (flow.hasFlowIssue && !diff) {
+      return [
+        `🎯 좋습니다`,
+        `🗣️ 발음 자체는 거의 정확합니다.`,
+        `다만 조금 끊기거나 반복된 부분이 있었어요.`,
+        `한 번에 자연스럽게 이어서 말하면 100점에 더 가까워집니다.`,
+      ].join("\n");
+    }
+
     if (diff) {
       return [
         `🎯 좋습니다`,
@@ -167,7 +263,7 @@ function makeDetailedFeedback(
       ].join("\n");
     }
 
-    return `🎯 좋습니다\n🗣️ 거의 정확합니다. ${answer} 를 한 번만 더 또렷하게 말해 보세요.`;
+    return `🎯 좋습니다\n🗣️ 거의 정확합니다. ${answer} 를 한 번만 더 또렷하게 말해 보세요.${flowComment}`;
   }
 
   if (score >= 75) {
@@ -178,10 +274,13 @@ function makeDetailedFeedback(
         `${diff.index + 1}번째 글자 근처가 조금 달라요.`,
         `정답 기준: ${diff.expectedTail}`,
         `인식 결과: ${diff.actualTail}`,
-      ].join("\n");
+        flow.hasFlowIssue ? `끊김이나 반복도 조금 줄여 보세요.` : ``,
+      ]
+        .filter(Boolean)
+        .join("\n");
     }
 
-    return `🎯 좋습니다\n🗣️ ${transcript || answer} 에서 큰 흐름은 맞아요. 정답을 보며 한 번 더 또렷하게 말해 보세요.`;
+    return `🎯 좋습니다\n🗣️ ${transcript || answer} 에서 큰 흐름은 맞아요. 정답을 보며 한 번 더 또렷하고 자연스럽게 말해 보세요.${flowComment}`;
   }
 
   if (score >= 50) {
@@ -192,10 +291,15 @@ function makeDetailedFeedback(
         `${diff.index + 1}번째 글자 근처를 다시 들어보세요.`,
         `정답 기준: ${diff.expectedTail}`,
         `인식 결과: ${diff.actualTail}`,
-      ].join("\n");
+        flow.hasFlowIssue
+          ? `천천히 끊지 말고 한 번에 말하는 것도 의식해 보세요.`
+          : ``,
+      ]
+        .filter(Boolean)
+        .join("\n");
     }
 
-    return `🎯 조금만 더\n🗣️ ${answer} 와 비슷하지만 몇 군데가 달라요. 정답을 보고 2~3번 따라 말해 보세요.`;
+    return `🎯 조금만 더\n🗣️ ${answer} 와 비슷하지만 몇 군데가 달라요. 정답을 보고 2~3번 따라 말해 보세요.${flowComment}`;
   }
 
   if (diff) {
@@ -205,10 +309,15 @@ function makeDetailedFeedback(
       `${diff.index + 1}번째 글자 근처부터 다시 또박또박 말해 보세요.`,
       `정답 기준: ${diff.expectedTail}`,
       `인식 결과: ${diff.actualTail}`,
-    ].join("\n");
+      flow.hasFlowIssue
+        ? `이번에는 중간에 끊지 말고 짧게 한 번에 말해 보세요.`
+        : ``,
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
-  return `🎯 천천히 다시\n🗣️ ${answer} 를 보고 또박또박 2~3번 따라 말해 보세요.`;
+  return `🎯 천천히 다시\n🗣️ ${answer} 를 보고 또박또박, 하지만 끊지 말고 한 번에 말해 보세요.`;
 }
 
 export async function POST(req: Request) {
@@ -234,10 +343,7 @@ export async function POST(req: Request) {
       typeof inputFile !== "object" ||
       !("arrayBuffer" in inputFile)
     ) {
-      return Response.json(
-        { error: "녹음 파일이 없습니다." },
-        { status: 400 }
-      );
+      return Response.json({ error: "녹음 파일이 없습니다." }, { status: 400 });
     }
 
     if (!answerJp) {
