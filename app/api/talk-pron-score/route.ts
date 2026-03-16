@@ -10,7 +10,7 @@ function stripPunctuation(text: string) {
   return String(text || "")
     .normalize("NFKC")
     .replace(/[\s\u3000]+/g, "")
-    .replace(/[、。．，,！？!？「」『』（）()\[\]{}…~\"'`´]/g, "");
+    .replace(/[、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g, "");
 }
 
 function normJp(text: string) {
@@ -38,23 +38,104 @@ function normJpLoose(text: string) {
     );
 }
 
+function escapeRegExp(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * 긴 문장을 먼저 치환해야 중간에 잘리는 걸 줄일 수 있습니다.
+ * 예: 来たくなると思います 를 먼저 잡고, 그 다음 思います 를 처리
+ */
+const PHRASE_READING_RULES: Array<[string, string]> = [
+  ["また来たくなると思います", "またきたくなるとおもいます"],
+  ["来たくなると思います", "きたくなるとおもいます"],
+  ["行ってみたいです", "いってみたいです"],
+  ["そう思います", "そうおもいます"],
+  ["いいと思います", "いいとおもいます"],
+];
+
+/**
+ * 회화 훈련에서 자주 나오는 표기 흔들림 보정
+ * 필요할 때 여기만 추가하면 됩니다.
+ */
+const WORD_READING_RULES: Array<[string, string]> = [
+  ["多分", "たぶん"],
+  ["多い", "おおい"],
+  ["思います", "おもいます"],
+  ["思う", "おもう"],
+  ["来たくなる", "きたくなる"],
+  ["来たい", "きたい"],
+  ["来ます", "きます"],
+  ["来る", "くる"],
+  ["行きたい", "いきたい"],
+  ["行きます", "いきます"],
+  ["行く", "いく"],
+  ["見たい", "みたい"],
+  ["見ます", "みます"],
+  ["見る", "みる"],
+  ["食べたい", "たべたい"],
+  ["食べます", "たべます"],
+  ["食べる", "たべる"],
+  ["飲みたい", "のみたい"],
+  ["飲みます", "のみます"],
+  ["飲む", "のむ"],
+  ["出来る", "できる"],
+  ["出来ます", "できます"],
+  ["良い", "いい"],
+  ["大丈夫", "だいじょうぶ"],
+  ["今日", "きょう"],
+  ["明日", "あした"],
+  ["昨日", "きのう"],
+  ["本当", "ほんとう"],
+  ["一人", "ひとり"],
+  ["二人", "ふたり"],
+  ["上手", "じょうず"],
+  ["下手", "へた"],
+  ["有名", "ゆうめい"],
+  ["便利", "べんり"],
+  ["簡単", "かんたん"],
+  ["大変", "たいへん"],
+  ["安心", "あんしん"],
+  ["心配", "しんぱい"],
+  ["大切", "たいせつ"],
+  ["必要", "ひつよう"],
+  ["自由", "じゆう"],
+  ["時間", "じかん"],
+  ["仕事", "しごと"],
+  ["休み", "やすみ"],
+  ["週末", "しゅうまつ"],
+  ["雰囲気", "ふんいき"],
+  ["ふいんき", "ふんいき"],
+  ["通り", "とおり"],
+  ["街", "まち"],
+  ["町", "まち"],
+];
+
+function applyReadingRules(text: string) {
+  let out = text;
+
+  // 긴 표현 우선
+  for (const [from, to] of PHRASE_READING_RULES) {
+    out = out.replace(new RegExp(escapeRegExp(from), "g"), to);
+  }
+
+  // 그 다음 일반 단어
+  for (const [from, to] of WORD_READING_RULES) {
+    out = out.replace(new RegExp(escapeRegExp(from), "g"), to);
+  }
+
+  return out;
+}
+
 /**
  * 발음상 거의 같은데 표기만 흔들리는 대표 케이스를 완화
- * 필요하면 여기에 계속 추가하면 됩니다.
+ * 이번 버전은 "치환 규칙 묶음" 기반으로 강화
  */
 function replaceCommonVariants(text: string) {
-  return text
-    .replace(/町/g, "街")
-    .replace(/まち/g, "まち")
-    .replace(/通り/g, "とおり")
-    .replace(/とおり/g, "とおり")
-    .replace(/雰囲気/g, "ふんいき")
-    .replace(/ふいんき/g, "ふんいき")
-    .replace(/出来る/g, "できる")
-    .replace(/出来ます/g, "できます")
-    .replace(/良い/g, "いい")
-    .replace(/いいです/g, "いいです")
-    .replace(/大丈夫/g, "だいじょうぶ");
+  return applyReadingRules(text)
+    .replace(/こんにちは/g, "こんにちは")
+    .replace(/こんばんは/g, "こんばんは")
+    .replace(/を/g, "お");
 }
 
 function toReadingLike(text: string) {
@@ -106,11 +187,17 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const aRead = toReadingLike(a);
   const bRead = toReadingLike(b);
 
+  // 읽기 기준으로 완전히 같으면 바로 100점
+  if (aRead && bRead && aRead === bRead) {
+    return 100;
+  }
+
   const bb = bigrams(bRead);
   if (bb.size > 0) {
     const overlap =
       [...bigrams(aRead)].filter((item) => bb.has(item)).length /
       Math.max(1, bb.size);
+
     if (overlap < gate) return 0;
   }
 
@@ -120,11 +207,13 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
 
   /**
    * strict: 원문 일치
-   * loose: 장음/촉음/소문자 흔들림 완화
-   * read : 한자/표기 차이 완화
+   * loose : 장음/촉음/소문자 흔들림 완화
+   * read  : 한자/표기 차이 완화
+   *
+   * 회화 발음 채점은 read 비중을 더 높게 둡니다.
    */
   const weighted = Math.round(
-    scoreStrict * 0.45 + scoreLoose * 0.20 + scoreRead * 0.35
+    scoreStrict * 0.20 + scoreLoose * 0.15 + scoreRead * 0.65
   );
 
   return weighted < floorToZero
