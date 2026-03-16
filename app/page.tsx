@@ -372,7 +372,7 @@ export default function HomePage() {
       kanji: getBalanceValue(balanceData, "한자"),
       katsuyou: getBalanceValue(balanceData, "활용"),
       talk: getBalanceValue(balanceData, "회화"),
-      review: getBalanceValue(balanceData, "복습"),
+      wrongCare: getBalanceValue(balanceData, "오답관리"),
       streak: getBalanceValue(balanceData, "꾸준함"),
     }),
     [balanceData]
@@ -483,8 +483,8 @@ export default function HomePage() {
     ? "아직 학습 기록이 없어요. 오늘은 첫 루틴 하나만 가볍게 시작해보세요."
     : isDormantWeek
       ? "이번 주는 잠시 쉬었네요. 오늘 한 세트부터 다시 시작해볼까요?"
-      : weakest === "복습"
-        ? "오늘은 새 문제보다 복습부터 해보면 더 효과적입니다."
+      : weakest === "오답관리"
+        ? "오늘은 새 문제보다 오답노트부터 보면 더 효과적입니다."
         : "오늘 가장 필요한 루틴부터 가볍게 시작해보세요.";
 
   const balanceSupportText = isEmptyUser
@@ -727,9 +727,9 @@ export default function HomePage() {
                     </span>
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800">
-                    <span className="text-gray-500">복습</span>
+                    <span className="text-gray-500">오답관리</span>
                     <span className="font-bold text-gray-900">
-                      {balanceScores.review}
+                      {balanceScores.wrongCare}
                     </span>
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800">
@@ -749,9 +749,8 @@ export default function HomePage() {
             <div
               className="flex h-44 w-44 items-center justify-center rounded-full shadow-sm"
               style={{
-                background: `conic-gradient(${progressColors.main} ${
-                  (stats.goalPercent / 100) * 360
-                }deg, ${progressColors.rest} 0deg)`,
+                background: `conic-gradient(${progressColors.main} ${(stats.goalPercent / 100) * 360
+                  }deg, ${progressColors.rest} 0deg)`,
               }}
             >
               <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
@@ -793,11 +792,10 @@ export default function HomePage() {
                     }
                   />
                   <p
-                    className={`mt-3 text-sm ${
-                      isToday
-                        ? "font-semibold text-gray-900"
-                        : "text-gray-500"
-                    }`}
+                    className={`mt-3 text-sm ${isToday
+                      ? "font-semibold text-gray-900"
+                      : "text-gray-500"
+                      }`}
                   >
                     {day.label}
                   </p>
@@ -811,7 +809,7 @@ export default function HomePage() {
           </div>
         </div>
 
- <div className="mt-10 rounded-3xl border border-gray-200 bg-gray-50/70 p-6">
+        <div className="mt-10 rounded-3xl border border-gray-200 bg-gray-50/70 p-6">
           <div className="flex items-center justify-between">
             <p className="text-xl font-bold">📊 레벨 진행</p>
             <p className="text-sm text-gray-500">최근 학습 기준</p>
@@ -959,7 +957,7 @@ export default function HomePage() {
             </div>
           ) : null}
         </div>
-        
+
         {suggestedRoutines.length > 0 ? (
           <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-6">
             <p className="text-lg font-semibold">오늘의 추천 루틴</p>
@@ -982,9 +980,8 @@ export default function HomePage() {
                     <div className="flex min-h-[56px] flex-col justify-center">
                       <p className="text-base font-semibold">{routine.title}</p>
                       <p
-                        className={`mt-1 text-sm leading-6 ${
-                          isPrimary ? "text-gray-200" : "text-gray-600"
-                        }`}
+                        className={`mt-1 text-sm leading-6 ${isPrimary ? "text-gray-200" : "text-gray-600"
+                          }`}
                       >
                         {routine.desc}
                       </p>
