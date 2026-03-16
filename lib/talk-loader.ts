@@ -6,49 +6,63 @@ function clean(value: unknown): string {
 }
 
 export async function loadTalkRows(): Promise<TalkCsvRow[]> {
-  const res = await fetch("/csv/talk_situations.csv");
+  // 원본이 아니라 yomi 복사판만 읽음
+  const res = await fetch("/csv/talk_situations.with-yomi.csv", {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error("talk_situations.with-yomi.csv를 불러오지 못했습니다.");
+  }
+
   const csvText = await res.text();
 
-  const parsed = Papa.parse<TalkCsvRow>(csvText, {
+  const parsed = Papa.parse<Record<string, unknown>>(csvText, {
     header: true,
     skipEmptyLines: true,
   });
 
   if (parsed.errors.length > 0) {
     console.error(parsed.errors);
-    throw new Error("talk_situations.csv를 읽는 중 오류가 발생했습니다.");
+    throw new Error("talk_situations.with-yomi.csv를 읽는 중 오류가 발생했습니다.");
   }
 
   return parsed.data
-    .map((row) => ({
-      qid: clean(row.qid),
-      level: clean(row.level),
-      tag: clean(row.tag),
-      tag_kr: clean(row.tag_kr),
-      sub: clean(row.sub),
-      sub_kr: clean(row.sub_kr),
-      situation_kr: clean(row.situation_kr),
-      partner_jp: clean(row.partner_jp),
-      partner_mp3: clean(row.partner_mp3),
-      partner_kr: clean(row.partner_kr),
-      answer_jp: clean(row.answer_jp),
-      answer_yomi: clean((row as any).answer_yomi),
-      answer_mp3: clean(row.answer_mp3),
-      answer_kr: clean(row.answer_kr),
-      d1_jp: clean(row.d1_jp),
-      d2_jp: clean(row.d2_jp),
-      d3_jp: clean(row.d3_jp),
-      hint_kr: clean(row.hint_kr),
-      mode: clean(row.mode),
-      section: clean(row.section),
-      stage: clean(row.stage),
-      explain_kr: clean(row.explain_kr),
-    }))
+    .map((row) => {
+      const answerJp = clean(row.answer_jp);
+      const answerYomi = clean(row.answer_yomi) || answerJp;
+
+      return {
+        qid: clean(row.qid),
+        level: clean(row.level),
+        tag: clean(row.tag),
+        tag_kr: clean(row.tag_kr),
+        sub: clean(row.sub),
+        sub_kr: clean(row.sub_kr),
+        situation_kr: clean(row.situation_kr),
+        partner_jp: clean(row.partner_jp),
+        partner_mp3: clean(row.partner_mp3),
+        partner_kr: clean(row.partner_kr),
+        answer_jp: answerJp,
+        answer_yomi: answerYomi,
+        answer_mp3: clean(row.answer_mp3),
+        answer_kr: clean(row.answer_kr),
+        d1_jp: clean(row.d1_jp),
+        d2_jp: clean(row.d2_jp),
+        d3_jp: clean(row.d3_jp),
+        hint_kr: clean(row.hint_kr),
+        mode: clean(row.mode),
+        section: clean(row.section),
+        stage: clean(row.stage),
+        explain_kr: clean(row.explain_kr),
+      } as TalkCsvRow;
+    })
     .filter(
       (row) =>
         row.qid &&
         row.partner_jp &&
         row.answer_jp &&
+        row.answer_yomi &&
         row.stage &&
         row.tag &&
         row.sub
