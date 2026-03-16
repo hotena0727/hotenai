@@ -208,7 +208,6 @@ export default function KanjiPage() {
       return Boolean(idMatched && levelMatched);
     });
   }, [rows, isReviewMode, reviewQids, reviewLevel]);
-}, [rows, isReviewMode, reviewQids, reviewQtype, reviewLevel]);
 
 useEffect(() => {
   const init = async () => {
