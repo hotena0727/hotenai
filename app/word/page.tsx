@@ -81,6 +81,30 @@ function circleNumber(index: number): string {
   return nums[index] || `${index + 1}.`;
 }
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const copied = [...arr];
+  for (let i = copied.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copied[i], copied[j]] = [copied[j], copied[i]];
+  }
+  return copied;
+}
+
+function uniqueStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  for (const v of values) {
+    const s = String(v || "").trim();
+    if (!s) continue;
+    if (seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+  }
+
+  return out;
+}
+
 const JA_FONT_STYLE = {
   fontFamily: `"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif`,
 } as const;
@@ -184,7 +208,9 @@ export default function WordPage() {
   const reviewRows = useMemo(() => {
     if (!isReviewMode || reviewQids.length === 0) return [] as WordRow[];
 
-    const qidSet = new Set(reviewQids);
+    const qidSet = new Set(
+      reviewQids.map((v) => String(v || "").trim()).filter(Boolean)
+    );
 
     return rows.filter((row) => {
       const itemKey = String((row as { item_key?: string }).item_key || "").trim();
@@ -201,8 +227,8 @@ export default function WordPage() {
   const visibleQtypes =
     selectedPosGroup === "other"
       ? QTYPE_OPTIONS.filter(
-        (item) => item.value === "meaning" || item.value === "kr2jp"
-      )
+          (item) => item.value === "meaning" || item.value === "kr2jp"
+        )
       : QTYPE_OPTIONS;
 
   const wrongItems = questions
@@ -287,14 +313,14 @@ export default function WordPage() {
   }, [isReviewMode, reviewQtype, reviewPos]);
 
   useEffect(() => {
-    if (isDailyLimitReached) {
+    if (isDailyLimitReached && !isReviewMode) {
       setQuestions([]);
       setAnswers({});
       setSubmitted(false);
       setScore(0);
       setSaveMessage("");
     }
-  }, [isDailyLimitReached]);
+  }, [isDailyLimitReached, isReviewMode]);
 
   useEffect(() => {
     if (!submitted) return;
@@ -439,6 +465,98 @@ export default function WordPage() {
     );
   };
 
+  const buildReviewQuestionsDirect = (
+    targetRows: WordRow[],
+    allRows: WordRow[],
+    qtype: WordQType
+  ): WordQuestion[] => {
+    const basePool =
+      reviewPos && reviewPos.length > 0
+        ? allRows.filter(
+            (row) => String(row.pos || "").trim().toLowerCase() === reviewPos
+          )
+        : allRows;
+
+    return targetRows
+      .map((row) => {
+        const jp_word = String(row.jp_word || "").trim();
+        const reading = String(row.reading || "").trim();
+        const meaning = String(row.meaning || "").trim();
+        const pos = String(row.pos || "").trim().toLowerCase();
+        const example_jp = String((row as { example_jp?: string }).example_jp || "").trim();
+        const example_kr = String((row as { example_kr?: string }).example_kr || "").trim();
+
+        if (!jp_word) return null;
+
+        let prompt = "";
+        let correct_text = "";
+        let choices: string[] = [];
+
+        if (qtype === "reading") {
+          prompt = jp_word;
+          correct_text = reading;
+
+          const distractors = uniqueStrings(
+            shuffleArray(
+              basePool
+                .filter((r) => String(r.jp_word || "").trim() !== jp_word)
+                .map((r) => String(r.reading || "").trim())
+            )
+          )
+            .filter((v) => v && v !== correct_text)
+            .slice(0, 3);
+
+          choices = shuffleArray(uniqueStrings([correct_text, ...distractors]));
+        } else if (qtype === "meaning") {
+          prompt = jp_word;
+          correct_text = meaning;
+
+          const distractors = uniqueStrings(
+            shuffleArray(
+              basePool
+                .filter((r) => String(r.jp_word || "").trim() !== jp_word)
+                .map((r) => String(r.meaning || "").trim())
+            )
+          )
+            .filter((v) => v && v !== correct_text)
+            .slice(0, 3);
+
+          choices = shuffleArray(uniqueStrings([correct_text, ...distractors]));
+        } else {
+          prompt = meaning;
+          correct_text = jp_word;
+
+          const distractors = uniqueStrings(
+            shuffleArray(
+              basePool
+                .filter((r) => String(r.jp_word || "").trim() !== jp_word)
+                .map((r) => String(r.jp_word || "").trim())
+            )
+          )
+            .filter((v) => v && v !== correct_text)
+            .slice(0, 3);
+
+          choices = shuffleArray(uniqueStrings([correct_text, ...distractors]));
+        }
+
+        if (!prompt || !correct_text || choices.length < 2) return null;
+
+        return {
+          jp_word,
+          reading,
+          meaning,
+          pos,
+          qtype,
+          prompt,
+          correct_text,
+          choices,
+          example_jp,
+          example_kr,
+        } as WordQuestion;
+      })
+      .filter(Boolean) as WordQuestion[];
+  };
+
   const generateQuiz = () => {
     try {
       if (isReviewMode) {
@@ -458,19 +576,28 @@ export default function WordPage() {
             ? (reviewQtype as WordQType)
             : "reading";
 
-        const quiz = buildWordQuiz({
-          rows: reviewRows,
-          qtype: reviewQtypeValue,
-          posGroup: "",
-          excludedWords: [],
-          size: reviewRows.length,
-        });
+        const reviewQuestions = buildReviewQuestionsDirect(
+          reviewRows,
+          rows,
+          reviewQtypeValue
+        );
 
-        setQuestions(quiz);
+        if (reviewQuestions.length === 0) {
+          setQuestions([]);
+          setAnswers({});
+          setSubmitted(false);
+          setScore(0);
+          setSaveMessage("선택한 복습 문제로 퀴즈를 만들지 못했습니다.");
+          setAudioError("");
+          setAudioLoadingKey("");
+          return;
+        }
+
+        setQuestions(reviewQuestions);
         setAnswers({});
         setSubmitted(false);
         setScore(0);
-        setSaveMessage(quiz.length === 0 ? "복습할 문제가 없습니다." : "");
+        setSaveMessage("");
         setAudioError("");
         setAudioLoadingKey("");
         return;
@@ -558,6 +685,7 @@ export default function WordPage() {
     isReviewMode,
     reviewRows,
     reviewQtype,
+    reviewPos,
   ]);
 
   const makeNewQuiz = () => {
@@ -1270,25 +1398,25 @@ export default function WordPage() {
 
                             <div className="mt-4 space-y-1 text-base sm:text-lg">
                               <p>
-                                <span className="font-semibold">내 답</span>
+                                <span className="font-semibold">내 답</span>{" "}
                                 <span lang="ja" style={JA_FONT_STYLE}>
                                   {item.selected}
                                 </span>
                               </p>
                               <p>
-                                <span className="font-semibold">정답</span>
+                                <span className="font-semibold">정답</span>{" "}
                                 <span lang="ja" style={JA_FONT_STYLE}>
                                   {item.question.correct_text}
                                 </span>
                               </p>
                               <p>
-                                <span className="font-semibold">발음</span>
+                                <span className="font-semibold">발음</span>{" "}
                                 <span lang="ja" style={JA_FONT_STYLE}>
                                   {item.question.reading}
                                 </span>
                               </p>
                               <p>
-                                <span className="font-semibold">뜻</span>
+                                <span className="font-semibold">뜻</span>{" "}
                                 {item.question.meaning}
                               </p>
                             </div>
@@ -1329,21 +1457,23 @@ export default function WordPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
-              ? "border-red-200 bg-red-50"
-              : "border-gray-300 bg-white"
-              }`}
+            className={`mt-6 rounded-2xl border p-5 ${
+              !isReviewMode && isDailyLimitReached
+                ? "border-red-200 bg-red-50"
+                : "border-gray-300 bg-white"
+            }`}
           >
             <p
-              className={`text-sm ${!isReviewMode && isDailyLimitReached
-                ? "text-red-700"
-                : "text-gray-500"
-                }`}
+              className={`text-sm ${
+                !isReviewMode && isDailyLimitReached
+                  ? "text-red-700"
+                  : "text-gray-500"
+              }`}
             >
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : isReviewMode
-                  ? "선택한 오답 문제를 찾지 못했습니다."
+                  ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
                   : "선택한 조건에 맞는 문제가 없습니다."}
             </p>
           </div>
