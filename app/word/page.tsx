@@ -1,7 +1,9 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { WordQType, WordQuestion, WordRow } from "@/app/types/word";
@@ -90,15 +92,12 @@ const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 export default function WordPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
-  const isReviewMode = searchParams.get("review") === "1";
-  const reviewQids = (searchParams.get("qids") || "")
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-  const reviewQtype = (searchParams.get("qtype") || "").trim();
-  const reviewPos = (searchParams.get("pos") || "").trim().toLowerCase();
+  const [reviewReady, setReviewReady] = useState(false);
+  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [reviewQids, setReviewQids] = useState<string[]>([]);
+  const [reviewQtype, setReviewQtype] = useState("");
+  const [reviewPos, setReviewPos] = useState("");
 
   const [rows, setRows] = useState<WordRow[]>([]);
   const [patternRows, setPatternRows] = useState<PatternRow[]>([]);
@@ -149,6 +148,24 @@ export default function WordPage() {
     }
   }, [router, pathname]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+
+    setIsReviewMode(params.get("review") === "1");
+    setReviewQids(
+      (params.get("qids") || "")
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean)
+    );
+    setReviewQtype((params.get("qtype") || "").trim());
+    setReviewPos((params.get("pos") || "").trim().toLowerCase());
+
+    setReviewReady(true);
+  }, []);
+
   const visiblePatterns = useMemo(
     () =>
       filterPatternRows(
@@ -174,7 +191,8 @@ export default function WordPage() {
       const itemKeyOk = itemKey ? qidSet.has(itemKey) : false;
       const jpWordOk = qidSet.has(String(row.jp_word || "").trim());
       const qtypeOk =
-        !reviewQtype || reviewQtype === String((row as { qtype?: string }).qtype || "").trim();
+        !reviewQtype ||
+        reviewQtype === String((row as { qtype?: string }).qtype || "").trim();
       const posOk =
         !reviewPos || reviewPos === String(row.pos || "").trim().toLowerCase();
 
@@ -218,8 +236,8 @@ export default function WordPage() {
         kind === "perfect"
           ? `${BASE_SFX_URL}/perfect.mp3`
           : kind === "correct"
-            ? `${BASE_SFX_URL}/correct.mp3`
-            : `${BASE_SFX_URL}/wrong.mp3`;
+          ? `${BASE_SFX_URL}/correct.mp3`
+          : `${BASE_SFX_URL}/wrong.mp3`;
 
       const audio = new Audio(src);
       audio.preload = "auto";
@@ -254,7 +272,7 @@ export default function WordPage() {
       reviewQtype === "meaning" ||
       reviewQtype === "kr2jp"
     ) {
-      setSelectedQType(reviewQtype);
+      setSelectedQType(reviewQtype as WordQType);
     }
 
     if (!reviewPos) return;
@@ -443,7 +461,7 @@ export default function WordPage() {
 
         const reviewQtypeValue: WordQType =
           reviewQtype === "meaning" || reviewQtype === "kr2jp"
-            ? reviewQtype
+            ? (reviewQtype as WordQType)
             : "reading";
 
         const quiz = buildWordQuiz({
@@ -524,7 +542,7 @@ export default function WordPage() {
   };
 
   useEffect(() => {
-    if (loading || rows.length === 0) return;
+    if (!reviewReady || loading || rows.length === 0) return;
     if (selectedPosGroup === "other" && selectedOtherPos.length === 0) {
       setQuestions([]);
       return;
@@ -537,6 +555,7 @@ export default function WordPage() {
     generateQuiz();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    reviewReady,
     loading,
     rows,
     selectedPosGroup,
@@ -706,7 +725,7 @@ export default function WordPage() {
     }
   };
 
-  if (loading) {
+  if (loading || !reviewReady) {
     return (
       <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
         <div className="mx-auto max-w-3xl">
@@ -819,8 +838,8 @@ export default function WordPage() {
                   {!isReviewMode && isDailyLimitReached
                     ? "오늘 이용 완료"
                     : isReviewMode
-                      ? "🔄 선택한 복습 문제 다시 불러오기"
-                      : "🔄 기타 선택 적용(새 문제)"}
+                    ? "🔄 선택한 복습 문제 다시 불러오기"
+                    : "🔄 기타 선택 적용(새 문제)"}
                 </button>
               </div>
             ) : null}
@@ -892,10 +911,10 @@ export default function WordPage() {
                 {isPaidPlan(userPlan)
                   ? "자세한 이용 안내 보기"
                   : !isReviewMode && isDailyLimitReached
-                    ? "오늘 이용 완료"
-                    : remainingSets === 1
-                      ? "오늘 1세트 남음"
-                      : `오늘 ${remainingSets}세트 남음`}
+                  ? "오늘 이용 완료"
+                  : remainingSets === 1
+                  ? "오늘 1세트 남음"
+                  : `오늘 ${remainingSets}세트 남음`}
               </p>
             </div>
             <span
@@ -921,8 +940,8 @@ export default function WordPage() {
                 {isPaidPlan(userPlan)
                   ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
                   : !isReviewMode && isDailyLimitReached
-                    ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
-                    : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+                  ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
+                  : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
@@ -1017,8 +1036,8 @@ export default function WordPage() {
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 이용 완료"
                 : isReviewMode
-                  ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
-                  : "🔄 새문제(랜덤 10문항)"}
+                ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
+                : "🔄 새문제(랜덤 10문항)"}
             </button>
             <button
               type="button"
@@ -1098,8 +1117,8 @@ export default function WordPage() {
                                 isCorrectChoice
                                   ? "font-semibold text-green-600"
                                   : isWrongChoice
-                                    ? "font-semibold text-red-600"
-                                    : ""
+                                  ? "font-semibold text-red-600"
+                                  : ""
                               }
                             >
                               <span lang="ja" style={JA_FONT_STYLE}>
@@ -1118,8 +1137,8 @@ export default function WordPage() {
                             isRight
                               ? "text-sm font-semibold text-green-600"
                               : isWrong
-                                ? "text-sm font-semibold text-red-600"
-                                : "text-sm text-gray-500"
+                              ? "text-sm font-semibold text-red-600"
+                              : "text-sm text-gray-500"
                           }
                         >
                           {isRight ? "정답입니다." : "오답입니다."}
@@ -1332,8 +1351,8 @@ export default function WordPage() {
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : isReviewMode
-                  ? "선택한 오답 문제를 찾지 못했습니다."
-                  : "선택한 조건에 맞는 문제가 없습니다."}
+                ? "선택한 오답 문제를 찾지 못했습니다."
+                : "선택한 조건에 맞는 문제가 없습니다."}
             </p>
           </div>
         )}
