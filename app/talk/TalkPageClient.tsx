@@ -873,8 +873,8 @@ export default function TalkPage() {
         const talkProgress = await loadAppProgress("talk");
         const completedMap =
           talkProgress?.completed_subs &&
-            typeof talkProgress.completed_subs === "object" &&
-            !Array.isArray(talkProgress.completed_subs)
+          typeof talkProgress.completed_subs === "object" &&
+          !Array.isArray(talkProgress.completed_subs)
             ? (talkProgress.completed_subs as Record<string, boolean>)
             : {};
         setCompletedSubsMap(completedMap);
@@ -1045,6 +1045,18 @@ export default function TalkPage() {
     return completedSubsMap[completedKey] ? `[완] ${item.label}` : item.label;
   };
 
+  const getNextSubValue = () => {
+    if (selectedSub === "전체") return null;
+
+    const currentSubIndex = subOptions.findIndex(
+      (item) => item.value === selectedSub
+    );
+    if (currentSubIndex < 0) return null;
+
+    const next = subOptions[currentSubIndex + 1];
+    return next?.value || null;
+  };
+
   const getTodayMissionText = () => {
     if (spokenSentenceCount >= 7) {
       return "좋아요. 오늘은 이미 충분히 말했어요. 정답 문장을 3번만 더 또렷하게 따라가 봅시다.";
@@ -1073,8 +1085,8 @@ export default function TalkPage() {
       const appProgress = await loadAppProgress("talk");
       const prevMap =
         appProgress?.completed_subs &&
-          typeof appProgress.completed_subs === "object" &&
-          !Array.isArray(appProgress.completed_subs)
+        typeof appProgress.completed_subs === "object" &&
+        !Array.isArray(appProgress.completed_subs)
           ? (appProgress.completed_subs as Record<string, boolean>)
           : {};
 
@@ -1261,7 +1273,8 @@ export default function TalkPage() {
         `정답표현: ${currentQuestion.answer_jp || ""}`,
         `정답해석: ${currentQuestion.answer_kr || ""}`,
         `내선택: ${selected}`,
-        `정오답: ${selected === currentQuestion.answer_jp ? "정답" : "오답"
+        `정오답: ${
+          selected === currentQuestion.answer_jp ? "정답" : "오답"
         }`,
       ].filter(Boolean);
 
@@ -1596,6 +1609,10 @@ export default function TalkPage() {
 
       await clearDailyState("talk");
 
+      if (!isReviewing && selectedSub !== "전체") {
+        await markCompletedSub(selectedStage, selectedTag, selectedSub);
+      }
+
       setSaveDone(true);
 
       if (isReviewing) {
@@ -1608,9 +1625,42 @@ export default function TalkPage() {
         setReviewNotice("복습 세트를 완료했습니다.");
         setIsReviewing(false);
         setViewMode("select");
+        setSaving(false);
+        return;
+      }
+
+      const completedLabel =
+        selectedSub === "전체" ? "현재 세트" : getSubLabel(selectedSub);
+
+      const nextSubValue = getNextSubValue();
+
+      setQuestions([]);
+      setCurrentIndex(0);
+      setCurrentChoices([]);
+      setSelected("");
+      setSubmitted(false);
+      setScore(0);
+      setWrongList([]);
+      setCoachOpen(false);
+      setCoachAnswer("");
+      setCoachError("");
+      setCoachLoading(false);
+      setCoachQuestion("");
+      setAudioError("");
+      setAudioLoadingKey("");
+      resetPronunciationState();
+      setViewMode("select");
+
+      if (nextSubValue) {
+        const nextLabel = getSubLabel(nextSubValue);
+        setSelectedSub(nextSubValue);
+        setFinishMessage(
+          `✅ [완] ${completedLabel} 완료! 다음 상황 문제 "${nextLabel}"를 이어서 풀어보세요.`
+        );
       } else {
-        setViewMode("done");
-        alert("결과가 저장되었습니다.");
+        setFinishMessage(
+          `✅ [완] ${completedLabel} 완료! 현재 유형의 상황 문제를 모두 풀었습니다.`
+        );
       }
     } catch (error) {
       console.error(error);
@@ -1825,8 +1875,8 @@ export default function TalkPage() {
                   {isPro
                     ? "자세한 이용 안내 보기"
                     : quotaLimitReached
-                      ? "오늘 이용 한도 도달"
-                      : `발음 ${remainingListen}회 · 녹음 ${remainingRecord}회 남음`}
+                    ? "오늘 이용 한도 도달"
+                    : `발음 ${remainingListen}회 · 녹음 ${remainingRecord}회 남음`}
                 </p>
               </div>
               <span
@@ -1852,7 +1902,7 @@ export default function TalkPage() {
                   {isPro
                     ? "유료 플랜은 발음듣기와 녹음을 제한 없이 이용할 수 있고, AI 스마트코치도 사용할 수 있습니다."
                     : quotaMessage ||
-                    "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 유료 플랜에서 이용할 수 있습니다."}
+                      "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 유료 플랜에서 이용할 수 있습니다."}
                 </p>
               </div>
             ) : null}
@@ -2024,13 +2074,13 @@ export default function TalkPage() {
               <p className="mt-3 text-sm text-gray-500">
                 {isReviewing
                   ? `복습 진행: ${Math.min(
-                    solvedCount + (submitted ? 0 : 1),
-                    totalCount
-                  )}/${totalCount}`
+                      solvedCount + (submitted ? 0 : 1),
+                      totalCount
+                    )}/${totalCount}`
                   : `문항 진행: ${Math.min(
-                    currentIndex + 1,
-                    totalCount
-                  )}/${totalCount}`}
+                      currentIndex + 1,
+                      totalCount
+                    )}/${totalCount}`}
               </p>
 
               {reviewNotice ? (
@@ -2351,12 +2401,12 @@ export default function TalkPage() {
                       disabled={
                         listenLimitReached ||
                         audioLoadingKey ===
-                        `partner-dialog-${currentQuestion?.qid}`
+                          `partner-dialog-${currentQuestion?.qid}`
                       }
                       className="shrink-0 p-1 text-xl leading-none"
                     >
                       {audioLoadingKey ===
-                        `partner-dialog-${currentQuestion?.qid}`
+                      `partner-dialog-${currentQuestion?.qid}`
                         ? "재생 중..."
                         : "🔊"}
                     </button>
@@ -2390,12 +2440,12 @@ export default function TalkPage() {
                       disabled={
                         listenLimitReached ||
                         audioLoadingKey ===
-                        `answer-dialog-${currentQuestion?.qid}`
+                          `answer-dialog-${currentQuestion?.qid}`
                       }
                       className="shrink-0 p-1 text-xl leading-none"
                     >
                       {audioLoadingKey ===
-                        `answer-dialog-${currentQuestion?.qid}`
+                      `answer-dialog-${currentQuestion?.qid}`
                         ? "재생 중..."
                         : "🔊"}
                     </button>
@@ -2504,7 +2554,7 @@ export default function TalkPage() {
               </div>
 
               {!isPro &&
-                (listenLimitReached || recordLimitReached || quotaMessage) ? (
+              (listenLimitReached || recordLimitReached || quotaMessage) ? (
                 <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm leading-6 text-gray-700">
                   {quotaMessage ||
                     "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다."}
@@ -2514,15 +2564,15 @@ export default function TalkPage() {
                       listenLimitReached
                         ? "오늘 FREE 발음듣기 사용이 모두 끝났어요."
                         : recordLimitReached
-                          ? "오늘 FREE 녹음 사용이 모두 끝났어요."
-                          : "유료 플랜에서는 더 편하게 이어갈 수 있어요."
+                        ? "오늘 FREE 녹음 사용이 모두 끝났어요."
+                        : "유료 플랜에서는 더 편하게 이어갈 수 있어요."
                     }
                     body={
                       listenLimitReached
                         ? "오늘은 준비된 발음듣기 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 발음듣기를 제한 없이 이용할 수 있습니다."
                         : recordLimitReached
-                          ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 녹음을 제한 없이 이용할 수 있습니다."
-                          : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. 유료 플랜에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."
+                        ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 녹음을 제한 없이 이용할 수 있습니다."
+                        : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. 유료 플랜에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."
                     }
                   />
                 </div>
@@ -2534,9 +2584,9 @@ export default function TalkPage() {
                   onClick={() =>
                     currentQuestion?.answer_mp3
                       ? playAudio(
-                        currentQuestion.answer_mp3,
-                        `answer-pron-${currentQuestion.qid}`
-                      )
+                          currentQuestion.answer_mp3,
+                          `answer-pron-${currentQuestion.qid}`
+                        )
                       : undefined
                   }
                   disabled={
@@ -2567,10 +2617,11 @@ export default function TalkPage() {
                           : startPronRecording
                       }
                       disabled={recordLimitReached && pronStage !== "recording"}
-                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${pronStage === "recording"
-                        ? "ring-4 ring-red-100"
-                        : "hover:shadow-md"
-                        }`}
+                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${
+                        pronStage === "recording"
+                          ? "ring-4 ring-red-100"
+                          : "hover:shadow-md"
+                      }`}
                       aria-label={
                         pronStage === "recording" ? "녹음 정지" : "녹음 시작"
                       }
@@ -2593,17 +2644,19 @@ export default function TalkPage() {
                       type="button"
                       onClick={playRecordedPronunciation}
                       disabled={!recordedAudioUrl}
-                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${isRecordedPlaying
-                        ? "ring-4 ring-gray-200 shadow-md"
-                        : "hover:shadow-md"
-                        }`}
+                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${
+                        isRecordedPlaying
+                          ? "ring-4 ring-gray-200 shadow-md"
+                          : "hover:shadow-md"
+                      }`}
                       aria-label="내 녹음 재생"
                     >
                       <span
-                        className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${isRecordedPlaying
-                          ? "border-l-black"
-                          : "border-l-gray-700"
-                          }`}
+                        className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${
+                          isRecordedPlaying
+                            ? "border-l-black"
+                            : "border-l-gray-700"
+                        }`}
                       />
                     </button>
 
