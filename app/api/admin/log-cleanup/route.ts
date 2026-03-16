@@ -89,7 +89,7 @@ async function countTargets(params: {
 
   let query = adminClient
     .from("quiz_attempts")
-    .select("id, created_at, user_id", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true });
 
   if (scope === "mine") {
     query = query.eq("user_id", selectedUserId);
@@ -138,6 +138,91 @@ async function deleteTargets(params: {
   return Number(count || 0);
 }
 
+type ProgressAll = {
+  talk?: Record<string, unknown>;
+  word?: Record<string, unknown>;
+  kanji?: Record<string, unknown>;
+  katsuyou?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+function stripStudyProgress(progress: unknown): ProgressAll {
+  const base =
+    progress && typeof progress === "object" && !Array.isArray(progress)
+      ? { ...(progress as Record<string, unknown>) }
+      : {};
+
+  delete base.talk;
+  delete base.word;
+  delete base.kanji;
+  delete base.katsuyou;
+
+  return base;
+}
+
+async function resetProgressTargets(params: {
+  adminClient: any;
+  scope: ScopeType;
+  selectedUserId: string;
+}) {
+  const { adminClient, scope, selectedUserId } = params;
+
+  if (scope === "mine") {
+    const { data, error } = await adminClient
+      .from("profiles")
+      .select("id, progress")
+      .eq("id", selectedUserId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`progress 조회 실패: ${error.message}`);
+    }
+
+    if (!data?.id) return 0;
+
+    const nextProgress = stripStudyProgress(data.progress);
+
+    const { error: updateError } = await adminClient
+      .from("profiles")
+      .update({ progress: nextProgress })
+      .eq("id", selectedUserId);
+
+    if (updateError) {
+      throw new Error(`progress 초기화 실패: ${updateError.message}`);
+    }
+
+    return 1;
+  }
+
+  const { data: rows, error } = await adminClient
+    .from("profiles")
+    .select("id, progress");
+
+  if (error) {
+    throw new Error(`progress 전체 조회 실패: ${error.message}`);
+  }
+
+  const targets = Array.isArray(rows) ? rows : [];
+  let updatedCount = 0;
+
+  for (const row of targets) {
+    const nextProgress = stripStudyProgress(row.progress);
+
+    const { error: updateError } = await adminClient
+      .from("profiles")
+      .update({ progress: nextProgress })
+      .eq("id", row.id);
+
+    if (updateError) {
+      throw new Error(`progress 초기화 실패(${row.id}): ${updateError.message}`);
+    }
+
+    updatedCount += 1;
+  }
+
+  return updatedCount;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin(req);
@@ -173,6 +258,7 @@ export async function POST(req: NextRequest) {
           scopeLabel,
           days,
           total,
+          willResetProgress: deleteAll,
         },
       });
     }
@@ -185,9 +271,21 @@ export async function POST(req: NextRequest) {
       days,
     });
 
+    let resetProfiles = 0;
+
+    // 전체삭제일 때는 시험 기록뿐 아니라 학습 진행 기억도 함께 초기화
+    if (deleteAll) {
+      resetProfiles = await resetProgressTargets({
+        adminClient: admin.adminClient,
+        scope,
+        selectedUserId,
+      });
+    }
+
     return NextResponse.json({
       ok: true,
       deleted,
+      resetProfiles,
       summary: {
         scopeLabel,
         days,

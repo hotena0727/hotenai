@@ -308,6 +308,15 @@ function makeCompletedSubKey(stage: string, tag: string, sub: string) {
   return `${stage}|||${tag}|||${sub}`;
 }
 
+function clearTalkLocalStateForToday() {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(`talk-spoken-count:${todayKST()}`);
+  } catch {
+    // noop
+  }
+}
+
 export default function TalkPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -869,6 +878,16 @@ export default function TalkPage() {
             ? (talkProgress.completed_subs as Record<string, boolean>)
             : {};
         setCompletedSubsMap(completedMap);
+
+        const hasTalkProgress =
+          talkProgress &&
+          typeof talkProgress === "object" &&
+          Object.keys(talkProgress).length > 0;
+
+        if (!hasTalkProgress) {
+          clearTalkLocalStateForToday();
+          setSpokenSentenceCount(0);
+        }
 
         const stages = getStageOptions(cleaned);
         setStageOptions(stages);
@@ -1696,6 +1715,7 @@ export default function TalkPage() {
     setIsReviewing(false);
     setReviewPanelOpen(false);
     setSpokenSentenceCount(0);
+    clearTalkLocalStateForToday();
   };
 
   const handleOpenWrongTalk = () => {
