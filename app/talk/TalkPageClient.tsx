@@ -394,7 +394,6 @@ export default function TalkPage() {
   const [pronScore, setPronScore] = useState<number | null>(null);
   const [pronFeedback, setPronFeedback] = useState("");
   const [pronTranscript, setPronTranscript] = useState("");
-  const [pronDebug, setPronDebug] = useState<any>(null);
   const [pronDuration, setPronDuration] = useState("00:00");
   const [spokenSentenceCount, setSpokenSentenceCount] = useState(0);
   const [pronError, setPronError] = useState("");
@@ -461,7 +460,6 @@ export default function TalkPage() {
     setPronScore(null);
     setPronFeedback("");
     setPronTranscript("");
-    setPronDebug(null);
     setPronDuration("00:00");
     setPronError("");
     setPronScoring(false);
@@ -547,7 +545,6 @@ export default function TalkPage() {
       setPronScore(null);
       setPronFeedback("");
       setPronTranscript("");
-      setPronDebug(null);
       if (recordedAudioUrl) {
         URL.revokeObjectURL(recordedAudioUrl);
         setRecordedAudioUrl("");
@@ -703,7 +700,6 @@ export default function TalkPage() {
       setPronScore(null);
       setPronFeedback("");
       setPronTranscript("");
-      setPronDebug(null);
       setPronError("");
 
       const form = new FormData();
@@ -733,13 +729,11 @@ export default function TalkPage() {
       const transcript = String(data?.transcript || "").trim();
       const score = Number(data?.score ?? 0);
       const feedback = String(data?.feedback || "").trim();
-      const debug = data?.debug || null;
 
       setPronChecked(true);
       setPronScore(Number.isFinite(score) ? score : 0);
       setPronTranscript(transcript || "-");
       setPronFeedback(feedback);
-      setPronDebug(debug);
       setPronError("");
 
       if (Number.isFinite(score) && score >= 100) {
@@ -755,7 +749,6 @@ export default function TalkPage() {
       setPronScore(null);
       setPronTranscript("");
       setPronFeedback("");
-      setPronDebug(null);
       setPronError(message || "말하기 점수를 계산하지 못했습니다.");
     } finally {
       setPronScoring(false);
@@ -2687,57 +2680,6 @@ export default function TalkPage() {
                     {pronFeedback ? (
                       <div className="whitespace-pre-line text-lg font-semibold text-red-500">
                         {pronFeedback}
-                      </div>
-                    ) : null}
-
-                    {pronDebug ? (
-                      <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-                        <p className="font-semibold text-gray-900">디버그</p>
-
-                        <div className="mt-3 space-y-2 break-all">
-                          <p>
-                            <span className="font-medium">answer_jp:</span>{" "}
-                            {String(pronDebug.answer_jp || "-")}
-                          </p>
-                          <p>
-                            <span className="font-medium">answer_yomi:</span>{" "}
-                            {String(pronDebug.answer_yomi || "-")}
-                          </p>
-                          <p>
-                            <span className="font-medium">scoring_target:</span>{" "}
-                            {String(pronDebug.scoring_target || "-")}
-                          </p>
-                          <p>
-                            <span className="font-medium">strict_answer:</span>{" "}
-                            {String(pronDebug.strict_answer || "-")}
-                          </p>
-                          <p>
-                            <span className="font-medium">
-                              strict_transcript:
-                            </span>{" "}
-                            {String(pronDebug.strict_transcript || "-")}
-                          </p>
-                          <p>
-                            <span className="font-medium">loose_answer:</span>{" "}
-                            {String(pronDebug.loose_answer || "-")}
-                          </p>
-                          <p>
-                            <span className="font-medium">
-                              loose_transcript:
-                            </span>{" "}
-                            {String(pronDebug.loose_transcript || "-")}
-                          </p>
-                          <p>
-                            <span className="font-medium">read_answer:</span>{" "}
-                            {String(pronDebug.read_answer || "-")}
-                          </p>
-                          <p>
-                            <span className="font-medium">
-                              read_transcript:
-                            </span>{" "}
-                            {String(pronDebug.read_transcript || "-")}
-                          </p>
-                        </div>
                       </div>
                     ) : null}
                   </div>
