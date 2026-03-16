@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams, usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { hasSeenHomeToday } from "@/lib/home-gate";
 import { supabase } from "@/lib/supabase";
 import { isPaidPlan, normalizePlan } from "@/lib/plans";
@@ -44,7 +44,6 @@ const UPGRADE_URL = "/pricing";
 
 let activeSfxAudio: HTMLAudioElement | null = null;
 
-type ReviewModeType = "wrong" | "random" | "old" | "mixed";
 type PronStage = "idle" | "recording" | "recorded";
 
 const TITLE_PATHS = {
@@ -74,21 +73,6 @@ function resolveMp3Url(path: string): string {
   if (!raw) return "";
   if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
   return "https://hotena.com/hotena/app/mp3/" + raw.replace(/^\/+/, "");
-}
-
-function reviewModeLabel(mode: ReviewModeType) {
-  switch (mode) {
-    case "wrong":
-      return "틀린 것";
-    case "random":
-      return "랜덤";
-    case "old":
-      return "오래된 것";
-    case "mixed":
-      return "혼합";
-    default:
-      return "랜덤";
-  }
 }
 
 function formatSeconds(totalSeconds: number) {
@@ -320,23 +304,6 @@ function clearTalkLocalStateForToday() {
 export default function TalkPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const reviewQid = searchParams.get("qid") || "";
-  const isReviewMode = searchParams.get("review") === "1";
-  const reviewQidsParam = searchParams.get("qids") || "";
-  const reviewQids = reviewQidsParam
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!hasSeenHomeToday()) {
-      const fullNext = `${pathname || "/talk"}${window.location.search || ""}`;
-      router.replace(`/?next=${encodeURIComponent(fullNext)}`);
-    }
-  }, [router, pathname]);
 
   const [allRows, setAllRows] = useState<TalkCsvRow[]>([]);
   const [questions, setQuestions] = useState<TalkCsvRow[]>([]);
@@ -378,7 +345,6 @@ export default function TalkPage() {
   const [selectedSub, setSelectedSub] = useState("전체");
 
   const [dailyStateLoaded, setDailyStateLoaded] = useState(false);
-  const [reviewNotice, setReviewNotice] = useState("");
   const [finishMessage, setFinishMessage] = useState("");
   const [completedSubsMap, setCompletedSubsMap] = useState<
     Record<string, boolean>
@@ -387,12 +353,9 @@ export default function TalkPage() {
   const [completionModalOpen, setCompletionModalOpen] = useState(false);
   const [completionTitle, setCompletionTitle] = useState("");
   const [completionBody, setCompletionBody] = useState("");
-  const [completionNextSubValue, setCompletionNextSubValue] = useState<string | null>(null);
-
-  const [reviewPanelOpen, setReviewPanelOpen] = useState(false);
-  const [isReviewing, setIsReviewing] = useState(false);
-  const [reviewModeType, setReviewModeType] =
-    useState<ReviewModeType>("wrong");
+  const [completionNextSubValue, setCompletionNextSubValue] = useState<
+    string | null
+  >(null);
 
   const [pronStage, setPronStage] = useState<PronStage>("idle");
   const [pronChecked, setPronChecked] = useState(false);
@@ -413,7 +376,6 @@ export default function TalkPage() {
 
   const restoringRef = useRef(false);
   const resumedOnceRef = useRef(false);
-  const reviewStartedRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recordStreamRef = useRef<MediaStream | null>(null);
   const recordContextRef = useRef<AudioContext | null>(null);
@@ -455,6 +417,14 @@ export default function TalkPage() {
       // noop
     }
   }, [spokenSentenceCount]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasSeenHomeToday()) {
+      const fullNext = `${pathname || "/talk"}${window.location.search || ""}`;
+      router.replace(`/?next=${encodeURIComponent(fullNext)}`);
+    }
+  }, [router, pathname]);
 
   const resetPronunciationState = () => {
     if (recordedAudioUrl) {
@@ -878,8 +848,8 @@ export default function TalkPage() {
         const talkProgress = await loadAppProgress("talk");
         const completedMap =
           talkProgress?.completed_subs &&
-            typeof talkProgress.completed_subs === "object" &&
-            !Array.isArray(talkProgress.completed_subs)
+          typeof talkProgress.completed_subs === "object" &&
+          !Array.isArray(talkProgress.completed_subs)
             ? (talkProgress.completed_subs as Record<string, boolean>)
             : {};
         setCompletedSubsMap(completedMap);
@@ -1092,11 +1062,6 @@ export default function TalkPage() {
     setFinishMessage("");
   };
 
-  const handleStartReviewFromCompletion = async () => {
-    setCompletionModalOpen(false);
-    await startReviewSet();
-  };
-
   const markCompletedSub = async (
     stage: string,
     tag: string,
@@ -1115,8 +1080,8 @@ export default function TalkPage() {
       const appProgress = await loadAppProgress("talk");
       const prevMap =
         appProgress?.completed_subs &&
-          typeof appProgress.completed_subs === "object" &&
-          !Array.isArray(appProgress.completed_subs)
+        typeof appProgress.completed_subs === "object" &&
+        !Array.isArray(appProgress.completed_subs)
           ? (appProgress.completed_subs as Record<string, boolean>)
           : {};
 
@@ -1140,11 +1105,6 @@ export default function TalkPage() {
       try {
         const ds = await loadDailyState("talk");
         if (!ds) {
-          setDailyStateLoaded(true);
-          return;
-        }
-
-        if (isReviewMode && (reviewQid || reviewQids.length > 0)) {
           setDailyStateLoaded(true);
           return;
         }
@@ -1184,9 +1144,6 @@ export default function TalkPage() {
         setAudioError("");
         setAudioLoadingKey("");
         resetPronunciationState();
-        setReviewNotice("");
-        setIsReviewing(false);
-        setReviewPanelOpen(false);
         setViewMode("quiz");
 
         setTimeout(() => {
@@ -1200,7 +1157,7 @@ export default function TalkPage() {
     };
 
     void tryResumeDailyState();
-  }, [loading, allRows, isReviewMode, reviewQid, reviewQids.length]);
+  }, [loading, allRows]);
 
   const askTalkCoach = async (params: {
     question: string;
@@ -1303,8 +1260,7 @@ export default function TalkPage() {
         `정답표현: ${currentQuestion.answer_jp || ""}`,
         `정답해석: ${currentQuestion.answer_kr || ""}`,
         `내선택: ${selected}`,
-        `정오답: ${selected === currentQuestion.answer_jp ? "정답" : "오답"
-        }`,
+        `정오답: ${selected === currentQuestion.answer_jp ? "정답" : "오답"}`,
       ].filter(Boolean);
 
       await askTalkCoach({
@@ -1329,82 +1285,7 @@ export default function TalkPage() {
     setFinishMessage("");
   };
 
-  const startReviewMode = async () => {
-    if (allRows.length === 0) return;
-
-    let reviewRows: TalkCsvRow[] = [];
-
-    if (reviewQids.length > 0) {
-      const qidSet = new Set(reviewQids);
-      reviewRows = allRows.filter((item) => qidSet.has(item.qid));
-    } else if (reviewQid) {
-      const row = allRows.find((item) => item.qid === reviewQid);
-      if (row) reviewRows = [row];
-    }
-
-    if (reviewRows.length === 0) {
-      setReviewNotice("복습할 문제를 찾지 못했습니다.");
-      return;
-    }
-
-    const first = reviewRows[0];
-
-    restoringRef.current = true;
-
-    setSelectedStage(first.stage || "");
-    setSelectedTag(first.tag || "");
-    setSelectedSub(first.sub || "전체");
-
-    setQuestions(reviewRows);
-    setCurrentIndex(0);
-    setSelected("");
-    setSubmitted(false);
-    setScore(0);
-    setWrongList([]);
-    setSaveDone(false);
-    setFinishMessage("");
-    setCoachOpen(false);
-    setCoachAnswer("");
-    setCoachError("");
-    setCoachLoading(false);
-    setCoachQuestion("");
-    setAudioError("");
-    setAudioLoadingKey("");
-    resetPronunciationState();
-    setReviewNotice(
-      reviewRows.length === 1
-        ? "오답노트 복습 모드입니다."
-        : `오답노트 복습 세트입니다. (${reviewRows.length}문제)`
-    );
-    setIsReviewing(true);
-    setReviewPanelOpen(false);
-    setViewMode("quiz");
-
-    setTimeout(() => {
-      restoringRef.current = false;
-    }, 0);
-  };
-
-  useEffect(() => {
-    if (loading || allRows.length === 0 || !dailyStateLoaded) return;
-    if (!isReviewMode || (!reviewQid && reviewQids.length === 0)) return;
-    if (reviewStartedRef.current) return;
-
-    reviewStartedRef.current = true;
-    void startReviewMode();
-  }, [
-    loading,
-    allRows,
-    dailyStateLoaded,
-    isReviewMode,
-    reviewQid,
-    reviewQids.length,
-  ]);
-
   const makeQuizSet = async () => {
-    setIsReviewing(false);
-    setReviewNotice("");
-    setReviewPanelOpen(false);
     setFinishMessage("");
 
     let pool = allRows.filter(
@@ -1454,91 +1335,6 @@ export default function TalkPage() {
       },
       "talk"
     );
-  };
-
-  const startReviewSet = async () => {
-    if (allRows.length === 0) {
-      alert("복습할 데이터가 없습니다.");
-      return;
-    }
-
-    let pool = [...allRows];
-    if (selectedStage) pool = pool.filter((row) => row.stage === selectedStage);
-    if (selectedTag) pool = pool.filter((row) => row.tag === selectedTag);
-    if (selectedSub && selectedSub !== "전체") {
-      pool = pool.filter((row) => row.sub === selectedSub);
-    }
-
-    if (pool.length === 0) {
-      alert("선택한 조건에 맞는 복습 문제가 없습니다.");
-      return;
-    }
-
-    let picked: TalkCsvRow[] = [];
-
-    if (reviewModeType === "wrong") {
-      const wrongQids = new Set(wrongList.map((item) => item.qid));
-      const wrongPool = pool.filter((row) => wrongQids.has(row.qid));
-      picked = shuffleArray(wrongPool).slice(0, Math.min(5, wrongPool.length));
-    } else if (reviewModeType === "old") {
-      picked = pool.slice(0, Math.min(5, pool.length));
-    } else if (reviewModeType === "mixed") {
-      const oldPart = pool.slice(0, Math.min(3, pool.length));
-      const randomPart = shuffleArray(pool).slice(0, Math.min(2, pool.length));
-      const merged = [...oldPart, ...randomPart];
-      const seen = new Set<string>();
-      picked = merged.filter((row) => {
-        if (seen.has(row.qid)) return false;
-        seen.add(row.qid);
-        return true;
-      });
-    } else {
-      picked = shuffleArray(pool).slice(0, Math.min(5, pool.length));
-    }
-
-    if (picked.length === 0) {
-      alert("선택한 복습 방식에 맞는 문제가 없습니다.");
-      return;
-    }
-
-    setQuestions(picked);
-    setCurrentIndex(0);
-    setSelected("");
-    setSubmitted(false);
-    setScore(0);
-    setSaveDone(false);
-    setFinishMessage("");
-    setCoachOpen(false);
-    setCoachAnswer("");
-    setCoachError("");
-    setCoachLoading(false);
-    setCoachQuestion("");
-    setAudioError("");
-    setAudioLoadingKey("");
-    resetPronunciationState();
-    setIsReviewing(true);
-    setReviewNotice(`복습중 · ${reviewModeLabel(reviewModeType)}`);
-    setReviewPanelOpen(false);
-    setViewMode("quiz");
-
-    await saveDailyState(
-      {
-        date: todayKST(),
-        key: `review|${selectedStage}|${selectedTag}|${selectedSub}|${reviewModeType}`,
-        stage: selectedStage,
-        tag: selectedTag,
-        sub: selectedSub,
-        set_qids: picked.map((q) => q.qid),
-        idx: 0,
-      },
-      "talk"
-    );
-  };
-
-  const switchToStudyMode = () => {
-    setIsReviewing(false);
-    setReviewNotice("");
-    setReviewPanelOpen(false);
   };
 
   const handleSelect = (choice: string) => {
@@ -1638,32 +1434,11 @@ export default function TalkPage() {
 
       await clearDailyState("talk");
 
-      if (!isReviewing && selectedSub !== "전체") {
+      if (selectedSub !== "전체") {
         await markCompletedSub(selectedStage, selectedTag, selectedSub);
       }
 
       setSaveDone(true);
-
-      if (isReviewing) {
-        playSfx("reward");
-
-        setQuestions([]);
-        setCurrentIndex(0);
-        setCurrentChoices([]);
-        setSelected("");
-        setSubmitted(false);
-        setReviewNotice("복습 세트를 완료했습니다.");
-        setIsReviewing(false);
-        setViewMode("select");
-
-        setCompletionTitle("🎉 복습 세트 완료");
-        setCompletionBody("복습 세트를 끝까지 완료했어요.");
-        setCompletionNextSubValue(null);
-        setCompletionModalOpen(true);
-
-        setSaving(false);
-        return;
-      }
 
       const completedLabel =
         selectedSub === "전체" ? "현재 세트" : getSubLabel(selectedSub);
@@ -1784,7 +1559,6 @@ export default function TalkPage() {
 
     restoringRef.current = false;
     resumedOnceRef.current = false;
-    reviewStartedRef.current = false;
 
     setViewMode("select");
     setQuestions([]);
@@ -1808,16 +1582,9 @@ export default function TalkPage() {
     setCompletionBody("");
     setCompletionNextSubValue(null);
     resetPronunciationState();
-    setReviewNotice("");
     setDailyStateLoaded(false);
-    setIsReviewing(false);
-    setReviewPanelOpen(false);
     setSpokenSentenceCount(0);
     clearTalkLocalStateForToday();
-  };
-
-  const handleOpenWrongTalk = () => {
-    window.location.href = "/mypage/wrong-talk";
   };
 
   if (loading || !dailyStateLoaded) {
@@ -1923,8 +1690,8 @@ export default function TalkPage() {
                   {isPro
                     ? "자세한 이용 안내 보기"
                     : quotaLimitReached
-                      ? "오늘 이용 한도 도달"
-                      : `발음 ${remainingListen}회 · 녹음 ${remainingRecord}회 남음`}
+                    ? "오늘 이용 한도 도달"
+                    : `발음 ${remainingListen}회 · 녹음 ${remainingRecord}회 남음`}
                 </p>
               </div>
               <span
@@ -1950,7 +1717,7 @@ export default function TalkPage() {
                   {isPro
                     ? "유료 플랜은 발음듣기와 녹음을 제한 없이 이용할 수 있고, AI 스마트코치도 사용할 수 있습니다."
                     : quotaMessage ||
-                    "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 유료 플랜에서 이용할 수 있습니다."}
+                      "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 유료 플랜에서 이용할 수 있습니다."}
                 </p>
               </div>
             ) : null}
@@ -2098,12 +1865,6 @@ export default function TalkPage() {
                   📈 세트 {questions.length > 0 ? 1 : 0}/1 (문항 {solvedCount}/
                   {totalCount} · 남은 {remainingCount}) · {progressPercent}%
                 </p>
-
-                {isReviewing ? (
-                  <span className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
-                    🧠 복습중 · {reviewModeLabel(reviewModeType)}
-                  </span>
-                ) : null}
               </div>
 
               <div className="mt-4 h-3 rounded-full bg-gray-100">
@@ -2114,20 +1875,8 @@ export default function TalkPage() {
               </div>
 
               <p className="mt-3 text-sm text-gray-500">
-                {isReviewing
-                  ? `복습 진행: ${Math.min(
-                    solvedCount + (submitted ? 0 : 1),
-                    totalCount
-                  )}/${totalCount}`
-                  : `문항 진행: ${Math.min(
-                    currentIndex + 1,
-                    totalCount
-                  )}/${totalCount}`}
+                문항 진행: {Math.min(currentIndex + 1, totalCount)}/{totalCount}
               </p>
-
-              {reviewNotice ? (
-                <p className="mt-2 text-sm text-blue-600">{reviewNotice}</p>
-              ) : null}
             </div>
 
             <div className="grid grid-cols-1 gap-3">
@@ -2136,109 +1885,10 @@ export default function TalkPage() {
                 onClick={makeQuizSet}
                 className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold"
               >
-                {isReviewing ? "🔄 일반 세트로 전환" : "🔄 새 세트"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setReviewPanelOpen((prev) => !prev)}
-                className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold"
-              >
-                📚 복습 {reviewPanelOpen ? "⌃" : "⌄"}
+                🔄 새 세트
               </button>
             </div>
           </div>
-
-          {reviewPanelOpen ? (
-            <div className="absolute right-0 z-20 mt-3 w-full max-w-2xl rounded-3xl border border-gray-200 bg-white p-6 shadow-lg">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start">
-                <button
-                  type="button"
-                  className="rounded-2xl border border-gray-300 px-4 py-3 text-base font-semibold"
-                >
-                  🎯 오늘의 복습
-                </button>
-
-                <p className="text-sm leading-6 text-gray-500">
-                  틀린 것, 오래된 것, 랜덤을 기준으로 복습 세트를 구성할 수
-                  있습니다. 현재 선택한 코스/유형/상황 범위 안에서 5문제를 자동
-                  구성합니다.
-                </p>
-              </div>
-
-              <div className="mt-6">
-                <p className="text-base font-semibold text-gray-700">
-                  복습 방식
-                </p>
-
-                <div className="mt-3 space-y-3 text-base">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      checked={reviewModeType === "wrong"}
-                      onChange={() => setReviewModeType("wrong")}
-                    />
-                    틀린 것
-                  </label>
-
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      checked={reviewModeType === "random"}
-                      onChange={() => setReviewModeType("random")}
-                    />
-                    랜덤
-                  </label>
-
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      checked={reviewModeType === "old"}
-                      onChange={() => setReviewModeType("old")}
-                    />
-                    오래된 것
-                  </label>
-
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      checked={reviewModeType === "mixed"}
-                      onChange={() => setReviewModeType("mixed")}
-                    />
-                    혼합(오래된+랜덤)
-                  </label>
-                </div>
-              </div>
-
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                <button
-                  onClick={startReviewSet}
-                  className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
-                >
-                  복습 시작
-                </button>
-
-                <button
-                  onClick={switchToStudyMode}
-                  className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
-                >
-                  학습 모드
-                </button>
-              </div>
-
-              <div className="mt-4">
-                <button
-                  onClick={() => {
-                    setReviewPanelOpen(false);
-                    handleOpenWrongTalk();
-                  }}
-                  className="text-sm text-gray-500 underline underline-offset-4"
-                >
-                  오답노트 보기
-                </button>
-              </div>
-            </div>
-          ) : null}
         </section>
 
         <section className="mt-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -2443,12 +2093,12 @@ export default function TalkPage() {
                       disabled={
                         listenLimitReached ||
                         audioLoadingKey ===
-                        `partner-dialog-${currentQuestion?.qid}`
+                          `partner-dialog-${currentQuestion?.qid}`
                       }
                       className="shrink-0 p-1 text-xl leading-none"
                     >
                       {audioLoadingKey ===
-                        `partner-dialog-${currentQuestion?.qid}`
+                      `partner-dialog-${currentQuestion?.qid}`
                         ? "재생 중..."
                         : "🔊"}
                     </button>
@@ -2482,12 +2132,12 @@ export default function TalkPage() {
                       disabled={
                         listenLimitReached ||
                         audioLoadingKey ===
-                        `answer-dialog-${currentQuestion?.qid}`
+                          `answer-dialog-${currentQuestion?.qid}`
                       }
                       className="shrink-0 p-1 text-xl leading-none"
                     >
                       {audioLoadingKey ===
-                        `answer-dialog-${currentQuestion?.qid}`
+                      `answer-dialog-${currentQuestion?.qid}`
                         ? "재생 중..."
                         : "🔊"}
                     </button>
@@ -2596,7 +2246,7 @@ export default function TalkPage() {
               </div>
 
               {!isPro &&
-                (listenLimitReached || recordLimitReached || quotaMessage) ? (
+              (listenLimitReached || recordLimitReached || quotaMessage) ? (
                 <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm leading-6 text-gray-700">
                   {quotaMessage ||
                     "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다."}
@@ -2606,15 +2256,15 @@ export default function TalkPage() {
                       listenLimitReached
                         ? "오늘 FREE 발음듣기 사용이 모두 끝났어요."
                         : recordLimitReached
-                          ? "오늘 FREE 녹음 사용이 모두 끝났어요."
-                          : "유료 플랜에서는 더 편하게 이어갈 수 있어요."
+                        ? "오늘 FREE 녹음 사용이 모두 끝났어요."
+                        : "유료 플랜에서는 더 편하게 이어갈 수 있어요."
                     }
                     body={
                       listenLimitReached
                         ? "오늘은 준비된 발음듣기 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 발음듣기를 제한 없이 이용할 수 있습니다."
                         : recordLimitReached
-                          ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 녹음을 제한 없이 이용할 수 있습니다."
-                          : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. 유료 플랜에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."
+                        ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 녹음을 제한 없이 이용할 수 있습니다."
+                        : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. 유료 플랜에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."
                     }
                   />
                 </div>
@@ -2626,9 +2276,9 @@ export default function TalkPage() {
                   onClick={() =>
                     currentQuestion?.answer_mp3
                       ? playAudio(
-                        currentQuestion.answer_mp3,
-                        `answer-pron-${currentQuestion.qid}`
-                      )
+                          currentQuestion.answer_mp3,
+                          `answer-pron-${currentQuestion.qid}`
+                        )
                       : undefined
                   }
                   disabled={
@@ -2659,10 +2309,11 @@ export default function TalkPage() {
                           : startPronRecording
                       }
                       disabled={recordLimitReached && pronStage !== "recording"}
-                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${pronStage === "recording"
-                        ? "ring-4 ring-red-100"
-                        : "hover:shadow-md"
-                        }`}
+                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${
+                        pronStage === "recording"
+                          ? "ring-4 ring-red-100"
+                          : "hover:shadow-md"
+                      }`}
                       aria-label={
                         pronStage === "recording" ? "녹음 정지" : "녹음 시작"
                       }
@@ -2685,17 +2336,19 @@ export default function TalkPage() {
                       type="button"
                       onClick={playRecordedPronunciation}
                       disabled={!recordedAudioUrl}
-                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${isRecordedPlaying
-                        ? "ring-4 ring-gray-200 shadow-md"
-                        : "hover:shadow-md"
-                        }`}
+                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${
+                        isRecordedPlaying
+                          ? "ring-4 ring-gray-200 shadow-md"
+                          : "hover:shadow-md"
+                      }`}
                       aria-label="내 녹음 재생"
                     >
                       <span
-                        className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${isRecordedPlaying
-                          ? "border-l-black"
-                          : "border-l-gray-700"
-                          }`}
+                        className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${
+                          isRecordedPlaying
+                            ? "border-l-black"
+                            : "border-l-gray-700"
+                        }`}
                       />
                     </button>
 
@@ -2841,19 +2494,15 @@ export default function TalkPage() {
             ) : null}
           </section>
         ) : null}
-
-        {!submitted && saveDone && !isReviewing ? (
-          <div className="mt-8">
-            <p className="text-sm text-blue-600">결과 저장이 완료되었습니다.</p>
-          </div>
-        ) : null}
       </div>
 
       {completionModalOpen ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
           <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
             <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">{completionTitle}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {completionTitle}
+              </p>
               <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
                 {completionBody}
               </p>
@@ -2869,13 +2518,12 @@ export default function TalkPage() {
                   다음 상황 풀기
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleStartReviewFromCompletion}
-                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-900"
+                <a
+                  href="/mypage/wrong-talk"
+                  className="block w-full rounded-2xl border border-gray-300 px-5 py-4 text-center text-lg font-semibold text-gray-900"
                 >
-                  복습 시작
-                </button>
+                  오답노트 보기
+                </a>
               )}
 
               <button
