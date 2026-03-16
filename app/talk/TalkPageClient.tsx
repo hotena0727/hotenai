@@ -394,6 +394,7 @@ export default function TalkPage() {
   const [pronScore, setPronScore] = useState<number | null>(null);
   const [pronFeedback, setPronFeedback] = useState("");
   const [pronTranscript, setPronTranscript] = useState("");
+  const [pronDebug, setPronDebug] = useState<any>(null);
   const [pronDuration, setPronDuration] = useState("00:00");
   const [spokenSentenceCount, setSpokenSentenceCount] = useState(0);
   const [pronError, setPronError] = useState("");
@@ -460,6 +461,7 @@ export default function TalkPage() {
     setPronScore(null);
     setPronFeedback("");
     setPronTranscript("");
+    setPronDebug(null);
     setPronDuration("00:00");
     setPronError("");
     setPronScoring(false);
@@ -545,6 +547,7 @@ export default function TalkPage() {
       setPronScore(null);
       setPronFeedback("");
       setPronTranscript("");
+      setPronDebug(null);
       if (recordedAudioUrl) {
         URL.revokeObjectURL(recordedAudioUrl);
         setRecordedAudioUrl("");
@@ -700,6 +703,7 @@ export default function TalkPage() {
       setPronScore(null);
       setPronFeedback("");
       setPronTranscript("");
+      setPronDebug(null);
       setPronError("");
 
       const form = new FormData();
@@ -729,11 +733,13 @@ export default function TalkPage() {
       const transcript = String(data?.transcript || "").trim();
       const score = Number(data?.score ?? 0);
       const feedback = String(data?.feedback || "").trim();
+      const debug = data?.debug || null;
 
       setPronChecked(true);
       setPronScore(Number.isFinite(score) ? score : 0);
       setPronTranscript(transcript || "-");
       setPronFeedback(feedback);
+      setPronDebug(debug);
       setPronError("");
 
       if (Number.isFinite(score) && score >= 100) {
@@ -749,6 +755,7 @@ export default function TalkPage() {
       setPronScore(null);
       setPronTranscript("");
       setPronFeedback("");
+      setPronDebug(null);
       setPronError(message || "말하기 점수를 계산하지 못했습니다.");
     } finally {
       setPronScoring(false);
@@ -873,8 +880,8 @@ export default function TalkPage() {
         const talkProgress = await loadAppProgress("talk");
         const completedMap =
           talkProgress?.completed_subs &&
-            typeof talkProgress.completed_subs === "object" &&
-            !Array.isArray(talkProgress.completed_subs)
+          typeof talkProgress.completed_subs === "object" &&
+          !Array.isArray(talkProgress.completed_subs)
             ? (talkProgress.completed_subs as Record<string, boolean>)
             : {};
         setCompletedSubsMap(completedMap);
@@ -1073,8 +1080,8 @@ export default function TalkPage() {
       const appProgress = await loadAppProgress("talk");
       const prevMap =
         appProgress?.completed_subs &&
-          typeof appProgress.completed_subs === "object" &&
-          !Array.isArray(appProgress.completed_subs)
+        typeof appProgress.completed_subs === "object" &&
+        !Array.isArray(appProgress.completed_subs)
           ? (appProgress.completed_subs as Record<string, boolean>)
           : {};
 
@@ -1261,7 +1268,8 @@ export default function TalkPage() {
         `정답표현: ${currentQuestion.answer_jp || ""}`,
         `정답해석: ${currentQuestion.answer_kr || ""}`,
         `내선택: ${selected}`,
-        `정오답: ${selected === currentQuestion.answer_jp ? "정답" : "오답"
+        `정오답: ${
+          selected === currentQuestion.answer_jp ? "정답" : "오답"
         }`,
       ].filter(Boolean);
 
@@ -1825,8 +1833,8 @@ export default function TalkPage() {
                   {isPro
                     ? "자세한 이용 안내 보기"
                     : quotaLimitReached
-                      ? "오늘 이용 한도 도달"
-                      : `발음 ${remainingListen}회 · 녹음 ${remainingRecord}회 남음`}
+                    ? "오늘 이용 한도 도달"
+                    : `발음 ${remainingListen}회 · 녹음 ${remainingRecord}회 남음`}
                 </p>
               </div>
               <span
@@ -1852,7 +1860,7 @@ export default function TalkPage() {
                   {isPro
                     ? "유료 플랜은 발음듣기와 녹음을 제한 없이 이용할 수 있고, AI 스마트코치도 사용할 수 있습니다."
                     : quotaMessage ||
-                    "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 유료 플랜에서 이용할 수 있습니다."}
+                      "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. AI 스마트코치는 유료 플랜에서 이용할 수 있습니다."}
                 </p>
               </div>
             ) : null}
@@ -2024,13 +2032,13 @@ export default function TalkPage() {
               <p className="mt-3 text-sm text-gray-500">
                 {isReviewing
                   ? `복습 진행: ${Math.min(
-                    solvedCount + (submitted ? 0 : 1),
-                    totalCount
-                  )}/${totalCount}`
+                      solvedCount + (submitted ? 0 : 1),
+                      totalCount
+                    )}/${totalCount}`
                   : `문항 진행: ${Math.min(
-                    currentIndex + 1,
-                    totalCount
-                  )}/${totalCount}`}
+                      currentIndex + 1,
+                      totalCount
+                    )}/${totalCount}`}
               </p>
 
               {reviewNotice ? (
@@ -2351,12 +2359,12 @@ export default function TalkPage() {
                       disabled={
                         listenLimitReached ||
                         audioLoadingKey ===
-                        `partner-dialog-${currentQuestion?.qid}`
+                          `partner-dialog-${currentQuestion?.qid}`
                       }
                       className="shrink-0 p-1 text-xl leading-none"
                     >
                       {audioLoadingKey ===
-                        `partner-dialog-${currentQuestion?.qid}`
+                      `partner-dialog-${currentQuestion?.qid}`
                         ? "재생 중..."
                         : "🔊"}
                     </button>
@@ -2390,12 +2398,12 @@ export default function TalkPage() {
                       disabled={
                         listenLimitReached ||
                         audioLoadingKey ===
-                        `answer-dialog-${currentQuestion?.qid}`
+                          `answer-dialog-${currentQuestion?.qid}`
                       }
                       className="shrink-0 p-1 text-xl leading-none"
                     >
                       {audioLoadingKey ===
-                        `answer-dialog-${currentQuestion?.qid}`
+                      `answer-dialog-${currentQuestion?.qid}`
                         ? "재생 중..."
                         : "🔊"}
                     </button>
@@ -2504,7 +2512,7 @@ export default function TalkPage() {
               </div>
 
               {!isPro &&
-                (listenLimitReached || recordLimitReached || quotaMessage) ? (
+              (listenLimitReached || recordLimitReached || quotaMessage) ? (
                 <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm leading-6 text-gray-700">
                   {quotaMessage ||
                     "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다."}
@@ -2514,15 +2522,15 @@ export default function TalkPage() {
                       listenLimitReached
                         ? "오늘 FREE 발음듣기 사용이 모두 끝났어요."
                         : recordLimitReached
-                          ? "오늘 FREE 녹음 사용이 모두 끝났어요."
-                          : "유료 플랜에서는 더 편하게 이어갈 수 있어요."
+                        ? "오늘 FREE 녹음 사용이 모두 끝났어요."
+                        : "유료 플랜에서는 더 편하게 이어갈 수 있어요."
                     }
                     body={
                       listenLimitReached
                         ? "오늘은 준비된 발음듣기 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 발음듣기를 제한 없이 이용할 수 있습니다."
                         : recordLimitReached
-                          ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 녹음을 제한 없이 이용할 수 있습니다."
-                          : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. 유료 플랜에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."
+                        ? "오늘은 준비된 녹음 3회를 모두 사용했습니다. 내일 다시 이용할 수 있고, 유료 플랜에서는 녹음을 제한 없이 이용할 수 있습니다."
+                        : "FREE는 하루 발음듣기 3회, 녹음 3회까지 이용할 수 있습니다. 유료 플랜에서는 회화 연습을 훨씬 더 여유롭게 이어갈 수 있습니다."
                     }
                   />
                 </div>
@@ -2534,9 +2542,9 @@ export default function TalkPage() {
                   onClick={() =>
                     currentQuestion?.answer_mp3
                       ? playAudio(
-                        currentQuestion.answer_mp3,
-                        `answer-pron-${currentQuestion.qid}`
-                      )
+                          currentQuestion.answer_mp3,
+                          `answer-pron-${currentQuestion.qid}`
+                        )
                       : undefined
                   }
                   disabled={
@@ -2567,10 +2575,11 @@ export default function TalkPage() {
                           : startPronRecording
                       }
                       disabled={recordLimitReached && pronStage !== "recording"}
-                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${pronStage === "recording"
-                        ? "ring-4 ring-red-100"
-                        : "hover:shadow-md"
-                        }`}
+                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${
+                        pronStage === "recording"
+                          ? "ring-4 ring-red-100"
+                          : "hover:shadow-md"
+                      }`}
                       aria-label={
                         pronStage === "recording" ? "녹음 정지" : "녹음 시작"
                       }
@@ -2593,17 +2602,19 @@ export default function TalkPage() {
                       type="button"
                       onClick={playRecordedPronunciation}
                       disabled={!recordedAudioUrl}
-                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${isRecordedPlaying
-                        ? "ring-4 ring-gray-200 shadow-md"
-                        : "hover:shadow-md"
-                        }`}
+                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${
+                        isRecordedPlaying
+                          ? "ring-4 ring-gray-200 shadow-md"
+                          : "hover:shadow-md"
+                      }`}
                       aria-label="내 녹음 재생"
                     >
                       <span
-                        className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${isRecordedPlaying
-                          ? "border-l-black"
-                          : "border-l-gray-700"
-                          }`}
+                        className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${
+                          isRecordedPlaying
+                            ? "border-l-black"
+                            : "border-l-gray-700"
+                        }`}
                       />
                     </button>
 
@@ -2676,6 +2687,57 @@ export default function TalkPage() {
                     {pronFeedback ? (
                       <div className="whitespace-pre-line text-lg font-semibold text-red-500">
                         {pronFeedback}
+                      </div>
+                    ) : null}
+
+                    {pronDebug ? (
+                      <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                        <p className="font-semibold text-gray-900">디버그</p>
+
+                        <div className="mt-3 space-y-2 break-all">
+                          <p>
+                            <span className="font-medium">answer_jp:</span>{" "}
+                            {String(pronDebug.answer_jp || "-")}
+                          </p>
+                          <p>
+                            <span className="font-medium">answer_yomi:</span>{" "}
+                            {String(pronDebug.answer_yomi || "-")}
+                          </p>
+                          <p>
+                            <span className="font-medium">scoring_target:</span>{" "}
+                            {String(pronDebug.scoring_target || "-")}
+                          </p>
+                          <p>
+                            <span className="font-medium">strict_answer:</span>{" "}
+                            {String(pronDebug.strict_answer || "-")}
+                          </p>
+                          <p>
+                            <span className="font-medium">
+                              strict_transcript:
+                            </span>{" "}
+                            {String(pronDebug.strict_transcript || "-")}
+                          </p>
+                          <p>
+                            <span className="font-medium">loose_answer:</span>{" "}
+                            {String(pronDebug.loose_answer || "-")}
+                          </p>
+                          <p>
+                            <span className="font-medium">
+                              loose_transcript:
+                            </span>{" "}
+                            {String(pronDebug.loose_transcript || "-")}
+                          </p>
+                          <p>
+                            <span className="font-medium">read_answer:</span>{" "}
+                            {String(pronDebug.read_answer || "-")}
+                          </p>
+                          <p>
+                            <span className="font-medium">
+                              read_transcript:
+                            </span>{" "}
+                            {String(pronDebug.read_transcript || "-")}
+                          </p>
+                        </div>
                       </div>
                     ) : null}
                   </div>
