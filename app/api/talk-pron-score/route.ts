@@ -38,61 +38,8 @@ function normJpLoose(text: string) {
     );
 }
 
-function escapeRegExp(text: string) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * 최소 규칙만 유지
- * - STT가 자주 한자로 뽑는 핵심 단어만 보정
- * - 문장 규칙은 꼭 필요한 것만
- */
-const PHRASE_READING_RULES: Array<[string, string]> = [
-  ["また来たくなると思います", "またきたくなるとおもいます"],
-  ["来たくなると思います", "きたくなるとおもいます"],
-  ["思ったより気楽に入れました", "おもったよりきらくにはいれました"],
-  ["行ってみたいです", "いってみたいです"],
-  ["いいと思います", "いいとおもいます"],
-  ["そう思います", "そうおもいます"],
-];
-
-const WORD_READING_RULES: Array<[string, string]> = [
-  ["思った", "おもった"],
-  ["思います", "おもいます"],
-  ["思う", "おもう"],
-  ["来たくなる", "きたくなる"],
-  ["来たい", "きたい"],
-  ["来ます", "きます"],
-  ["来る", "くる"],
-  ["気楽", "きらく"],
-  ["入れました", "はいれました"],
-  ["入ります", "はいります"],
-  ["入れる", "はいれる"],
-  ["入る", "はいる"],
-  ["良かった", "よかった"],
-  ["良い", "いい"],
-  ["行きたい", "いきたい"],
-  ["行きます", "いきます"],
-  ["行く", "いく"],
-  ["雰囲気", "ふんいき"],
-];
-
-function applyReadingRules(text: string) {
-  let out = String(text || "");
-
-  for (const [from, to] of PHRASE_READING_RULES) {
-    out = out.replace(new RegExp(escapeRegExp(from), "g"), to);
-  }
-
-  for (const [from, to] of WORD_READING_RULES) {
-    out = out.replace(new RegExp(escapeRegExp(from), "g"), to);
-  }
-
-  return out;
-}
-
 function replaceCommonVariants(text: string) {
-  return normJpLoose(applyReadingRules(text))
+  return normJpLoose(text)
     .replace(/ふいんき/g, "ふんいき")
     .replace(/を/g, "お");
 }
@@ -148,7 +95,6 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const aRead = toReadingLike(a);
   const bRead = toReadingLike(b);
 
-  // 읽기 기준 완전 일치면 100
   if (aRead && bRead && aRead === bRead) {
     return 100;
   }
@@ -166,9 +112,8 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const scoreLoose = scoreByDistance(aLoose, bLoose);
   const scoreRead = scoreByDistance(aRead, bRead);
 
-  // 발음 기준을 가장 강하게 반영
   const weighted = Math.round(
-    scoreStrict * 0.05 + scoreLoose * 0.10 + scoreRead * 0.85
+    scoreStrict * 0.05 + scoreLoose * 0.1 + scoreRead * 0.85
   );
 
   return weighted < floorToZero
@@ -176,19 +121,93 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
     : Math.max(0, Math.min(100, weighted));
 }
 
-function makeFeedback(score: number, answer: string, transcript: string) {
+function getFirstDiffInfo(expected: string, actual: string) {
+  const a = Array.from(expected);
+  const b = Array.from(actual);
+  const max = Math.max(a.length, b.length);
+
+  for (let i = 0; i < max; i += 1) {
+    const ea = a[i] ?? "";
+    const ab = b[i] ?? "";
+    if (ea !== ab) {
+      return {
+        index: i,
+        expectedChar: ea || "(없음)",
+        actualChar: ab || "(없음)",
+        expectedTail: a.slice(Math.max(0, i - 2), i + 4).join(""),
+        actualTail: b.slice(Math.max(0, i - 2), i + 4).join(""),
+      };
+    }
+  }
+
+  return null;
+}
+
+function makeDetailedFeedback(
+  score: number,
+  answer: string,
+  transcript: string,
+  expectedReading: string,
+  actualReading: string
+) {
+  const diff = getFirstDiffInfo(expectedReading, actualReading);
+
   if (score >= 100) {
     return `🎯 아주 좋습니다\n🗣️ ${answer} 를 정확하게 말했어요.`;
   }
+
   if (score >= 90) {
+    if (diff) {
+      return [
+        `🎯 좋습니다`,
+        `🗣️ 거의 정확합니다.`,
+        `다만 ${diff.index + 1}번째 글자 근처를 한 번 더 확인해 보세요.`,
+        `정답 기준: ${diff.expectedTail}`,
+        `인식 결과: ${diff.actualTail}`,
+      ].join("\n");
+    }
+
     return `🎯 좋습니다\n🗣️ 거의 정확합니다. ${answer} 를 한 번만 더 또렷하게 말해 보세요.`;
   }
+
   if (score >= 75) {
+    if (diff) {
+      return [
+        `🎯 좋습니다`,
+        `🗣️ 큰 흐름은 맞아요.`,
+        `${diff.index + 1}번째 글자 근처가 조금 달라요.`,
+        `정답 기준: ${diff.expectedTail}`,
+        `인식 결과: ${diff.actualTail}`,
+      ].join("\n");
+    }
+
     return `🎯 좋습니다\n🗣️ ${transcript || answer} 에서 큰 흐름은 맞아요. 정답을 보며 한 번 더 또렷하게 말해 보세요.`;
   }
+
   if (score >= 50) {
+    if (diff) {
+      return [
+        `🎯 조금만 더`,
+        `🗣️ 몇 군데가 달라요.`,
+        `${diff.index + 1}번째 글자 근처를 다시 들어보세요.`,
+        `정답 기준: ${diff.expectedTail}`,
+        `인식 결과: ${diff.actualTail}`,
+      ].join("\n");
+    }
+
     return `🎯 조금만 더\n🗣️ ${answer} 와 비슷하지만 몇 군데가 달라요. 정답을 보고 2~3번 따라 말해 보세요.`;
   }
+
+  if (diff) {
+    return [
+      `🎯 천천히 다시`,
+      `🗣️ 발음 차이가 조금 큽니다.`,
+      `${diff.index + 1}번째 글자 근처부터 다시 또박또박 말해 보세요.`,
+      `정답 기준: ${diff.expectedTail}`,
+      `인식 결과: ${diff.actualTail}`,
+    ].join("\n");
+  }
+
   return `🎯 천천히 다시\n🗣️ ${answer} 를 보고 또박또박 2~3번 따라 말해 보세요.`;
 }
 
@@ -237,6 +256,7 @@ export async function POST(req: Request) {
       "다음 일본어 음성을 전사하세요.",
       "가능하면 히라가나 중심으로 전사하세요.",
       "동음이의어 한자가 가능하면 정답 문장에 가까운 표기를 우선하세요.",
+      "정답과 같은 발음이면 정답 문장에 가까운 표기를 우선해 주세요.",
       `정답 문장: ${answerJp}`,
       answerYomi ? `정답 읽기: ${answerYomi}` : "",
     ]
@@ -301,17 +321,23 @@ export async function POST(req: Request) {
       );
     }
 
-    // 정답은 yomi 기준이 핵심
     const scoreAgainstYomi = answerYomi
       ? similarityScore(transcript, answerYomi)
       : 0;
-
-    // 참고용으로 jp도 비교
     const scoreAgainstJp = similarityScore(transcript, answerJp);
 
-    // 둘 중 높은 점수 반영
     const score = Math.max(scoreAgainstYomi, scoreAgainstJp);
-    const feedback = makeFeedback(score, answerJp, transcript);
+
+    const expectedReading = toReadingLike(answerYomi || answerJp);
+    const actualReading = toReadingLike(transcript);
+
+    const feedback = makeDetailedFeedback(
+      score,
+      answerJp,
+      transcript,
+      expectedReading,
+      actualReading
+    );
 
     return Response.json({
       transcript,
