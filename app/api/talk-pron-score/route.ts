@@ -42,6 +42,11 @@ function escapeRegExp(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * 최소 규칙만 유지
+ * - STT가 자주 한자로 뽑는 핵심 단어만 보정
+ * - 문장 규칙은 꼭 필요한 것만
+ */
 const PHRASE_READING_RULES: Array<[string, string]> = [
   ["また来たくなると思います", "またきたくなるとおもいます"],
   ["来たくなると思います", "きたくなるとおもいます"],
@@ -52,7 +57,6 @@ const PHRASE_READING_RULES: Array<[string, string]> = [
 ];
 
 const WORD_READING_RULES: Array<[string, string]> = [
-  ["多分", "たぶん"],
   ["思った", "おもった"],
   ["思います", "おもいます"],
   ["思う", "おもう"],
@@ -144,6 +148,7 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const aRead = toReadingLike(a);
   const bRead = toReadingLike(b);
 
+  // 읽기 기준 완전 일치면 100
   if (aRead && bRead && aRead === bRead) {
     return 100;
   }
@@ -161,8 +166,9 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const scoreLoose = scoreByDistance(aLoose, bLoose);
   const scoreRead = scoreByDistance(aRead, bRead);
 
+  // 발음 기준을 가장 강하게 반영
   const weighted = Math.round(
-    scoreStrict * 0.05 + scoreLoose * 0.1 + scoreRead * 0.85
+    scoreStrict * 0.05 + scoreLoose * 0.10 + scoreRead * 0.85
   );
 
   return weighted < floorToZero
@@ -228,11 +234,11 @@ export async function POST(req: Request) {
         : "speech.wav";
 
     const prompt = [
+      "다음 일본어 음성을 전사하세요.",
+      "가능하면 히라가나 중심으로 전사하세요.",
+      "동음이의어 한자가 가능하면 정답 문장에 가까운 표기를 우선하세요.",
       `정답 문장: ${answerJp}`,
       answerYomi ? `정답 읽기: ${answerYomi}` : "",
-      "일본어 음성을 전사하세요.",
-      "동음이의어 한자가 가능하면 정답 문장에 가까운 표기를 우선하세요.",
-      "다만 최종 채점은 읽기 기준으로 진행됩니다.",
     ]
       .filter(Boolean)
       .join("\n");
@@ -295,12 +301,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const scoreAgainstJp = similarityScore(transcript, answerJp);
+    // 정답은 yomi 기준이 핵심
     const scoreAgainstYomi = answerYomi
       ? similarityScore(transcript, answerYomi)
       : 0;
 
-    const score = Math.max(scoreAgainstJp, scoreAgainstYomi);
+    // 참고용으로 jp도 비교
+    const scoreAgainstJp = similarityScore(transcript, answerJp);
+
+    // 둘 중 높은 점수 반영
+    const score = Math.max(scoreAgainstYomi, scoreAgainstJp);
     const feedback = makeFeedback(score, answerJp, transcript);
 
     return Response.json({
