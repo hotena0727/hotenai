@@ -384,6 +384,11 @@ export default function TalkPage() {
     Record<string, boolean>
   >({});
 
+  const [completionModalOpen, setCompletionModalOpen] = useState(false);
+  const [completionTitle, setCompletionTitle] = useState("");
+  const [completionBody, setCompletionBody] = useState("");
+  const [completionNextSubValue, setCompletionNextSubValue] = useState<string | null>(null);
+
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewModeType, setReviewModeType] =
@@ -1067,6 +1072,31 @@ export default function TalkPage() {
     return "오늘은 입을 7번만 열어봅시다.";
   };
 
+  const closeCompletionModal = () => {
+    setCompletionModalOpen(false);
+  };
+
+  const handleStartNextSub = () => {
+    if (!completionNextSubValue) {
+      setCompletionModalOpen(false);
+      return;
+    }
+
+    setSelectedSub(completionNextSubValue);
+    setCompletionModalOpen(false);
+    setFinishMessage("");
+  };
+
+  const handleBackToSelectFromCompletion = () => {
+    setCompletionModalOpen(false);
+    setFinishMessage("");
+  };
+
+  const handleStartReviewFromCompletion = async () => {
+    setCompletionModalOpen(false);
+    await startReviewSet();
+  };
+
   const markCompletedSub = async (
     stage: string,
     tag: string,
@@ -1616,7 +1646,8 @@ export default function TalkPage() {
       setSaveDone(true);
 
       if (isReviewing) {
-        alert("복습 세트가 완료되었습니다.");
+        playSfx("reward");
+
         setQuestions([]);
         setCurrentIndex(0);
         setCurrentChoices([]);
@@ -1625,6 +1656,12 @@ export default function TalkPage() {
         setReviewNotice("복습 세트를 완료했습니다.");
         setIsReviewing(false);
         setViewMode("select");
+
+        setCompletionTitle("🎉 복습 세트 완료");
+        setCompletionBody("복습 세트를 끝까지 완료했어요.");
+        setCompletionNextSubValue(null);
+        setCompletionModalOpen(true);
+
         setSaving(false);
         return;
       }
@@ -1650,17 +1687,25 @@ export default function TalkPage() {
       setAudioLoadingKey("");
       resetPronunciationState();
       setViewMode("select");
+      setFinishMessage("");
+
+      playSfx("reward");
 
       if (nextSubValue) {
         const nextLabel = getSubLabel(nextSubValue);
         setSelectedSub(nextSubValue);
-        setFinishMessage(
-          `✅ [완] ${completedLabel} 완료! 다음 상황 문제 "${nextLabel}"를 이어서 풀어보세요.`
+
+        setCompletionTitle(`🎉 [완] ${completedLabel} 완료`);
+        setCompletionBody(
+          `좋아요. 다음 상황 문제 "${nextLabel}"를 이어서 풀어볼까요?`
         );
+        setCompletionNextSubValue(nextSubValue);
+        setCompletionModalOpen(true);
       } else {
-        setFinishMessage(
-          `✅ [완] ${completedLabel} 완료! 현재 유형의 상황 문제를 모두 풀었습니다.`
-        );
+        setCompletionTitle(`🏆 [완] ${completedLabel} 완료`);
+        setCompletionBody("현재 유형의 상황 문제를 모두 풀었습니다.");
+        setCompletionNextSubValue(null);
+        setCompletionModalOpen(true);
       }
     } catch (error) {
       console.error(error);
@@ -1759,6 +1804,10 @@ export default function TalkPage() {
     setAudioError("");
     setAudioLoadingKey("");
     setFinishMessage("");
+    setCompletionModalOpen(false);
+    setCompletionTitle("");
+    setCompletionBody("");
+    setCompletionNextSubValue(null);
     resetPronunciationState();
     setReviewNotice("");
     setDailyStateLoaded(false);
@@ -2039,12 +2088,6 @@ export default function TalkPage() {
             >
               시작하기
             </button>
-
-            {finishMessage ? (
-              <div className="mt-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-sm font-medium text-green-700">
-                {finishMessage}
-              </div>
-            ) : null}
           </div>
         </section>
 
@@ -2810,6 +2853,55 @@ export default function TalkPage() {
           </div>
         ) : null}
       </div>
+
+      {completionModalOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900">{completionTitle}</p>
+              <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
+                {completionBody}
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {completionNextSubValue ? (
+                <button
+                  type="button"
+                  onClick={handleStartNextSub}
+                  className="w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
+                >
+                  다음 상황 풀기
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStartReviewFromCompletion}
+                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-900"
+                >
+                  복습 시작
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleBackToSelectFromCompletion}
+                className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
+              >
+                선택으로 돌아가기
+              </button>
+
+              <button
+                type="button"
+                onClick={closeCompletionModal}
+                className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
