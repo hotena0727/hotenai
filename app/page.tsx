@@ -82,6 +82,30 @@ function getPlanProgressColors(plan: PlanCode) {
   }
 }
 
+function normalizeLevelValue(level?: string | null): string {
+  const raw = String(level || "").trim().toUpperCase();
+  if (["N5", "N4", "N3", "N2", "N1"].includes(raw)) return raw;
+  return String(level || "").trim();
+}
+
+function levelLabel(level?: string | null): string {
+  const raw = normalizeLevelValue(level);
+  switch (raw) {
+    case "N5":
+      return "첫걸음";
+    case "N4":
+      return "기초";
+    case "N3":
+      return "실전";
+    case "N2":
+      return "심화";
+    case "N1":
+      return "완성";
+    default:
+      return raw || "-";
+  }
+}
+
 export default function HomePage() {
   const router = useRouter();
 
@@ -321,6 +345,7 @@ export default function HomePage() {
       ),
       levelProgress: (safeDashboard.levelProgress || []).map((item) => ({
         level: item.level,
+        displayLevel: levelLabel(item.level),
         count: Number(item.count || 0),
         widthPct: Math.round(
           ((Number(item.count || 0) || 0) / maxLevelCount) * 100
@@ -749,8 +774,9 @@ export default function HomePage() {
             <div
               className="flex h-44 w-44 items-center justify-center rounded-full shadow-sm"
               style={{
-                background: `conic-gradient(${progressColors.main} ${(stats.goalPercent / 100) * 360
-                  }deg, ${progressColors.rest} 0deg)`,
+                background: `conic-gradient(${progressColors.main} ${
+                  (stats.goalPercent / 100) * 360
+                }deg, ${progressColors.rest} 0deg)`,
               }}
             >
               <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
@@ -792,10 +818,9 @@ export default function HomePage() {
                     }
                   />
                   <p
-                    className={`mt-3 text-sm ${isToday
-                      ? "font-semibold text-gray-900"
-                      : "text-gray-500"
-                      }`}
+                    className={`mt-3 text-sm ${
+                      isToday ? "font-semibold text-gray-900" : "text-gray-500"
+                    }`}
                   >
                     {day.label}
                   </p>
@@ -819,9 +844,9 @@ export default function HomePage() {
             {stats.levelProgress.map((item) => (
               <div
                 key={item.level}
-                className="grid grid-cols-[48px_1fr_32px] items-center gap-3"
+                className="grid grid-cols-[64px_1fr_32px] items-center gap-3"
               >
-                <p className="font-semibold text-gray-700">{item.level}</p>
+                <p className="font-semibold text-gray-700">{item.displayLevel}</p>
                 <div className="h-3 rounded-full bg-white">
                   <div
                     className="h-3 rounded-full bg-blue-300"
@@ -980,8 +1005,9 @@ export default function HomePage() {
                     <div className="flex min-h-[56px] flex-col justify-center">
                       <p className="text-base font-semibold">{routine.title}</p>
                       <p
-                        className={`mt-1 text-sm leading-6 ${isPrimary ? "text-gray-200" : "text-gray-600"
-                          }`}
+                        className={`mt-1 text-sm leading-6 ${
+                          isPrimary ? "text-gray-200" : "text-gray-600"
+                        }`}
                       >
                         {routine.desc}
                       </p>

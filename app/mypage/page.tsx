@@ -62,6 +62,33 @@ type NoticeStatus = {
   serviceWorkerReady: boolean;
 };
 
+function normalizeLevelValue(level?: string | null): string {
+  const raw = String(level || "").trim().toUpperCase();
+  if (["N5", "N4", "N3", "N2", "N1"].includes(raw)) return raw;
+  if (raw === "전체".toUpperCase()) return "전체";
+  return String(level || "").trim();
+}
+
+function levelLabel(level?: string | null): string {
+  const raw = normalizeLevelValue(level);
+  switch (raw) {
+    case "N5":
+      return "첫걸음";
+    case "N4":
+      return "기초";
+    case "N3":
+      return "실전";
+    case "N2":
+      return "심화";
+    case "N1":
+      return "완성";
+    case "전체":
+      return "전체";
+    default:
+      return raw || "-";
+  }
+}
+
 function calcAveragePercent(attempts: QuizAttemptRow[]): number {
   if (attempts.length === 0) return 0;
 
@@ -129,10 +156,13 @@ function formatRelativeMessageTime(value?: string | null) {
     })}`;
   }
 
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${d.toLocaleTimeString("ko-KR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${d.toLocaleTimeString(
+    "ko-KR",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  )}`;
 }
 
 function formatDateOnly(value?: string | null) {
@@ -229,7 +259,10 @@ function calcThisMonthCount(attempts: QuizAttemptRow[]) {
   return attempts.filter((item) => {
     const d = parseDate(item.created_at);
     if (!d) return false;
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth()
+    );
   }).length;
 }
 
@@ -403,7 +436,9 @@ export default function MyPage() {
         if (sectionError) {
           console.error(sectionError);
         } else {
-          setShowMyClassroomSection(Boolean(sectionRow?.show_my_classroom_section));
+          setShowMyClassroomSection(
+            Boolean(sectionRow?.show_my_classroom_section)
+          );
         }
 
         const recent = await fetchRecentAttempts(user.id, 12);
@@ -469,10 +504,18 @@ export default function MyPage() {
   }, []);
 
   const stats = useMemo(() => {
-    const talkAttempts = allAttempts.filter((item) => isTalkAttempt(item.pos_mode));
-    const wordAttempts = allAttempts.filter((item) => isWordAttempt(item.pos_mode));
-    const kanjiAttempts = allAttempts.filter((item) => isKanjiAttempt(item.pos_mode));
-    const katsuyouAttempts = allAttempts.filter((item) => isKatsuyouAttempt(item.pos_mode));
+    const talkAttempts = allAttempts.filter((item) =>
+      isTalkAttempt(item.pos_mode)
+    );
+    const wordAttempts = allAttempts.filter((item) =>
+      isWordAttempt(item.pos_mode)
+    );
+    const kanjiAttempts = allAttempts.filter((item) =>
+      isKanjiAttempt(item.pos_mode)
+    );
+    const katsuyouAttempts = allAttempts.filter((item) =>
+      isKatsuyouAttempt(item.pos_mode)
+    );
 
     const totalAttempts = allAttempts.length;
     const totalWrong = allAttempts.reduce(
@@ -532,6 +575,7 @@ export default function MyPage() {
         item.pos_mode || "",
         withFullIfMissing(item.pos_mode),
         item.level || "",
+        levelLabel(item.level),
         String(item.score || ""),
         String(item.quiz_len || ""),
         String(item.wrong_count || ""),
@@ -655,11 +699,15 @@ export default function MyPage() {
         throw new Error(String(data?.error || "테스트 푸시 발송 실패"));
       }
 
-      setNoticeMessage(`테스트 푸시를 보냈습니다. (${data.successCount || 0}건)`);
+      setNoticeMessage(
+        `테스트 푸시를 보냈습니다. (${data.successCount || 0}건)`
+      );
     } catch (error) {
       console.error(error);
       setNoticeError(
-        error instanceof Error ? error.message : "테스트 푸시 발송에 실패했습니다."
+        error instanceof Error
+          ? error.message
+          : "테스트 푸시 발송에 실패했습니다."
       );
     } finally {
       setNoticeTesting(false);
@@ -732,7 +780,8 @@ export default function MyPage() {
         ? "조금 틀려도 괜찮아요. 기록은 흔들림이 아니라, 다시 올라가는 발판이 됩니다."
         : "오답이 쌓였다는 건 그만큼 시도했다는 뜻이기도 해요. 오늘은 많이 말고, 한 번 더 보는 것에 집중해 봅시다.";
 
-  const latestAttemptAt = allAttempts[0]?.created_at || recentAttempts[0]?.created_at || null;
+  const latestAttemptAt =
+    allAttempts[0]?.created_at || recentAttempts[0]?.created_at || null;
   const secondAttemptAt = allAttempts[1]?.created_at || latestAttemptAt;
   const thirdAttemptAt = allAttempts[2]?.created_at || secondAttemptAt;
 
@@ -763,14 +812,13 @@ export default function MyPage() {
     },
   ];
 
-  const groupedMessageHistory = messageHistory.reduce<Record<string, typeof messageHistory>>(
-    (acc, item) => {
-      if (!acc[item.section]) acc[item.section] = [];
-      acc[item.section].push(item);
-      return acc;
-    },
-    {}
-  );
+  const groupedMessageHistory = messageHistory.reduce<
+    Record<string, typeof messageHistory>
+  >((acc, item) => {
+    if (!acc[item.section]) acc[item.section] = [];
+    acc[item.section].push(item);
+    return acc;
+  }, {});
 
   const noticePermissionLabel =
     noticeStatus.permission === "granted"
@@ -807,7 +855,11 @@ export default function MyPage() {
     return (
       <main className="min-h-screen bg-white text-gray-900">
         <div className="mx-auto max-w-3xl px-4 py-10">
-          <p className={needsLogin ? "text-sm text-gray-700" : "text-sm text-red-500"}>
+          <p
+            className={
+              needsLogin ? "text-sm text-gray-700" : "text-sm text-red-500"
+            }
+          >
             {errorMsg}
           </p>
 
@@ -846,7 +898,9 @@ export default function MyPage() {
             className="flex w-full items-center justify-between px-5 py-4 text-left"
           >
             <div>
-              <p className="text-base font-bold text-slate-900">앱처럼 설치하기</p>
+              <p className="text-base font-bold text-slate-900">
+                앱처럼 설치하기
+              </p>
               <p className="mt-1 text-sm text-slate-600">
                 홈 화면에 추가하면 더 빠르고 편하게 사용할 수 있어요.
               </p>
@@ -858,13 +912,16 @@ export default function MyPage() {
 
           {installGuideOpen ? (
             <div className="border-t border-sky-200 bg-white/70 px-5 py-4 text-sm leading-6 text-slate-700">
-              <div className="font-semibold text-slate-900">브라우저별 안내</div>
+              <div className="font-semibold text-slate-900">
+                브라우저별 안내
+              </div>
               <div className="mt-2">
-                • <span className="font-semibold">iPhone / Safari</span>: 아래 공유 버튼 → 홈 화면에 추가
-                <br />
-                • <span className="font-semibold">Android / Chrome</span>: 브라우저 메뉴 → 홈 화면에 추가 또는 앱 설치
-                <br />
-                • <span className="font-semibold">삼성 인터넷</span>: 브라우저 메뉴 → 홈 화면에 추가
+                • <span className="font-semibold">iPhone / Safari</span>: 아래
+                공유 버튼 → 홈 화면에 추가
+                <br />• <span className="font-semibold">Android / Chrome</span>:
+                브라우저 메뉴 → 홈 화면에 추가 또는 앱 설치
+                <br />• <span className="font-semibold">삼성 인터넷</span>:
+                브라우저 메뉴 → 홈 화면에 추가
               </div>
             </div>
           ) : null}
@@ -876,7 +933,9 @@ export default function MyPage() {
               <p className="text-sm font-semibold text-gray-500">현재 플랜</p>
               <p className="mt-2 text-lg font-bold text-gray-900">
                 {profile ? getPlanGuideText(profile.plan) : "-"}
-                {profile && profile.plan !== "free" && profile.plan_expires_at
+                {profile &&
+                profile.plan !== "free" &&
+                profile.plan_expires_at
                   ? ` · ${formatDateOnly(profile.plan_expires_at)}까지`
                   : ""}
               </p>
@@ -983,7 +1042,9 @@ export default function MyPage() {
               {goalSaving ? "저장 중..." : "목표 저장"}
             </button>
 
-            {goalMessage ? <p className="text-sm text-gray-600">{goalMessage}</p> : null}
+            {goalMessage ? (
+              <p className="text-sm text-gray-600">{goalMessage}</p>
+            ) : null}
           </div>
         </div>
 
@@ -991,12 +1052,15 @@ export default function MyPage() {
           <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-gray-500">나의 강의실</p>
+                <p className="text-sm font-semibold text-gray-500">
+                  나의 강의실
+                </p>
                 <p className="mt-2 text-lg font-bold text-gray-900">
                   지금 듣고 있는 강의를 이어가 보세요
                 </p>
                 <p className="mt-2 text-sm text-gray-600">
-                  수강 중인 강의, 최근 본 강의, 이어보기 항목을 한눈에 확인할 수 있습니다.
+                  수강 중인 강의, 최근 본 강의, 이어보기 항목을 한눈에 확인할 수
+                  있습니다.
                 </p>
               </div>
 
@@ -1040,22 +1104,34 @@ export default function MyPage() {
         <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
             <p className="text-2xl font-bold sm:text-4xl">{stats.streak}</p>
-            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">연속 학습일</p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">
+              연속 학습일
+            </p>
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl font-bold sm:text-4xl">{stats.thisWeekCount}</p>
-            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">이번 주 풀이수</p>
+            <p className="text-2xl font-bold sm:text-4xl">
+              {stats.thisWeekCount}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">
+              이번 주 풀이수
+            </p>
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
-            <p className="text-2xl font-bold sm:text-4xl">{stats.topWrongType}</p>
-            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">최다 오답 유형</p>
+            <p className="text-2xl font-bold sm:text-4xl">
+              {stats.topWrongType}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">
+              최다 오답 유형
+            </p>
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
             <p className="text-2xl font-bold sm:text-4xl">{stats.totalWrong}</p>
-            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">오답</p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">
+              오답
+            </p>
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
@@ -1068,14 +1144,18 @@ export default function MyPage() {
                       100
                   )}%`}
             </p>
-            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">평균 정답률</p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">
+              평균 정답률
+            </p>
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white p-3 sm:p-5">
             <p className="text-2xl font-bold sm:text-4xl">
               {stats.last7.reduce((sum, day) => sum + (day.total > 0 ? 1 : 0), 0)}
             </p>
-            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">최근 7일 학습</p>
+            <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">
+              최근 7일 학습
+            </p>
           </div>
         </div>
 
@@ -1111,7 +1191,9 @@ export default function MyPage() {
                 className="rounded-2xl border border-blue-200 bg-blue-50 p-2 text-center sm:p-4"
               >
                 <p className="text-xs font-bold sm:text-lg">{day.label}</p>
-                <p className="mt-2 text-lg font-bold sm:mt-3 sm:text-3xl">{idx + 1}</p>
+                <p className="mt-2 text-lg font-bold sm:mt-3 sm:text-3xl">
+                  {idx + 1}
+                </p>
                 <p className="mt-1 text-[10px] font-semibold text-gray-700 sm:mt-2 sm:text-sm">
                   {day.total}회
                 </p>
@@ -1209,7 +1291,9 @@ export default function MyPage() {
             <div className="mt-6 rounded-3xl border border-gray-200 bg-gradient-to-b from-gray-50 to-white p-5">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
                 <div>
-                  <p className="text-sm font-semibold text-gray-700">오답으로 시험보기</p>
+                  <p className="text-sm font-semibold text-gray-700">
+                    오답으로 시험보기
+                  </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {[
                       { key: "word", label: "단어" },
@@ -1264,7 +1348,9 @@ export default function MyPage() {
             <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
                 <div>
-                  <label className="text-sm font-semibold text-gray-700">검색</label>
+                  <label className="text-sm font-semibold text-gray-700">
+                    검색
+                  </label>
                   <input
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
@@ -1327,22 +1413,29 @@ export default function MyPage() {
                           {prettyAttemptLabel(withFullIfMissing(item.pos_mode))}
                         </p>
                         <p className="mt-2 text-sm text-gray-600">
-                          {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
+                          {levelLabel(item.level)} · {Number(item.score || 0)}/
+                          {Number(item.quiz_len || 0)} · 오답{" "}
+                          {Number(item.wrong_count || 0)}
                         </p>
                       </div>
 
                       <div className="text-right text-sm text-gray-500">
                         <p>
                           {item.created_at
-                            ? new Date(item.created_at).toLocaleDateString("ko-KR")
+                            ? new Date(item.created_at).toLocaleDateString(
+                                "ko-KR"
+                              )
                             : "-"}
                         </p>
                         <p className="mt-1">
                           {item.created_at
-                            ? new Date(item.created_at).toLocaleTimeString("ko-KR", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
+                            ? new Date(item.created_at).toLocaleTimeString(
+                                "ko-KR",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )
                             : "-"}
                         </p>
                       </div>
@@ -1358,22 +1451,29 @@ export default function MyPage() {
           <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
             <h2 className="text-2xl font-bold">📈 기록</h2>
             <p className="mt-3 text-sm text-gray-500">
-              최근 학습 흐름을 한눈에 확인해 보세요. 가장 최근에 저장된 결과부터 보여드립니다.
+              최근 학습 흐름을 한눈에 확인해 보세요. 가장 최근에 저장된 결과부터
+              보여드립니다.
             </p>
 
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs text-gray-500">최근 기록</p>
-                <p className="mt-2 text-2xl font-bold">{recentAttempts.length}개</p>
+                <p className="mt-2 text-2xl font-bold">
+                  {recentAttempts.length}개
+                </p>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs text-gray-500">평균 점수</p>
-                <p className="mt-2 text-2xl font-bold">{calcAveragePercent(recentAttempts)}%</p>
+                <p className="mt-2 text-2xl font-bold">
+                  {calcAveragePercent(recentAttempts)}%
+                </p>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs text-gray-500">가장 많이 한 학습</p>
                 <p className="mt-2 text-2xl font-bold">
-                  {getTopWrongType(recentAttempts) === "-" ? "-" : getTopWrongType(recentAttempts)}
+                  {getTopWrongType(recentAttempts) === "-"
+                    ? "-"
+                    : getTopWrongType(recentAttempts)}
                 </p>
               </div>
             </div>
@@ -1404,19 +1504,26 @@ export default function MyPage() {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${tone}`}>
+                          <div
+                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${tone}`}
+                          >
                             {getAppLabelFromPosMode(item.pos_mode)}
                           </div>
                           <p className="mt-3 text-base font-semibold text-gray-900">
                             {prettyAttemptLabel(withFullIfMissing(item.pos_mode))}
                           </p>
                           <p className="mt-2 text-sm text-gray-600">
-                            {item.level || "-"} · {Number(item.score || 0)}/{Number(item.quiz_len || 0)} · 오답 {Number(item.wrong_count || 0)}
+                            {levelLabel(item.level)} ·{" "}
+                            {Number(item.score || 0)}/
+                            {Number(item.quiz_len || 0)} · 오답{" "}
+                            {Number(item.wrong_count || 0)}
                           </p>
                         </div>
 
                         <div className="shrink-0 text-right text-xs text-gray-500">
-                          {item.created_at ? new Date(item.created_at).toLocaleString("ko-KR") : "-"}
+                          {item.created_at
+                            ? new Date(item.created_at).toLocaleString("ko-KR")
+                            : "-"}
                         </div>
                       </div>
                     </div>
@@ -1434,7 +1541,8 @@ export default function MyPage() {
                 <div>
                   <h2 className="text-2xl font-bold">💌 메시지</h2>
                   <p className="mt-3 text-sm text-gray-500">
-                    관리자가 직접 보낸 메시지가 아니라, 오늘의 학습 흐름을 바탕으로 자동 생성된 피드백 메시지입니다.
+                    관리자가 직접 보낸 메시지가 아니라, 오늘의 학습 흐름을
+                    바탕으로 자동 생성된 피드백 메시지입니다.
                   </p>
                 </div>
                 <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
@@ -1445,42 +1553,73 @@ export default function MyPage() {
 
             <div className="rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-6">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold text-blue-700">오늘의 한마디</p>
+                <p className="text-sm font-semibold text-blue-700">
+                  오늘의 한마디
+                </p>
                 <div className="rounded-full border border-blue-200 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700">
                   {formatRelativeMessageTime(latestAttemptAt)}
                 </div>
               </div>
-              <p className="mt-3 text-2xl font-bold text-gray-900">{todayMessageTitle}</p>
-              <p className="mt-3 text-base leading-7 text-gray-700">{todayMessageBody}</p>
+              <p className="mt-3 text-2xl font-bold text-gray-900">
+                {todayMessageTitle}
+              </p>
+              <p className="mt-3 text-base leading-7 text-gray-700">
+                {todayMessageBody}
+              </p>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="rounded-3xl border border-gray-200 bg-white p-6">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-semibold text-gray-500">현재 학습 코멘트</p>
-                  <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(secondAttemptAt)}</p>
+                  <p className="text-sm font-semibold text-gray-500">
+                    현재 학습 코멘트
+                  </p>
+                  <p className="text-xs font-medium text-gray-400">
+                    {formatRelativeMessageTime(secondAttemptAt)}
+                  </p>
                 </div>
-                <p className="mt-3 text-lg font-semibold text-gray-900">{warmMessage}</p>
+                <p className="mt-3 text-lg font-semibold text-gray-900">
+                  {warmMessage}
+                </p>
                 <div className="mt-5 rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
-                  최근 7일 학습 {stats.last7.reduce((sum, day) => sum + (day.total > 0 ? 1 : 0), 0)}일 · 연속 학습 {stats.streak}일 · 이번 주 풀이 {stats.thisWeekCount}회
+                  최근 7일 학습{" "}
+                  {stats.last7.reduce(
+                    (sum, day) => sum + (day.total > 0 ? 1 : 0),
+                    0
+                  )}
+                  일 · 연속 학습 {stats.streak}일 · 이번 주 풀이{" "}
+                  {stats.thisWeekCount}회
                 </div>
               </div>
 
               <div className="rounded-3xl border border-gray-200 bg-white p-6">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-semibold text-gray-500">{coachTipTitle}</p>
-                  <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(thirdAttemptAt)}</p>
+                  <p className="text-sm font-semibold text-gray-500">
+                    {coachTipTitle}
+                  </p>
+                  <p className="text-xs font-medium text-gray-400">
+                    {formatRelativeMessageTime(thirdAttemptAt)}
+                  </p>
                 </div>
-                <p className="mt-3 text-lg font-semibold text-gray-900">오늘은 너무 넓게 말고, 하나만 정확히</p>
-                <p className="mt-3 text-base leading-7 text-gray-700">{coachTipBody}</p>
+                <p className="mt-3 text-lg font-semibold text-gray-900">
+                  오늘은 너무 넓게 말고, 하나만 정확히
+                </p>
+                <p className="mt-3 text-base leading-7 text-gray-700">
+                  {coachTipBody}
+                </p>
               </div>
             </div>
 
             <div className="rounded-3xl border border-gray-200 bg-white p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-lg font-semibold text-gray-900">메시지 기록</p>
-                  <p className="mt-2 text-sm text-gray-500">언제 받은 메시지인지 한눈에 구분할 수 있게 최근 흐름으로 정리했습니다.</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    메시지 기록
+                  </p>
+                  <p className="mt-2 text-sm text-gray-500">
+                    언제 받은 메시지인지 한눈에 구분할 수 있게 최근 흐름으로
+                    정리했습니다.
+                  </p>
                 </div>
                 <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
                   총 {messageHistory.length}개
@@ -1492,25 +1631,36 @@ export default function MyPage() {
                   <div key={section}>
                     <div className="mb-3 flex items-center gap-2">
                       <div className="h-px flex-1 bg-gray-200" />
-                      <p className="shrink-0 text-xs font-semibold tracking-wide text-gray-400">{section}</p>
+                      <p className="shrink-0 text-xs font-semibold tracking-wide text-gray-400">
+                        {section}
+                      </p>
                       <div className="h-px flex-1 bg-gray-200" />
                     </div>
 
                     <div className="space-y-3">
                       {items.map((item) => (
-                        <div key={item.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                        <div
+                          key={item.id}
+                          className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+                        >
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-semibold text-gray-900">{item.title}</p>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {item.title}
+                              </p>
                               {item.badge ? (
                                 <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-500">
                                   {item.badge}
                                 </span>
                               ) : null}
                             </div>
-                            <p className="text-xs font-medium text-gray-400">{formatRelativeMessageTime(item.time)}</p>
+                            <p className="text-xs font-medium text-gray-400">
+                              {formatRelativeMessageTime(item.time)}
+                            </p>
                           </div>
-                          <p className="mt-2 text-sm leading-6 text-gray-600">{item.body}</p>
+                          <p className="mt-2 text-sm leading-6 text-gray-600">
+                            {item.body}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -1522,11 +1672,17 @@ export default function MyPage() {
             <div className="rounded-3xl border border-gray-200 bg-white p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-lg font-semibold text-gray-900">지금 추천하는 루틴</p>
-                  <p className="mt-2 text-sm text-gray-500">부담 없이 이어가기 좋은 루틴부터 시작해 보세요.</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    지금 추천하는 루틴
+                  </p>
+                  <p className="mt-2 text-sm text-gray-500">
+                    부담 없이 이어가기 좋은 루틴부터 시작해 보세요.
+                  </p>
                 </div>
                 <div className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  {profile?.full_name ? `${profile.full_name}님 맞춤` : "오늘의 추천"}
+                  {profile?.full_name
+                    ? `${profile.full_name}님 맞춤`
+                    : "오늘의 추천"}
                 </div>
               </div>
 
@@ -1560,13 +1716,16 @@ export default function MyPage() {
           <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
             <h2 className="text-2xl font-bold">🔔 알림</h2>
             <p className="mt-3 text-sm text-gray-500">
-              지금 이 브라우저에서 푸시 알림이 켜져 있는지 바로 확인할 수 있습니다.
+              지금 이 브라우저에서 푸시 알림이 켜져 있는지 바로 확인할 수
+              있습니다.
             </p>
 
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs text-gray-500">브라우저 권한</p>
-                <p className="mt-2 text-xl font-bold">{noticePermissionLabel}</p>
+                <p className="mt-2 text-xl font-bold">
+                  {noticePermissionLabel}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
@@ -1585,7 +1744,9 @@ export default function MyPage() {
             </div>
 
             <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-              <p className="text-base font-semibold text-blue-900">{noticeSummary}</p>
+              <p className="text-base font-semibold text-blue-900">
+                {noticeSummary}
+              </p>
               <p className="mt-2 text-sm text-blue-800">
                 {noticeStatus.permission === "denied"
                   ? "브라우저 설정에서 알림 권한을 다시 허용해야 합니다."
