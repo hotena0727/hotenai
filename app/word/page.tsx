@@ -15,6 +15,15 @@ import type { PatternRow } from "@/app/types/pattern";
 import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
 import { hasSeenHomeToday } from "@/lib/home-gate";
 
+const LEVEL_OPTIONS = [
+  { value: "all", label: "전체" },
+  { value: "N5", label: "첫걸음" },
+  { value: "N4", label: "기초" },
+  { value: "N3", label: "실전" },
+  { value: "N2", label: "심화" },
+  { value: "N1", label: "완성" },
+] as const;
+
 const POS_GROUP_OPTIONS = [
   { value: "noun", label: "명사" },
   { value: "adj_i", label: "い형용사" },
@@ -38,6 +47,43 @@ const QTYPE_OPTIONS: Array<{ value: WordQType; label: string }> = [
 
 type AnswerMap = Record<number, string>;
 type ExcludedWordMap = Record<string, boolean>;
+
+function getLevelDisplayLabel(level?: string | null): string {
+  const raw = String(level || "").trim().toUpperCase();
+
+  switch (raw) {
+    case "N5":
+      return "첫걸음";
+    case "N4":
+      return "기초";
+    case "N3":
+      return "실전";
+    case "N2":
+      return "심화";
+    case "N1":
+      return "완성";
+    case "ALL":
+    case "전체":
+      return "전체";
+    default:
+      return String(level || "-").trim() || "-";
+  }
+}
+
+function normalizeLevelValue(level?: string | null): string {
+  const raw = String(level || "").trim().toUpperCase();
+  if (["N5", "N4", "N3", "N2", "N1"].includes(raw)) return raw;
+  return "";
+}
+
+function filterRowsByLevel(rows: WordRow[], selectedLevel: string): WordRow[] {
+  if (!selectedLevel || selectedLevel === "all") return rows;
+
+  return rows.filter((row) => {
+    const rowLevel = normalizeLevelValue((row as { level?: string }).level);
+    return rowLevel === selectedLevel;
+  });
+}
 
 function posLabel(pos: string): string {
   const raw = String(pos || "").trim().toLowerCase();
@@ -128,6 +174,7 @@ export default function WordPage() {
   const [patternRows, setPatternRows] = useState<PatternRow[]>([]);
   const [questions, setQuestions] = useState<WordQuestion[]>([]);
 
+  const [selectedLevel, setSelectedLevel] = useState("all");
   const [selectedPosGroup, setSelectedPosGroup] = useState("noun");
   const [selectedQType, setSelectedQType] = useState<WordQType>("reading");
 
@@ -672,10 +719,12 @@ export default function WordPage() {
       (k) => nextExcludedWords[k]
     );
 
+    const levelFilteredRows = filterRowsByLevel(rows, selectedLevel);
+
     if (selectedPosGroup === "other") {
       if (selectedOtherPos.length === 0) return false;
 
-      let filteredRows = rows.filter((row) =>
+      let filteredRows = levelFilteredRows.filter((row) =>
         selectedOtherPos.includes(String(row.pos || "").trim().toLowerCase())
       );
 
@@ -696,7 +745,7 @@ export default function WordPage() {
     }
 
     const nextQuiz = buildWordQuiz({
-      rows,
+      rows: levelFilteredRows,
       qtype: selectedQType,
       posGroup: selectedPosGroup,
       excludedWords: blockedWords,
@@ -768,6 +817,8 @@ export default function WordPage() {
         (k) => excludedWords[k]
       );
 
+      const levelFilteredRows = filterRowsByLevel(rows, selectedLevel);
+
       let quiz: WordQuestion[] = [];
 
       if (selectedPosGroup === "other") {
@@ -776,7 +827,7 @@ export default function WordPage() {
           return;
         }
 
-        let filteredRows = rows.filter((row) =>
+        let filteredRows = levelFilteredRows.filter((row) =>
           selectedOtherPos.includes(String(row.pos || "").trim().toLowerCase())
         );
 
@@ -805,7 +856,7 @@ export default function WordPage() {
           .filter(Boolean) as WordQuestion[];
       } else {
         quiz = buildWordQuiz({
-          rows,
+          rows: levelFilteredRows,
           qtype: selectedQType,
           posGroup: selectedPosGroup,
           excludedWords: blockedWords,
@@ -847,6 +898,7 @@ export default function WordPage() {
     reviewReady,
     loading,
     rows,
+    selectedLevel,
     selectedPosGroup,
     selectedQType,
     selectedOtherPos.join("|"),
@@ -870,7 +922,7 @@ export default function WordPage() {
     if (nextScore === currentQuestions.length) {
       setCompletionTitle("🎉 이 조건은 거의 정복했어요");
       setCompletionBody(
-        `완벽합니다.\n${nextScore}/${currentQuestions.length} 정답이에요.\n다른 유형이나 품사로 넘어가 보세요.`
+        `완벽합니다.\n${nextScore}/${currentQuestions.length} 정답이에요.\n다른 레벨, 유형이나 품사로 넘어가 보세요.`
       );
       setCompletionModalOpen(true);
       return;
@@ -878,7 +930,7 @@ export default function WordPage() {
 
     setCompletionTitle("✅ 이 조건은 거의 정복했어요");
     setCompletionBody(
-      `${nextScore}/${currentQuestions.length} 정답이에요.\n현재 조건에서는 새 10문항 구성이 거의 끝났습니다.\n다른 유형이나 품사로 넘어가거나, 틀린 문제만 다시 볼 수 있어요.`
+      `${nextScore}/${currentQuestions.length} 정답이에요.\n현재 조건에서는 새 10문항 구성이 거의 끝났습니다.\n다른 레벨, 유형이나 품사로 넘어가거나, 틀린 문제만 다시 볼 수 있어요.`
     );
     setCompletionModalOpen(true);
   };
@@ -1051,7 +1103,7 @@ export default function WordPage() {
       const payload = buildWordAttemptPayload({
         user_id: user.id,
         user_email: user.email ?? "",
-        level: "",
+        level: selectedLevel === "all" ? "전체" : selectedLevel,
         pos_mode: `단어 · ${selectedPosGroup} · ${selectedQType}`,
         quiz_len: currentQuestions.length,
         score: nextScore,
@@ -1122,6 +1174,31 @@ export default function WordPage() {
             오답노트 복습 모드 · 선택한 문제만 출제됩니다.
           </p>
         ) : null}
+
+        <div className="mt-8">
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">
+            ✅ 레벨을 선택하세요
+          </p>
+          <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
+            {LEVEL_OPTIONS.map((item) => {
+              const active = selectedLevel === item.value;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setSelectedLevel(item.value)}
+                  className={
+                    active
+                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 py-3 text-sm font-semibold text-white sm:px-4 sm:text-base"
+                      : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900 sm:px-4 sm:text-base"
+                  }
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="mt-8">
           <p className="text-base font-semibold text-gray-700 sm:text-lg">
@@ -1524,7 +1601,8 @@ export default function WordPage() {
                           / 뜻: {q.meaning}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
-                          품사: {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)}
+                          레벨: {getLevelDisplayLabel(q.level)} / 품사:{" "}
+                          {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)}
                         </p>
 
                         {q.qtype === "meaning" ? (
@@ -1627,8 +1705,9 @@ export default function WordPage() {
                                   </span>
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
-                                  {item.question.prompt} · 품사:{" "}
-                                  {posLabel(item.question.pos)} · 유형:{" "}
+                                  {item.question.prompt} · 레벨:{" "}
+                                  {getLevelDisplayLabel(item.question.level)} ·
+                                  품사: {posLabel(item.question.pos)} · 유형:{" "}
                                   {qtypeLabel(item.question.qtype)}
                                 </p>
                               </div>
@@ -1715,7 +1794,7 @@ export default function WordPage() {
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : isReviewMode
                   ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
-                  : "이 조건은 거의 정복했어요. 다른 유형이나 품사로 넘어가 보세요."}
+                  : "이 조건은 거의 정복했어요. 다른 레벨, 유형이나 품사로 넘어가 보세요."}
             </p>
           </div>
         )}
