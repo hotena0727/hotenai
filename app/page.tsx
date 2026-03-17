@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   PolarAngleAxis,
   PolarGrid,
-  PolarRadiusAxis,
   Radar,
   RadarChart,
   ResponsiveContainer,
@@ -483,18 +482,18 @@ export default function HomePage() {
   const recommendationText = isEmptyUser
     ? "아직 학습 기록이 없어요. 오늘은 첫 루틴 하나만 가볍게 시작해보세요."
     : isDormantWeek
-    ? "이번 주는 잠시 쉬었네요. 오늘 한 세트부터 다시 시작해볼까요?"
-    : weakest === "오답관리"
-    ? "오늘은 새 문제보다 오답노트부터 보면 더 효과적입니다."
-    : "오늘 가장 필요한 루틴부터 가볍게 시작해보세요.";
+      ? "이번 주는 잠시 쉬었네요. 오늘 한 세트부터 다시 시작해볼까요?"
+      : weakest === "오답관리"
+        ? "오늘은 새 문제보다 오답노트부터 보면 더 효과적입니다."
+        : "오늘 가장 필요한 루틴부터 가볍게 시작해보세요.";
 
   const balanceSupportText = isEmptyUser
     ? "아직 학습 기록이 없어요. 단어, 한자, 회화 중 하나부터 시작하면 밸런스가 채워집니다."
     : isLightDataUser
-    ? untouchedAreas.length > 0
-      ? `${untouchedAreas.join(", ")} 영역의 데이터가 아직 적어요. 몇 세트만 더 쌓이면 밸런스가 더 정확해집니다.`
-      : "아직 데이터가 많지 않아요. 몇 세트만 더 쌓이면 밸런스가 더 정확해집니다."
-    : `${balanceSummary.weaknesses.join(", ")} 영역을 조금 더 보강하면 전체 흐름이 더 단단해집니다.`;
+      ? untouchedAreas.length > 0
+        ? `${untouchedAreas.join(", ")} 영역의 데이터가 아직 적어요. 몇 세트만 더 쌓이면 밸런스가 더 정확해집니다.`
+        : "아직 데이터가 많지 않아요. 몇 세트만 더 쌓이면 밸런스가 더 정확해집니다."
+      : `${balanceSummary.weaknesses.join(", ")} 영역을 조금 더 보강하면 전체 흐름이 더 단단해집니다.`;
 
   const strengthLabel = isEmptyUser ? "시작 전" : "강점";
   const strengthValue = isEmptyUser
@@ -506,17 +505,17 @@ export default function HomePage() {
     ? canWord
       ? "단어, 회화"
       : canTalk
-      ? "회화, 한자"
-      : "가벼운 루틴부터"
+        ? "회화, 한자"
+        : "가벼운 루틴부터"
     : isLightDataUser && untouchedAreas.length > 0
-    ? untouchedAreas.slice(0, 2).join(", ")
-    : balanceSummary.weaknesses.join(", ");
+      ? untouchedAreas.slice(0, 2).join(", ")
+      : balanceSummary.weaknesses.join(", ");
 
   const weeklySupportText = isDormantWeek
     ? "이번 주는 아직 조용하네요. 오늘 한 세트부터 다시 시작해볼까요?"
     : stats.activeDays7 <= 2
-    ? "루틴은 짧게라도 이어가는 게 중요해요."
-    : "좋아요. 최근 루틴이 조금씩 이어지고 있어요.";
+      ? "루틴은 짧게라도 이어가는 게 중요해요."
+      : "좋아요. 최근 루틴이 조금씩 이어지고 있어요.";
 
   const nextLabel = useMemo(() => {
     if (!nextHref) return "";
@@ -646,21 +645,10 @@ export default function HomePage() {
               <div className="h-[340px] w-full sm:h-[360px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart data={balanceData} outerRadius="76%">
-                    <PolarGrid
-                      gridType="polygon"
-                      radialLines={true}
-                      stroke="#dbe1ea"
-                      strokeOpacity={0.9}
-                    />
+                    <PolarGrid stroke="#dbe1ea" />
                     <PolarAngleAxis
                       dataKey="subject"
                       tick={{ fill: "#374151", fontSize: 13, fontWeight: 700 }}
-                    />
-                    <PolarRadiusAxis
-                      domain={[0, 7]}
-                      ticks={[1, 2, 3, 4, 5, 6, 7]}
-                      tick={false}
-                      axisLine={false}
                     />
                     <Radar
                       dataKey="value"
@@ -761,9 +749,8 @@ export default function HomePage() {
             <div
               className="flex h-44 w-44 items-center justify-center rounded-full shadow-sm"
               style={{
-                background: `conic-gradient(${progressColors.main} ${
-                  (stats.goalPercent / 100) * 360
-                }deg, ${progressColors.rest} 0deg)`,
+                background: `conic-gradient(${progressColors.main} ${(stats.goalPercent / 100) * 360
+                  }deg, ${progressColors.rest} 0deg)`,
               }}
             >
               <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
@@ -805,11 +792,10 @@ export default function HomePage() {
                     }
                   />
                   <p
-                    className={`mt-3 text-sm ${
-                      isToday
-                        ? "font-semibold text-gray-900"
-                        : "text-gray-500"
-                    }`}
+                    className={`mt-3 text-sm ${isToday
+                      ? "font-semibold text-gray-900"
+                      : "text-gray-500"
+                      }`}
                   >
                     {day.label}
                   </p>
@@ -994,9 +980,8 @@ export default function HomePage() {
                     <div className="flex min-h-[56px] flex-col justify-center">
                       <p className="text-base font-semibold">{routine.title}</p>
                       <p
-                        className={`mt-1 text-sm leading-6 ${
-                          isPrimary ? "text-gray-200" : "text-gray-600"
-                        }`}
+                        className={`mt-1 text-sm leading-6 ${isPrimary ? "text-gray-200" : "text-gray-600"
+                          }`}
                       >
                         {routine.desc}
                       </p>
