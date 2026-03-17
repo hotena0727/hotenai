@@ -41,18 +41,82 @@ function lastChar(text: string): string {
 
 function kanaRowChar(ch: string): string {
   const map: Record<string, string> = {
-    あ: "a", か: "k", さ: "s", た: "t", な: "n", は: "h", ま: "m", や: "y", ら: "r", わ: "w",
-    い: "a", き: "k", し: "s", ち: "t", に: "n", ひ: "h", み: "m", り: "r",
-    う: "a", く: "k", す: "s", つ: "t", ぬ: "n", ふ: "h", む: "m", ゆ: "y", る: "r",
-    え: "a", け: "k", せ: "s", て: "t", ね: "n", へ: "h", め: "m", れ: "r",
-    お: "a", こ: "k", そ: "s", と: "t", の: "n", ほ: "h", も: "m", よ: "y", ろ: "r", を: "w",
-    が: "k", ぎ: "k", ぐ: "k", げ: "k", ご: "k",
-    ざ: "s", じ: "s", ず: "s", ぜ: "s", ぞ: "s",
-    だ: "t", ぢ: "t", づ: "t", で: "t", ど: "t",
-    ば: "h", び: "h", ぶ: "h", べ: "h", ぼ: "h",
-    ぱ: "h", ぴ: "h", ぷ: "h", ぺ: "h", ぽ: "h",
+    あ: "a",
+    か: "k",
+    さ: "s",
+    た: "t",
+    な: "n",
+    は: "h",
+    ま: "m",
+    や: "y",
+    ら: "r",
+    わ: "w",
+    い: "a",
+    き: "k",
+    し: "s",
+    ち: "t",
+    に: "n",
+    ひ: "h",
+    み: "m",
+    り: "r",
+    う: "a",
+    く: "k",
+    す: "s",
+    つ: "t",
+    ぬ: "n",
+    ふ: "h",
+    む: "m",
+    ゆ: "y",
+    る: "r",
+    え: "a",
+    け: "k",
+    せ: "s",
+    て: "t",
+    ね: "n",
+    へ: "h",
+    め: "m",
+    れ: "r",
+    お: "a",
+    こ: "k",
+    そ: "s",
+    と: "t",
+    の: "n",
+    ほ: "h",
+    も: "m",
+    よ: "y",
+    ろ: "r",
+    を: "w",
+    が: "k",
+    ぎ: "k",
+    ぐ: "k",
+    げ: "k",
+    ご: "k",
+    ざ: "s",
+    じ: "s",
+    ず: "s",
+    ぜ: "s",
+    ぞ: "s",
+    だ: "t",
+    ぢ: "t",
+    づ: "t",
+    で: "t",
+    ど: "t",
+    ば: "h",
+    び: "h",
+    ぶ: "h",
+    べ: "h",
+    ぼ: "h",
+    ぱ: "h",
+    ぴ: "h",
+    ぷ: "h",
+    ぺ: "h",
+    ぽ: "h",
     ん: "n",
-    っ: "x", ゃ: "y", ゅ: "y", ょ: "y", ー: "-"
+    っ: "x",
+    ゃ: "y",
+    ゅ: "y",
+    ょ: "y",
+    ー: "-",
   };
   return map[ch] || ch;
 }
@@ -85,6 +149,10 @@ function isAdjNaLike(pos: string): boolean {
 
 function endsWithSuru(text: string): boolean {
   return String(text || "").trim().endsWith("する");
+}
+
+function normalizeLevel(level?: string | null): string {
+  return String(level || "").trim().toUpperCase();
 }
 
 function pickDistinctLastCharRows(rows: WordRow[], count: number): WordRow[] {
@@ -312,7 +380,11 @@ export function makeWordQuestion(
   const lvl = row.level;
   const pos = row.pos;
 
-  const poolPos = pool.filter((item) => item.pos === pos);
+  const normalizedLevel = normalizeLevel(lvl);
+  const poolPos = pool.filter(
+    (item) =>
+      item.pos === pos && normalizeLevel(item.level) === normalizedLevel
+  );
 
   let prompt = "";
   let correct = "";
@@ -324,7 +396,7 @@ export function makeWordQuestion(
 
     const wrongRows = pickReadingWrongRows(row, poolPos);
     if (wrongRows.length < 3) {
-      throw new Error(`오답 후보 부족: qtype=${qtype}, pos=${pos}, word=${jp}`);
+      throw new Error(`오답 후보 부족: qtype=${qtype}, pos=${pos}, level=${normalizedLevel}, word=${jp}`);
     }
 
     const wrongs = wrongRows.map((item) => item.reading);
@@ -343,7 +415,7 @@ export function makeWordQuestion(
     );
 
     if (candidates.length < 3) {
-      throw new Error(`오답 후보 부족: qtype=${qtype}, pos=${pos}, word=${jp}`);
+      throw new Error(`오답 후보 부족: qtype=${qtype}, pos=${pos}, level=${normalizedLevel}, word=${jp}`);
     }
 
     const wrongs = shuffleArray(candidates).slice(0, 3);
@@ -362,7 +434,7 @@ export function makeWordQuestion(
     );
 
     if (candidates.length < 3) {
-      throw new Error(`오답 후보 부족: qtype=${qtype}, pos=${pos}, word=${jp}`);
+      throw new Error(`오답 후보 부족: qtype=${qtype}, pos=${pos}, level=${normalizedLevel}, word=${jp}`);
     }
 
     const wrongs = shuffleArray(candidates).slice(0, 3);
@@ -389,6 +461,7 @@ export function buildWordQuiz(params: {
   rows: WordRow[];
   qtype: WordQType;
   posGroup: string;
+  level?: string;
   seenWords?: string[];
   masteredWords?: string[];
   excludedWords?: string[];
@@ -398,14 +471,23 @@ export function buildWordQuiz(params: {
     rows,
     qtype,
     posGroup,
+    level = "",
     seenWords = [],
     masteredWords = [],
     excludedWords = [],
     size = QUIZ_SET_SIZE,
   } = params;
 
+  const normalizedLevel = normalizeLevel(level);
   const posFilters = getPosFilters(posGroup);
+
   let base = rows.filter((row) => posFilters.includes(row.pos));
+
+  if (normalizedLevel) {
+    base = base.filter(
+      (row) => normalizeLevel(row.level) === normalizedLevel
+    );
+  }
 
   if (qtype === "reading") {
     base = base.filter((row) => hasKanji(row.jp_word));
@@ -438,16 +520,33 @@ export function buildWordQuizFromWordKeys(params: {
   wordKeys: string[];
   qtype: WordQType;
   posGroup: string;
+  level?: string;
 }): WordQuestion[] {
-  const { rows, wordKeys, qtype, posGroup } = params;
+  const { rows, wordKeys, qtype, posGroup, level = "" } = params;
 
-  const keys = Array.from(new Set(wordKeys.map(String).map((x) => x.trim()).filter(Boolean)));
+  const keys = Array.from(
+    new Set(
+      wordKeys
+        .map(String)
+        .map((x) => x.trim())
+        .filter(Boolean)
+    )
+  );
+
   if (keys.length === 0) return [];
 
+  const normalizedLevel = normalizeLevel(level);
   const posFilters = getPosFilters(posGroup);
+
   let retryRows = rows.filter(
     (row) => keys.includes(row.jp_word) && posFilters.includes(row.pos)
   );
+
+  if (normalizedLevel) {
+    retryRows = retryRows.filter(
+      (row) => normalizeLevel(row.level) === normalizedLevel
+    );
+  }
 
   if (qtype === "reading") {
     retryRows = retryRows.filter((row) => hasKanji(row.jp_word));
@@ -468,6 +567,7 @@ export function buildWordQuizFromWrongs(params: {
   wrongList: Array<{ item_key?: string; jp_word?: string; app?: string; qtype?: string }>;
   qtype: WordQType;
   posGroup: string;
+  level?: string;
 }): WordQuestion[] {
   const wordKeys = params.wrongList
     .filter((item) => item.app === "word")
@@ -479,5 +579,6 @@ export function buildWordQuizFromWrongs(params: {
     wordKeys,
     qtype: params.qtype,
     posGroup: params.posGroup,
+    level: params.level,
   });
 }
