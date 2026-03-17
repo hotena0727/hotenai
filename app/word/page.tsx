@@ -1247,9 +1247,7 @@ export default function WordPage() {
             >
               <span className="text-lg">{levelPanelOpen ? "⌄" : "›"}</span>
               <div className="min-w-0">
-                <span className="block text-lg font-semibold">
-                  레벨 선택
-                </span>
+                <span className="block text-lg font-semibold">레벨 선택</span>
                 <span className="mt-1 block text-sm text-gray-500">
                   현재 선택: {levelLabel(selectedLevel)}
                 </span>
@@ -1261,6 +1259,7 @@ export default function WordPage() {
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                   {visibleLevelOptions.map((level) => {
                     const active = selectedLevel === level;
+
                     return (
                       <button
                         key={level}
@@ -1272,647 +1271,638 @@ export default function WordPage() {
                             : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900"
                         }
                       >
-                        <button
-                          key={level}
-                          type="button"
-                          onClick={() => setSelectedLevel(level)}
-                          className={
-                            active
-                              ? "rounded-2xl border border-red-400 bg-red-500 px-3 py-3 text-sm font-semibold text-white"
-                              : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900"
-                          }
-                        >
-                          {levelLabel(level)}
-                        </button>
-                        );
+                        {levelLabel(level)}
+                      </button>
+                    );
                   })}
-                      </div>
+                </div>
               </div>
             ) : null}
-              </div>
-            ) : null}
+          </div>
+        ) : null}
 
-            {selectedPosGroup === "other" ? (
-              <div className="mt-5 rounded-2xl border border-gray-300 bg-white">
-                <button
-                  type="button"
-                  onClick={() => setOtherPanelOpen((prev) => !prev)}
-                  className="flex w-full items-center gap-3 px-4 py-4 text-left"
-                >
-                  <span className="text-lg">{otherPanelOpen ? "⌄" : "›"}</span>
-                  <span className="text-lg font-semibold">
-                    기타 세부 선택 (부사/조사/접속사/감탄사)
-                  </span>
-                </button>
 
-                {otherPanelOpen ? (
-                  <div className="border-t border-gray-200 px-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      {OTHER_POS_OPTIONS.map((item) => {
-                        const checked = selectedOtherPos.includes(item.value);
-
-                        return (
-                          <label
-                            key={item.value}
-                            className="flex items-center gap-3 text-base text-gray-900 sm:text-lg"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleOtherPos(item.value)}
-                              className="h-5 w-5"
-                            />
-                            <span>{item.label}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={makeNewQuiz}
-                      disabled={!isReviewMode && isDailyLimitReached}
-                      className={
-                        !isReviewMode && isDailyLimitReached
-                          ? "mt-5 w-full rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
-                          : "mt-5 w-full rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
-                      }
-                    >
-                      {!isReviewMode && isDailyLimitReached
-                        ? "오늘 이용 완료"
-                        : isReviewMode
-                          ? "🔄 선택한 복습 문제 다시 불러오기"
-                          : "🔄 기타 선택 적용(새 문제)"}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="mt-6">
-              <p className="text-base font-semibold text-gray-700 sm:text-lg">
-                ✅ 유형을 선택하세요
-              </p>
-              <div
-                className={
-                  selectedPosGroup === "other"
-                    ? "mt-3 grid grid-cols-2 gap-3"
-                    : "mt-3 grid grid-cols-3 gap-3"
-                }
-              >
-                {visibleQtypes.map((item) => {
-                  const active = selectedQType === item.value;
-                  return (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => setSelectedQType(item.value)}
-                      className={
-                        active
-                          ? "rounded-2xl border border-red-400 bg-red-500 px-3 py-3 text-sm font-semibold text-white sm:px-4 sm:text-xl"
-                          : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900 sm:px-4 sm:text-xl"
-                      }
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div
-              className={
-                !isReviewMode && isDailyLimitReached
-                  ? "mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 sm:px-4 sm:py-4"
-                  : "mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 sm:px-4 sm:py-4"
-              }
+        {selectedPosGroup === "other" ? (
+          <div className="mt-5 rounded-2xl border border-gray-300 bg-white">
+            <button
+              type="button"
+              onClick={() => setOtherPanelOpen((prev) => !prev)}
+              className="flex w-full items-center gap-3 px-4 py-4 text-left"
             >
-              <button
-                type="button"
-                onClick={() => setPlanInfoOpen((prev) => !prev)}
-                className="flex w-full items-center justify-between gap-3 text-left"
-              >
-                <div className="min-w-0">
-                  <p
-                    className={
-                      !isReviewMode && isDailyLimitReached
-                        ? "text-xs font-semibold text-red-700 sm:text-sm"
-                        : "text-xs font-semibold text-gray-800 sm:text-sm"
-                    }
-                  >
-                    {isPaidPlan(userPlan)
-                      ? `${userPlan.toUpperCase()} · 단어·한자 무제한`
-                      : `FREE · 오늘 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
-                  </p>
-                  <p
-                    className={
-                      !isReviewMode && isDailyLimitReached
-                        ? "mt-1 text-xs text-red-600"
-                        : "mt-1 text-xs text-gray-500"
-                    }
-                  >
-                    {isPaidPlan(userPlan)
-                      ? "자세한 이용 안내 보기"
-                      : !isReviewMode && isDailyLimitReached
-                        ? "오늘 이용 완료"
-                        : remainingSets === 1
-                          ? "오늘 1세트 남음"
-                          : `오늘 ${remainingSets}세트 남음`}
-                  </p>
+              <span className="text-lg">{otherPanelOpen ? "⌄" : "›"}</span>
+              <span className="text-lg font-semibold">
+                기타 세부 선택 (부사/조사/접속사/감탄사)
+              </span>
+            </button>
+
+            {otherPanelOpen ? (
+              <div className="border-t border-gray-200 px-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  {OTHER_POS_OPTIONS.map((item) => {
+                    const checked = selectedOtherPos.includes(item.value);
+
+                    return (
+                      <label
+                        key={item.value}
+                        className="flex items-center gap-3 text-base text-gray-900 sm:text-lg"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleOtherPos(item.value)}
+                          className="h-5 w-5"
+                        />
+                        <span>{item.label}</span>
+                      </label>
+                    );
+                  })}
                 </div>
-                <span
-                  className={
-                    !isReviewMode && isDailyLimitReached
-                      ? "shrink-0 text-sm text-red-500 sm:text-base"
-                      : "shrink-0 text-sm text-gray-500 sm:text-base"
-                  }
-                >
-                  {planInfoOpen ? "⌄" : "›"}
-                </span>
-              </button>
 
-              {planInfoOpen ? (
-                <div
-                  className={
-                    !isReviewMode && isDailyLimitReached
-                      ? "mt-3 border-t border-red-200 pt-3 text-xs leading-6 text-red-700 sm:text-sm"
-                      : "mt-3 border-t border-gray-200 pt-3 text-xs leading-6 text-gray-600 sm:text-sm"
-                  }
-                >
-                  <p>
-                    {isPaidPlan(userPlan)
-                      ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
-                      : !isReviewMode && isDailyLimitReached
-                        ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
-                        : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
-                  </p>
-                </div>
-              ) : null}
-
-              {!isReviewMode && isDailyLimitReached ? (
-                <div className="mt-3">
-                  <a
-                    href={PRO_UPGRADE_URL}
-                    className="inline-flex rounded-2xl bg-red-500 px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    Pro 업그레이드
-                  </a>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-gray-300 bg-white">
-              <button
-                type="button"
-                onClick={() => setPatternOpen((prev) => !prev)}
-                className="flex w-full items-center gap-3 px-4 py-4 text-left"
-              >
-                <span className="text-lg">{patternOpen ? "⌄" : "›"}</span>
-                <span className="text-lg font-semibold">
-                  📌 필수패턴 (카드로 빠르게 익히기)
-                </span>
-              </button>
-
-              {patternOpen ? (
-                <div className="border-t border-gray-200 px-4 py-4">
-                  {!featuredPattern ? (
-                    <p className="text-sm text-gray-500">표시할 패턴이 없습니다.</p>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600">
-                        랜덤 1개 패턴
-                      </div>
-
-                      <div className="rounded-3xl border border-gray-200 p-5">
-                        <p className="text-2xl font-bold sm:text-3xl">
-                          {featuredPattern.title}
-                        </p>
-                        <p className="mt-4 text-xl font-semibold sm:text-2xl">
-                          <span lang="ja" style={JA_FONT_STYLE}>
-                            {featuredPattern.jp}
-                          </span>
-                        </p>
-                        <p className="mt-2 text-xl text-gray-700">
-                          {featuredPattern.kr}
-                        </p>
-
-                        <div className="mt-6">
-                          <p className="text-base font-semibold sm:text-xl">
-                            <span lang="ja" style={JA_FONT_STYLE}>
-                              {featuredPattern.ex1_jp}
-                            </span>
-                          </p>
-                          <p className="mt-1 text-sm text-gray-700 sm:text-lg">
-                            {featuredPattern.ex1_kr}
-                          </p>
-                        </div>
-
-                        <div className="mt-5">
-                          <p className="text-base font-semibold sm:text-xl">
-                            <span lang="ja" style={JA_FONT_STYLE}>
-                              {featuredPattern.ex2_jp}
-                            </span>
-                          </p>
-                          <p className="mt-1 text-sm text-gray-700 sm:text-lg">
-                            {featuredPattern.ex2_kr}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-8 border-t border-gray-200 pt-8">
-              <div className="grid grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={makeNewQuiz}
                   disabled={!isReviewMode && isDailyLimitReached}
                   className={
                     !isReviewMode && isDailyLimitReached
-                      ? "rounded-2xl border border-gray-200 bg-gray-100 px-3 py-3 text-sm font-semibold text-gray-400 sm:px-4 sm:py-4 sm:text-lg"
-                      : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
+                      ? "mt-5 w-full rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
+                      : "mt-5 w-full rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
                   }
                 >
                   {!isReviewMode && isDailyLimitReached
                     ? "오늘 이용 완료"
                     : isReviewMode
-                      ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
-                      : "🔄 새문제(랜덤 10문항)"}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetExcludedWords}
-                  className="rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
-                >
-                  맞힌 단어 제외 초기화
+                      ? "🔄 선택한 복습 문제 다시 불러오기"
+                      : "🔄 기타 선택 적용(새 문제)"}
                 </button>
               </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="mt-6">
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">
+            ✅ 유형을 선택하세요
+          </p>
+          <div
+            className={
+              selectedPosGroup === "other"
+                ? "mt-3 grid grid-cols-2 gap-3"
+                : "mt-3 grid grid-cols-3 gap-3"
+            }
+          >
+            {visibleQtypes.map((item) => {
+              const active = selectedQType === item.value;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setSelectedQType(item.value)}
+                  className={
+                    active
+                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 py-3 text-sm font-semibold text-white sm:px-4 sm:text-xl"
+                      : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900 sm:px-4 sm:text-xl"
+                  }
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div
+          className={
+            !isReviewMode && isDailyLimitReached
+              ? "mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 sm:px-4 sm:py-4"
+              : "mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 sm:px-4 sm:py-4"
+          }
+        >
+          <button
+            type="button"
+            onClick={() => setPlanInfoOpen((prev) => !prev)}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <div className="min-w-0">
+              <p
+                className={
+                  !isReviewMode && isDailyLimitReached
+                    ? "text-xs font-semibold text-red-700 sm:text-sm"
+                    : "text-xs font-semibold text-gray-800 sm:text-sm"
+                }
+              >
+                {isPaidPlan(userPlan)
+                  ? `${userPlan.toUpperCase()} · 단어·한자 무제한`
+                  : `FREE · 오늘 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
+              </p>
+              <p
+                className={
+                  !isReviewMode && isDailyLimitReached
+                    ? "mt-1 text-xs text-red-600"
+                    : "mt-1 text-xs text-gray-500"
+                }
+              >
+                {isPaidPlan(userPlan)
+                  ? "자세한 이용 안내 보기"
+                  : !isReviewMode && isDailyLimitReached
+                    ? "오늘 이용 완료"
+                    : remainingSets === 1
+                      ? "오늘 1세트 남음"
+                      : `오늘 ${remainingSets}세트 남음`}
+              </p>
             </div>
+            <span
+              className={
+                !isReviewMode && isDailyLimitReached
+                  ? "shrink-0 text-sm text-red-500 sm:text-base"
+                  : "shrink-0 text-sm text-gray-500 sm:text-base"
+              }
+            >
+              {planInfoOpen ? "⌄" : "›"}
+            </span>
+          </button>
 
-            {questions.length > 0 ? (
-              <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
-                {audioError ? (
-                  <p className="mb-4 text-sm text-red-500">{audioError}</p>
-                ) : null}
+          {planInfoOpen ? (
+            <div
+              className={
+                !isReviewMode && isDailyLimitReached
+                  ? "mt-3 border-t border-red-200 pt-3 text-xs leading-6 text-red-700 sm:text-sm"
+                  : "mt-3 border-t border-gray-200 pt-3 text-xs leading-6 text-gray-600 sm:text-sm"
+              }
+            >
+              <p>
+                {isPaidPlan(userPlan)
+                  ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
+                  : !isReviewMode && isDailyLimitReached
+                    ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
+                    : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+              </p>
+            </div>
+          ) : null}
 
-                <div className="space-y-8">
-                  {questions.map((q, idx) => {
-                    const selectedChoice = answers[idx] || "";
-                    const correct = q.correct_text;
-                    const isRight = submitted && selectedChoice === correct;
-                    const isWrong = submitted && selectedChoice !== correct;
+          {!isReviewMode && isDailyLimitReached ? (
+            <div className="mt-3">
+              <a
+                href={PRO_UPGRADE_URL}
+                className="inline-flex rounded-2xl bg-red-500 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Pro 업그레이드
+              </a>
+            </div>
+          ) : null}
+        </div>
 
-                    return (
-                      <div key={`${q.jp_word}-${idx}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="text-xl font-semibold sm:text-2xl">
-                            {circleNumber(idx)}{" "}
-                            <span lang="ja" style={JA_FONT_STYLE}>
-                              {q.prompt}
+        <div className="mt-6 rounded-2xl border border-gray-300 bg-white">
+          <button
+            type="button"
+            onClick={() => setPatternOpen((prev) => !prev)}
+            className="flex w-full items-center gap-3 px-4 py-4 text-left"
+          >
+            <span className="text-lg">{patternOpen ? "⌄" : "›"}</span>
+            <span className="text-lg font-semibold">
+              📌 필수패턴 (카드로 빠르게 익히기)
+            </span>
+          </button>
+
+          {patternOpen ? (
+            <div className="border-t border-gray-200 px-4 py-4">
+              {!featuredPattern ? (
+                <p className="text-sm text-gray-500">표시할 패턴이 없습니다.</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600">
+                    랜덤 1개 패턴
+                  </div>
+
+                  <div className="rounded-3xl border border-gray-200 p-5">
+                    <p className="text-2xl font-bold sm:text-3xl">
+                      {featuredPattern.title}
+                    </p>
+                    <p className="mt-4 text-xl font-semibold sm:text-2xl">
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {featuredPattern.jp}
+                      </span>
+                    </p>
+                    <p className="mt-2 text-xl text-gray-700">
+                      {featuredPattern.kr}
+                    </p>
+
+                    <div className="mt-6">
+                      <p className="text-base font-semibold sm:text-xl">
+                        <span lang="ja" style={JA_FONT_STYLE}>
+                          {featuredPattern.ex1_jp}
+                        </span>
+                      </p>
+                      <p className="mt-1 text-sm text-gray-700 sm:text-lg">
+                        {featuredPattern.ex1_kr}
+                      </p>
+                    </div>
+
+                    <div className="mt-5">
+                      <p className="text-base font-semibold sm:text-xl">
+                        <span lang="ja" style={JA_FONT_STYLE}>
+                          {featuredPattern.ex2_jp}
+                        </span>
+                      </p>
+                      <p className="mt-1 text-sm text-gray-700 sm:text-lg">
+                        {featuredPattern.ex2_kr}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-8 border-t border-gray-200 pt-8">
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={makeNewQuiz}
+              disabled={!isReviewMode && isDailyLimitReached}
+              className={
+                !isReviewMode && isDailyLimitReached
+                  ? "rounded-2xl border border-gray-200 bg-gray-100 px-3 py-3 text-sm font-semibold text-gray-400 sm:px-4 sm:py-4 sm:text-lg"
+                  : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
+              }
+            >
+              {!isReviewMode && isDailyLimitReached
+                ? "오늘 이용 완료"
+                : isReviewMode
+                  ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
+                  : "🔄 새문제(랜덤 10문항)"}
+            </button>
+            <button
+              type="button"
+              onClick={resetExcludedWords}
+              className="rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
+            >
+              맞힌 단어 제외 초기화
+            </button>
+          </div>
+        </div>
+
+        {questions.length > 0 ? (
+          <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
+            {audioError ? (
+              <p className="mb-4 text-sm text-red-500">{audioError}</p>
+            ) : null}
+
+            <div className="space-y-8">
+              {questions.map((q, idx) => {
+                const selectedChoice = answers[idx] || "";
+                const correct = q.correct_text;
+                const isRight = submitted && selectedChoice === correct;
+                const isWrong = submitted && selectedChoice !== correct;
+
+                return (
+                  <div key={`${q.jp_word}-${idx}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-xl font-semibold sm:text-2xl">
+                        {circleNumber(idx)}{" "}
+                        <span lang="ja" style={JA_FONT_STYLE}>
+                          {q.prompt}
+                        </span>
+                      </p>
+
+                      {q.qtype === "meaning" ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            speakJapanese(q.reading || q.jp_word, `q-${idx}`)
+                          }
+                          disabled={audioLoadingKey === `q-${idx}`}
+                          className="shrink-0 rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
+                        >
+                          {audioLoadingKey === `q-${idx}`
+                            ? "재생 중..."
+                            : "🔊 발음 듣기"}
+                        </button>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      {q.choices.map((choice) => {
+                        const checked = selectedChoice === choice;
+                        const isCorrectChoice = submitted && choice === correct;
+                        const isWrongChoice =
+                          submitted && checked && choice !== correct;
+
+                        return (
+                          <label
+                            key={choice}
+                            className="flex items-center gap-3 text-base text-gray-900 sm:text-lg"
+                          >
+                            <input
+                              type="radio"
+                              name={`q-${idx}`}
+                              checked={checked}
+                              disabled={submitted}
+                              onChange={() => handleSelectChoice(idx, choice)}
+                              className="h-4 w-4"
+                            />
+                            <span
+                              className={
+                                isCorrectChoice
+                                  ? "font-semibold text-green-600"
+                                  : isWrongChoice
+                                    ? "font-semibold text-red-600"
+                                    : ""
+                              }
+                            >
+                              <span lang="ja" style={JA_FONT_STYLE}>
+                                {choice}
+                              </span>
                             </span>
-                          </p>
+                          </label>
+                        );
+                      })}
+                    </div>
 
-                          {q.qtype === "meaning" ? (
+                    {submitted ? (
+                      <div className="mt-4 rounded-2xl bg-gray-50 p-4">
+                        <p
+                          className={
+                            isRight
+                              ? "text-sm font-semibold text-green-600"
+                              : isWrong
+                                ? "text-sm font-semibold text-red-600"
+                                : "text-sm text-gray-500"
+                          }
+                        >
+                          {isRight ? "정답입니다." : "오답입니다."}
+                        </p>
+                        <p className="mt-2 text-sm text-gray-700">
+                          정답:{" "}
+                          <span lang="ja" style={JA_FONT_STYLE}>
+                            {correct}
+                          </span>
+                        </p>
+                        <p className="mt-1 text-sm text-gray-700">
+                          단어:{" "}
+                          <span lang="ja" style={JA_FONT_STYLE}>
+                            {q.jp_word}
+                          </span>{" "}
+                          / 읽기:{" "}
+                          <span lang="ja" style={JA_FONT_STYLE}>
+                            {q.reading}
+                          </span>{" "}
+                          / 뜻: {q.meaning}
+                        </p>
+                        <p className="mt-1 text-sm text-gray-700">
+                          품사: {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)} / 레벨: {levelLabel(q.level)}
+                        </p>
+
+                        {q.qtype === "meaning" ? (
+                          <div className="mt-3">
                             <button
                               type="button"
                               onClick={() =>
-                                speakJapanese(q.reading || q.jp_word, `q-${idx}`)
+                                speakJapanese(
+                                  q.reading || q.jp_word,
+                                  `answer-${idx}`
+                                )
                               }
-                              disabled={audioLoadingKey === `q-${idx}`}
-                              className="shrink-0 rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
+                              disabled={audioLoadingKey === `answer-${idx}`}
+                              className="rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
                             >
-                              {audioLoadingKey === `q-${idx}`
+                              {audioLoadingKey === `answer-${idx}`
                                 ? "재생 중..."
-                                : "🔊 발음 듣기"}
+                                : "🔊 정답 발음 듣기"}
                             </button>
-                          ) : null}
-                        </div>
+                          </div>
+                        ) : null}
 
-                        <div className="mt-4 space-y-2">
-                          {q.choices.map((choice) => {
-                            const checked = selectedChoice === choice;
-                            const isCorrectChoice = submitted && choice === correct;
-                            const isWrongChoice =
-                              submitted && checked && choice !== correct;
-
-                            return (
-                              <label
-                                key={choice}
-                                className="flex items-center gap-3 text-base text-gray-900 sm:text-lg"
-                              >
-                                <input
-                                  type="radio"
-                                  name={`q-${idx}`}
-                                  checked={checked}
-                                  disabled={submitted}
-                                  onChange={() => handleSelectChoice(idx, choice)}
-                                  className="h-4 w-4"
-                                />
-                                <span
-                                  className={
-                                    isCorrectChoice
-                                      ? "font-semibold text-green-600"
-                                      : isWrongChoice
-                                        ? "font-semibold text-red-600"
-                                        : ""
-                                  }
-                                >
-                                  <span lang="ja" style={JA_FONT_STYLE}>
-                                    {choice}
-                                  </span>
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-
-                        {submitted ? (
-                          <div className="mt-4 rounded-2xl bg-gray-50 p-4">
-                            <p
-                              className={
-                                isRight
-                                  ? "text-sm font-semibold text-green-600"
-                                  : isWrong
-                                    ? "text-sm font-semibold text-red-600"
-                                    : "text-sm text-gray-500"
-                              }
-                            >
-                              {isRight ? "정답입니다." : "오답입니다."}
+                        {q.example_jp || q.example_kr ? (
+                          <div className="mt-3 rounded-xl bg-blue-50 p-3">
+                            <p className="text-sm text-blue-900">
+                              {q.example_jp}
                             </p>
-                            <p className="mt-2 text-sm text-gray-700">
-                              정답:{" "}
-                              <span lang="ja" style={JA_FONT_STYLE}>
-                                {correct}
-                              </span>
+                            <p className="mt-1 text-sm text-blue-900">
+                              {q.example_kr}
                             </p>
-                            <p className="mt-1 text-sm text-gray-700">
-                              단어:{" "}
-                              <span lang="ja" style={JA_FONT_STYLE}>
-                                {q.jp_word}
-                              </span>{" "}
-                              / 읽기:{" "}
-                              <span lang="ja" style={JA_FONT_STYLE}>
-                                {q.reading}
-                              </span>{" "}
-                              / 뜻: {q.meaning}
-                            </p>
-                            <p className="mt-1 text-sm text-gray-700">
-                              품사: {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)} / 레벨: {levelLabel(q.level)}
-                            </p>
-
-                            {q.qtype === "meaning" ? (
-                              <div className="mt-3">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    speakJapanese(
-                                      q.reading || q.jp_word,
-                                      `answer-${idx}`
-                                    )
-                                  }
-                                  disabled={audioLoadingKey === `answer-${idx}`}
-                                  className="rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
-                                >
-                                  {audioLoadingKey === `answer-${idx}`
-                                    ? "재생 중..."
-                                    : "🔊 정답 발음 듣기"}
-                                </button>
-                              </div>
-                            ) : null}
-
-                            {q.example_jp || q.example_kr ? (
-                              <div className="mt-3 rounded-xl bg-blue-50 p-3">
-                                <p className="text-sm text-blue-900">
-                                  {q.example_jp}
-                                </p>
-                                <p className="mt-1 text-sm text-blue-900">
-                                  {q.example_kr}
-                                </p>
-                              </div>
-                            ) : null}
                           </div>
                         ) : null}
                       </div>
-                    );
-                  })}
-                </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
 
-                <div className="mt-8 flex flex-col gap-4">
-                  {!submitted ? (
-                    <button
-                      type="button"
-                      onClick={handleSubmitAll}
-                      className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white sm:px-5 sm:py-4 sm:text-lg"
-                    >
-                      제출하고 채점하기
-                    </button>
-                  ) : (
+            <div className="mt-8 flex flex-col gap-4">
+              {!submitted ? (
+                <button
+                  type="button"
+                  onClick={handleSubmitAll}
+                  className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white sm:px-5 sm:py-4 sm:text-lg"
+                >
+                  제출하고 채점하기
+                </button>
+              ) : (
+                <>
+                  <div ref={resultRef} className="rounded-2xl bg-green-50 p-4">
+                    <p className="text-base font-semibold text-green-700 sm:text-lg">
+                      점수: {score} / {questions.length}
+                    </p>
+                  </div>
+
+                  {isPerfect ? (
                     <>
-                      <div ref={resultRef} className="rounded-2xl bg-green-50 p-4">
+                      <div className="rounded-2xl bg-green-50 p-4">
                         <p className="text-base font-semibold text-green-700 sm:text-lg">
-                          점수: {score} / {questions.length}
+                          🎉 완벽해요! 전부 정답입니다.
                         </p>
                       </div>
-
-                      {isPerfect ? (
-                        <>
-                          <div className="rounded-2xl bg-green-50 p-4">
-                            <p className="text-base font-semibold text-green-700 sm:text-lg">
-                              🎉 완벽해요! 전부 정답입니다.
-                            </p>
-                          </div>
-                          <div className="rounded-2xl bg-green-50 p-4">
-                            <p className="text-base font-semibold text-green-700 sm:text-lg">
-                              🎉 Perfect Streak! {questions.length}연속 정답!
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="rounded-2xl bg-yellow-50 p-4">
-                          <p className="text-base font-semibold text-yellow-800">
-                            💪 괜찮아요! 틀린 문제는 성장의 재료예요. 다시 한 번 도전해봐요.
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="text-sm text-gray-500">
-                        🧠 이번 최고 콤보: {score}연속
-                      </div>
-
-                      {showWrongNote ? (
-                        <div className="mt-2">
-                          <h2 className="text-3xl font-bold text-gray-900">
-                            ❌ 오답 노트
-                          </h2>
-
-                          <div className="mt-4 space-y-4">
-                            {wrongItems.slice(0, 3).map((item, i) => (
-                              <div
-                                key={`${item.question.jp_word}-${i}`}
-                                className="rounded-3xl border border-gray-200 bg-white p-5"
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <p className="text-xl font-bold sm:text-2xl">
-                                      Q{item.index + 1}.{" "}
-                                      <span lang="ja" style={JA_FONT_STYLE}>
-                                        {item.question.jp_word}
-                                      </span>
-                                    </p>
-                                    <p className="mt-1 text-sm text-gray-600">
-                                      {item.question.prompt} · 품사:{" "}
-                                      {posLabel(item.question.pos)} · 유형:{" "}
-                                      {qtypeLabel(item.question.qtype)} · 레벨:{" "}
-                                      {levelLabel(item.question.level)}
-                                    </p>
-                                  </div>
-                                  <div className="rounded-full border border-gray-200 px-4 py-1 text-sm font-semibold">
-                                    오답
-                                  </div>
-                                </div>
-
-                                <div className="mt-4 space-y-1 text-base sm:text-lg">
-                                  <p>
-                                    <span className="font-semibold">내 답</span>{" "}
-                                    <span lang="ja" style={JA_FONT_STYLE}>
-                                      {item.selected}
-                                    </span>
-                                  </p>
-                                  <p>
-                                    <span className="font-semibold">정답</span>{" "}
-                                    <span lang="ja" style={JA_FONT_STYLE}>
-                                      {item.question.correct_text}
-                                    </span>
-                                  </p>
-                                  <p>
-                                    <span className="font-semibold">발음</span>{" "}
-                                    <span lang="ja" style={JA_FONT_STYLE}>
-                                      {item.question.reading}
-                                    </span>
-                                  </p>
-                                  <p>
-                                    <span className="font-semibold">뜻</span>{" "}
-                                    {item.question.meaning}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-
-                            {wrongItems.length > 3 ? (
-                              <div className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-700">
-                                › 오답 더 보기 (+{wrongItems.length - 3}개)
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div className="grid grid-cols-2 gap-4 pt-2">
-                        <button
-                          type="button"
-                          onClick={makeNewQuiz}
-                          className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white sm:px-5 sm:py-4 sm:text-lg"
-                        >
-                          {isReviewMode
-                            ? "선택한 복습 문제 다시 시작하기"
-                            : "다음 10문항 시작하기"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={handleRetryWrongOnly}
-                          className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800 sm:px-5 sm:py-4 sm:text-lg"
-                        >
-                          ❌ 틀린 문제만 다시 풀기
-                        </button>
+                      <div className="rounded-2xl bg-green-50 p-4">
+                        <p className="text-base font-semibold text-green-700 sm:text-lg">
+                          🎉 Perfect Streak! {questions.length}연속 정답!
+                        </p>
                       </div>
                     </>
+                  ) : (
+                    <div className="rounded-2xl bg-yellow-50 p-4">
+                      <p className="text-base font-semibold text-yellow-800">
+                        💪 괜찮아요! 틀린 문제는 성장의 재료예요. 다시 한 번 도전해봐요.
+                      </p>
+                    </div>
                   )}
-                </div>
-              </div>
-            ) : (
-              <div
-                className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
-                    ? "border-red-200 bg-red-50"
-                    : "border-gray-300 bg-white"
-                  }`}
-              >
-                <p
-                  className={`text-sm ${!isReviewMode && isDailyLimitReached
-                      ? "text-red-700"
-                      : "text-gray-500"
-                    }`}
-                >
-                  {!isReviewMode && isDailyLimitReached
-                    ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
-                    : isReviewMode
-                      ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
-                      : "이 조건은 거의 정복했어요. 다른 유형, 품사, 레벨로 넘어가 보세요."}
-                </p>
-              </div>
-            )}
-          </div>
 
-      {completionModalOpen ? (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
-            <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">
-                  {completionTitle}
-                </p>
-                <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
-                  {completionBody}
-                </p>
-              </div>
+                  <div className="text-sm text-gray-500">
+                    🧠 이번 최고 콤보: {score}연속
+                  </div>
 
-              <div className="mt-6 space-y-3">
-                <button
-                  type="button"
-                  onClick={handleContinueSameMode}
-                  disabled={saving || (!isReviewMode && isDailyLimitReached)}
-                  className={
-                    saving || (!isReviewMode && isDailyLimitReached)
-                      ? "w-full rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-lg font-semibold text-gray-400"
-                      : "w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
-                  }
-                >
-                  {!isReviewMode && isDailyLimitReached
-                    ? "오늘 이용 완료"
-                    : "같은 조건으로 다음 10문항"}
-                </button>
+                  {showWrongNote ? (
+                    <div className="mt-2">
+                      <h2 className="text-3xl font-bold text-gray-900">
+                        ❌ 오답 노트
+                      </h2>
 
-                {completionWrongCount > 0 ? (
-                  <button
-                    type="button"
-                    onClick={handleRetryWrongOnlyFromModal}
-                    className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-900"
-                  >
-                    틀린 문제만 다시 풀기
-                  </button>
-                ) : null}
+                      <div className="mt-4 space-y-4">
+                        {wrongItems.slice(0, 3).map((item, i) => (
+                          <div
+                            key={`${item.question.jp_word}-${i}`}
+                            className="rounded-3xl border border-gray-200 bg-white p-5"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-xl font-bold sm:text-2xl">
+                                  Q{item.index + 1}.{" "}
+                                  <span lang="ja" style={JA_FONT_STYLE}>
+                                    {item.question.jp_word}
+                                  </span>
+                                </p>
+                                <p className="mt-1 text-sm text-gray-600">
+                                  {item.question.prompt} · 품사:{" "}
+                                  {posLabel(item.question.pos)} · 유형:{" "}
+                                  {qtypeLabel(item.question.qtype)} · 레벨:{" "}
+                                  {levelLabel(item.question.level)}
+                                </p>
+                              </div>
+                              <div className="rounded-full border border-gray-200 px-4 py-1 text-sm font-semibold">
+                                오답
+                              </div>
+                            </div>
 
-                <button
-                  type="button"
-                  onClick={handleBackToSelect}
-                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
-                >
-                  선택으로 돌아가기
-                </button>
+                            <div className="mt-4 space-y-1 text-base sm:text-lg">
+                              <p>
+                                <span className="font-semibold">내 답</span>{" "}
+                                <span lang="ja" style={JA_FONT_STYLE}>
+                                  {item.selected}
+                                </span>
+                              </p>
+                              <p>
+                                <span className="font-semibold">정답</span>{" "}
+                                <span lang="ja" style={JA_FONT_STYLE}>
+                                  {item.question.correct_text}
+                                </span>
+                              </p>
+                              <p>
+                                <span className="font-semibold">발음</span>{" "}
+                                <span lang="ja" style={JA_FONT_STYLE}>
+                                  {item.question.reading}
+                                </span>
+                              </p>
+                              <p>
+                                <span className="font-semibold">뜻</span>{" "}
+                                {item.question.meaning}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
 
-                <button
-                  type="button"
-                  onClick={closeCompletionModal}
-                  className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
-                >
-                  닫기
-                </button>
-              </div>
+                        {wrongItems.length > 3 ? (
+                          <div className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-700">
+                            › 오답 더 보기 (+{wrongItems.length - 3}개)
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <button
+                      type="button"
+                      onClick={makeNewQuiz}
+                      className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-semibold text-white sm:px-5 sm:py-4 sm:text-lg"
+                    >
+                      {isReviewMode
+                        ? "선택한 복습 문제 다시 시작하기"
+                        : "다음 10문항 시작하기"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleRetryWrongOnly}
+                      className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800 sm:px-5 sm:py-4 sm:text-lg"
+                    >
+                      ❌ 틀린 문제만 다시 풀기
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div
+            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
+              ? "border-red-200 bg-red-50"
+              : "border-gray-300 bg-white"
+              }`}
+          >
+            <p
+              className={`text-sm ${!isReviewMode && isDailyLimitReached
+                ? "text-red-700"
+                : "text-gray-500"
+                }`}
+            >
+              {!isReviewMode && isDailyLimitReached
+                ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
+                : isReviewMode
+                  ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
+                  : "이 조건은 거의 정복했어요. 다른 유형, 품사, 레벨로 넘어가 보세요."}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {completionModalOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900">
+                {completionTitle}
+              </p>
+              <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
+                {completionBody}
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={handleContinueSameMode}
+                disabled={saving || (!isReviewMode && isDailyLimitReached)}
+                className={
+                  saving || (!isReviewMode && isDailyLimitReached)
+                    ? "w-full rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-lg font-semibold text-gray-400"
+                    : "w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
+                }
+              >
+                {!isReviewMode && isDailyLimitReached
+                  ? "오늘 이용 완료"
+                  : "같은 조건으로 다음 10문항"}
+              </button>
+
+              {completionWrongCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleRetryWrongOnlyFromModal}
+                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-900"
+                >
+                  틀린 문제만 다시 풀기
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleBackToSelect}
+                className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
+              >
+                선택으로 돌아가기
+              </button>
+
+              <button
+                type="button"
+                onClick={closeCompletionModal}
+                className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
