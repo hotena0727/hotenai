@@ -178,8 +178,8 @@ export default function KanjiPage() {
         kind === "perfect"
           ? `${BASE_SFX_URL}/perfect.mp3`
           : kind === "correct"
-          ? `${BASE_SFX_URL}/correct.mp3`
-          : `${BASE_SFX_URL}/wrong.mp3`;
+            ? `${BASE_SFX_URL}/correct.mp3`
+            : `${BASE_SFX_URL}/wrong.mp3`;
 
       const audio = new Audio(src);
       audio.preload = "auto";
@@ -487,6 +487,31 @@ export default function KanjiPage() {
       .filter(Boolean) as KanjiQuestion[];
   };
 
+  const canMakeMoreQuizForCurrentCondition = (
+    nextExcludedWords: ExcludedWordMap
+  ) => {
+    const blockedWords = Object.keys(nextExcludedWords).filter(
+      (k) => nextExcludedWords[k]
+    );
+
+    const nextQuiz = buildKanjiQuiz({
+      rows,
+      qtype: selectedQType,
+      level: selectedLevel,
+      excludedWords: blockedWords,
+      size: 10,
+    });
+
+    return nextQuiz.length >= 10;
+  };
+
+  const shouldShowCompletionModal = (
+    nextExcludedWords: ExcludedWordMap
+  ) => {
+    if (isReviewMode) return false;
+    return !canMakeMoreQuizForCurrentCondition(nextExcludedWords);
+  };
+
   const generateQuiz = () => {
     try {
       if (isReviewMode) {
@@ -601,17 +626,17 @@ export default function KanjiPage() {
     setCompletionWrongCount(wrongCount);
 
     if (nextScore === currentQuestions.length) {
-      setCompletionTitle("🎉 한자 훈련 완료");
+      setCompletionTitle("🎉 이 조건은 거의 정복했어요");
       setCompletionBody(
-        `완벽합니다.\n${nextScore}/${currentQuestions.length} 정답이에요.\n같은 조건으로 다음 10문항을 이어서 풀까요?`
+        `완벽합니다.\n${nextScore}/${currentQuestions.length} 정답이에요.\n다른 레벨이나 유형으로 넘어가 보세요.`
       );
       setCompletionModalOpen(true);
       return;
     }
 
-    setCompletionTitle("✅ 한자 훈련 완료");
+    setCompletionTitle("✅ 이 조건은 거의 정복했어요");
     setCompletionBody(
-      `${nextScore}/${currentQuestions.length} 정답이에요.\n틀린 문제는 ${wrongCount}개입니다.\n이어서 새 문제를 풀거나, 틀린 문제만 다시 볼 수 있어요.`
+      `${nextScore}/${currentQuestions.length} 정답이에요.\n현재 조건에서는 새 10문항 구성이 거의 끝났습니다.\n다른 레벨이나 유형으로 넘어가거나, 틀린 문제만 다시 볼 수 있어요.`
     );
     setCompletionModalOpen(true);
   };
@@ -745,6 +770,13 @@ export default function KanjiPage() {
   }) => {
     if (currentQuestions.length === 0) return;
 
+    const nextExcludedWords: ExcludedWordMap = { ...excludedWords };
+    currentQuestions.forEach((q, idx) => {
+      if (currentAnswers[idx] === q.correct_text) {
+        nextExcludedWords[q.jp_word] = true;
+      }
+    });
+
     try {
       setSaving(true);
 
@@ -756,7 +788,9 @@ export default function KanjiPage() {
       if (userError || !user) {
         console.error(userError);
         alert("로그인 정보가 없어 결과를 저장하지 못했습니다.");
-        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        if (shouldShowCompletionModal(nextExcludedWords)) {
+          openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        }
         return;
       }
 
@@ -787,7 +821,9 @@ export default function KanjiPage() {
 
       if (!result.ok) {
         alert("결과 저장 중 오류가 발생했습니다.");
-        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        if (shouldShowCompletionModal(nextExcludedWords)) {
+          openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        }
         return;
       }
 
@@ -800,11 +836,15 @@ export default function KanjiPage() {
         );
       }
 
-      openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      if (shouldShowCompletionModal(nextExcludedWords)) {
+        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      }
     } catch (error) {
       console.error(error);
       alert("결과 저장 중 오류가 발생했습니다.");
-      openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      if (shouldShowCompletionModal(nextExcludedWords)) {
+        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      }
     } finally {
       setSaving(false);
     }
@@ -925,10 +965,10 @@ export default function KanjiPage() {
                 {isPaidPlan(userPlan)
                   ? "자세한 이용 안내 보기"
                   : !isReviewMode && isDailyLimitReached
-                  ? "오늘 이용 완료"
-                  : remainingSets === 1
-                  ? "오늘 1세트 남음"
-                  : `오늘 ${remainingSets}세트 남음`}
+                    ? "오늘 이용 완료"
+                    : remainingSets === 1
+                      ? "오늘 1세트 남음"
+                      : `오늘 ${remainingSets}세트 남음`}
               </p>
             </div>
             <span
@@ -954,8 +994,8 @@ export default function KanjiPage() {
                 {isPaidPlan(userPlan)
                   ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
                   : !isReviewMode && isDailyLimitReached
-                  ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
-                  : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+                    ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
+                    : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
@@ -987,8 +1027,8 @@ export default function KanjiPage() {
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 이용 완료"
                 : isReviewMode
-                ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
-                : "🔄 새문제(랜덤 10문항)"}
+                  ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
+                  : "🔄 새문제(랜덤 10문항)"}
             </button>
 
             <button
@@ -1094,8 +1134,8 @@ export default function KanjiPage() {
                                 isCorrectChoice
                                   ? "font-semibold text-green-600"
                                   : isWrongChoice
-                                  ? "font-semibold text-red-600"
-                                  : ""
+                                    ? "font-semibold text-red-600"
+                                    : ""
                               }
                             >
                               <span lang="ja" style={JA_FONT_STYLE}>
@@ -1114,8 +1154,8 @@ export default function KanjiPage() {
                             isRight
                               ? "text-sm font-semibold text-green-600"
                               : isWrong
-                              ? "text-sm font-semibold text-red-600"
-                              : "text-sm text-gray-500"
+                                ? "text-sm font-semibold text-red-600"
+                                : "text-sm text-gray-500"
                           }
                         >
                           {isRight ? "정답입니다." : "오답입니다."}
@@ -1320,8 +1360,8 @@ export default function KanjiPage() {
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : isReviewMode
-                ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
-                : "이 조건은 거의 정복했어요. 다른 레벨이나 유형으로 넘어가 보세요."}
+                  ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
+                  : "이 조건은 거의 정복했어요. 다른 레벨이나 유형으로 넘어가 보세요."}
             </p>
           </div>
         )}

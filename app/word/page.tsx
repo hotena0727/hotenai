@@ -234,8 +234,8 @@ export default function WordPage() {
   const visibleQtypes =
     selectedPosGroup === "other"
       ? QTYPE_OPTIONS.filter(
-        (item) => item.value === "meaning" || item.value === "kr2jp"
-      )
+          (item) => item.value === "meaning" || item.value === "kr2jp"
+        )
       : QTYPE_OPTIONS;
 
   const wrongItems = questions
@@ -486,8 +486,8 @@ export default function WordPage() {
     const basePool =
       reviewPos && reviewPos.length > 0
         ? allRows.filter(
-          (row) => String(row.pos || "").trim().toLowerCase() === reviewPos
-        )
+            (row) => String(row.pos || "").trim().toLowerCase() === reviewPos
+          )
         : allRows;
 
     return targetRows
@@ -662,7 +662,55 @@ export default function WordPage() {
       choices,
       example_jp,
       example_kr,
-    };
+    } as WordQuestion;
+  };
+
+  const canMakeMoreQuizForCurrentCondition = (
+    nextExcludedWords: ExcludedWordMap
+  ) => {
+    const blockedWords = Object.keys(nextExcludedWords).filter(
+      (k) => nextExcludedWords[k]
+    );
+
+    if (selectedPosGroup === "other") {
+      if (selectedOtherPos.length === 0) return false;
+
+      let filteredRows = rows.filter((row) =>
+        selectedOtherPos.includes(String(row.pos || "").trim().toLowerCase())
+      );
+
+      if (selectedQType === "reading") {
+        filteredRows = filteredRows.filter((row) =>
+          /[\u4E00-\u9FFF]/.test(String(row.jp_word || ""))
+        );
+      }
+
+      if (blockedWords.length > 0) {
+        const blocked = new Set(blockedWords);
+        filteredRows = filteredRows.filter(
+          (row) => !blocked.has(String(row.jp_word || "").trim())
+        );
+      }
+
+      return filteredRows.length >= 10;
+    }
+
+    const nextQuiz = buildWordQuiz({
+      rows,
+      qtype: selectedQType,
+      posGroup: selectedPosGroup,
+      excludedWords: blockedWords,
+      size: 10,
+    });
+
+    return nextQuiz.length >= 10;
+  };
+
+  const shouldShowCompletionModal = (
+    nextExcludedWords: ExcludedWordMap
+  ) => {
+    if (isReviewMode) return false;
+    return !canMakeMoreQuizForCurrentCondition(nextExcludedWords);
   };
 
   const generateQuiz = () => {
@@ -820,17 +868,17 @@ export default function WordPage() {
     setCompletionWrongCount(wrongCount);
 
     if (nextScore === currentQuestions.length) {
-      setCompletionTitle("🎉 단어 훈련 완료");
+      setCompletionTitle("🎉 이 조건은 거의 정복했어요");
       setCompletionBody(
-        `완벽합니다.\n${nextScore}/${currentQuestions.length} 정답이에요.\n같은 조건으로 다음 10문항을 이어서 풀까요?`
+        `완벽합니다.\n${nextScore}/${currentQuestions.length} 정답이에요.\n다른 유형이나 품사로 넘어가 보세요.`
       );
       setCompletionModalOpen(true);
       return;
     }
 
-    setCompletionTitle("✅ 단어 훈련 완료");
+    setCompletionTitle("✅ 이 조건은 거의 정복했어요");
     setCompletionBody(
-      `${nextScore}/${currentQuestions.length} 정답이에요.\n틀린 단어는 ${wrongCount}개입니다.\n이어서 새 문제를 풀거나, 틀린 문제만 다시 볼 수 있어요.`
+      `${nextScore}/${currentQuestions.length} 정답이에요.\n현재 조건에서는 새 10문항 구성이 거의 끝났습니다.\n다른 유형이나 품사로 넘어가거나, 틀린 문제만 다시 볼 수 있어요.`
     );
     setCompletionModalOpen(true);
   };
@@ -964,6 +1012,13 @@ export default function WordPage() {
   }) => {
     if (currentQuestions.length === 0) return;
 
+    const nextExcludedWords: ExcludedWordMap = { ...excludedWords };
+    currentQuestions.forEach((q, idx) => {
+      if (currentAnswers[idx] === q.correct_text) {
+        nextExcludedWords[q.jp_word] = true;
+      }
+    });
+
     try {
       setSaving(true);
 
@@ -975,7 +1030,9 @@ export default function WordPage() {
       if (userError || !user) {
         console.error(userError);
         alert("로그인 정보가 없어 결과를 저장하지 못했습니다.");
-        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        if (shouldShowCompletionModal(nextExcludedWords)) {
+          openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        }
         return;
       }
 
@@ -1006,7 +1063,9 @@ export default function WordPage() {
 
       if (!result.ok) {
         alert("결과 저장 중 오류가 발생했습니다.");
-        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        if (shouldShowCompletionModal(nextExcludedWords)) {
+          openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        }
         return;
       }
 
@@ -1019,11 +1078,15 @@ export default function WordPage() {
         );
       }
 
-      openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      if (shouldShowCompletionModal(nextExcludedWords)) {
+        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      }
     } catch (error) {
       console.error(error);
       alert("결과 저장 중 오류가 발생했습니다.");
-      openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      if (shouldShowCompletionModal(nextExcludedWords)) {
+        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      }
     } finally {
       setSaving(false);
     }
@@ -1635,16 +1698,18 @@ export default function WordPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
-              ? "border-red-200 bg-red-50"
-              : "border-gray-300 bg-white"
-              }`}
+            className={`mt-6 rounded-2xl border p-5 ${
+              !isReviewMode && isDailyLimitReached
+                ? "border-red-200 bg-red-50"
+                : "border-gray-300 bg-white"
+            }`}
           >
             <p
-              className={`text-sm ${!isReviewMode && isDailyLimitReached
-                ? "text-red-700"
-                : "text-gray-500"
-                }`}
+              className={`text-sm ${
+                !isReviewMode && isDailyLimitReached
+                  ? "text-red-700"
+                  : "text-gray-500"
+              }`}
             >
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."

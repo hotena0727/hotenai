@@ -130,6 +130,7 @@ export default function KatsuyouPage() {
   const [completionModalOpen, setCompletionModalOpen] = useState(false);
   const [completionTitle, setCompletionTitle] = useState("");
   const [completionBody, setCompletionBody] = useState("");
+  const [completionWrongCount, setCompletionWrongCount] = useState(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -435,6 +436,31 @@ export default function KatsuyouPage() {
     }
   };
 
+  const canMakeMoreQuizForCurrentCondition = (
+    nextExcludedWords: ExcludedWordMap
+  ) => {
+    const blockedWords = Object.keys(nextExcludedWords).filter(
+      (k) => nextExcludedWords[k]
+    );
+
+    const nextQuiz = buildKatsuyouQuiz({
+      rows,
+      qtype: selectedQType,
+      pos: selectedPos,
+      excludedWords: blockedWords,
+      size: 10,
+    });
+
+    return nextQuiz.length >= 10;
+  };
+
+  const shouldShowCompletionModal = (
+    nextExcludedWords: ExcludedWordMap
+  ) => {
+    if (reviewMode) return false;
+    return !canMakeMoreQuizForCurrentCondition(nextExcludedWords);
+  };
+
   const generateQuiz = () => {
     try {
       if (isDailyLimitReached) {
@@ -636,37 +662,32 @@ export default function KatsuyouPage() {
       (_, idx) => currentAnswers[idx] !== currentQuestions[idx].correct_text
     ).length;
 
-    if (reviewMode) {
-      setCompletionTitle("🎉 활용 복습 완료");
-      setCompletionBody(
-        `${nextScore}/${currentQuestions.length} 정답이에요.\n선택한 복습 문제를 끝까지 완료했습니다.`
-      );
-      setCompletionModalOpen(true);
-      return;
-    }
+    setCompletionWrongCount(wrongCount);
 
     if (nextScore === currentQuestions.length) {
-      setCompletionTitle("🎉 활용 훈련 완료");
+      setCompletionTitle("🎉 이 조건은 거의 정복했어요");
       setCompletionBody(
-        `완벽합니다.\n${nextScore}/${currentQuestions.length} 정답이에요.\n같은 조건으로 다음 10문항을 이어서 풀까요?`
+        `완벽합니다.\n${nextScore}/${currentQuestions.length} 정답이에요.\n다른 품사나 방향으로 넘어가 보세요.`
       );
       setCompletionModalOpen(true);
       return;
     }
 
-    setCompletionTitle("✅ 활용 훈련 완료");
+    setCompletionTitle("✅ 이 조건은 거의 정복했어요");
     setCompletionBody(
-      `${nextScore}/${currentQuestions.length} 정답이에요.\n틀린 문제는 ${wrongCount}개입니다.\n이어서 새 문제를 풀거나, 틀린 문제만 다시 볼 수 있어요.`
+      `${nextScore}/${currentQuestions.length} 정답이에요.\n현재 조건에서는 새 10문항 구성이 거의 끝났습니다.\n다른 품사나 방향으로 넘어가거나, 틀린 문제만 다시 볼 수 있어요.`
     );
     setCompletionModalOpen(true);
   };
 
   const closeCompletionModal = () => {
     setCompletionModalOpen(false);
+    setCompletionWrongCount(0);
   };
 
   const handleContinueSameMode = () => {
     setCompletionModalOpen(false);
+    setCompletionWrongCount(0);
 
     if (reviewMode) {
       void clearKatsuyouSavedSet();
@@ -682,11 +703,13 @@ export default function KatsuyouPage() {
 
   const handleRetryWrongOnlyFromModal = () => {
     setCompletionModalOpen(false);
+    setCompletionWrongCount(0);
     handleRetryWrongOnly();
   };
 
   const handleBackToSelect = () => {
     setCompletionModalOpen(false);
+    setCompletionWrongCount(0);
     setSubmitted(false);
     setScore(0);
     setQuestions([]);
@@ -830,6 +853,13 @@ export default function KatsuyouPage() {
   }) => {
     if (currentQuestions.length === 0) return;
 
+    const nextExcludedWords: ExcludedWordMap = { ...excludedWords };
+    currentQuestions.forEach((q, idx) => {
+      if (currentAnswers[idx] === q.correct_text) {
+        nextExcludedWords[q.jp_word] = true;
+      }
+    });
+
     try {
       setSaving(true);
 
@@ -841,7 +871,9 @@ export default function KatsuyouPage() {
       if (userError || !user) {
         console.error(userError);
         alert("로그인 정보가 없어 결과를 저장하지 못했습니다.");
-        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        if (shouldShowCompletionModal(nextExcludedWords)) {
+          openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        }
         return;
       }
 
@@ -869,7 +901,9 @@ export default function KatsuyouPage() {
 
       if (!result.ok) {
         alert("결과 저장 중 오류가 발생했습니다.");
-        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        if (shouldShowCompletionModal(nextExcludedWords)) {
+          openCompletionModal(nextScore, currentQuestions, currentAnswers);
+        }
         return;
       }
 
@@ -886,11 +920,15 @@ export default function KatsuyouPage() {
         await clearKatsuyouSavedSet();
       }
 
-      openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      if (shouldShowCompletionModal(nextExcludedWords)) {
+        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      }
     } catch (error) {
       console.error(error);
       alert("결과 저장 중 오류가 발생했습니다.");
-      openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      if (shouldShowCompletionModal(nextExcludedWords)) {
+        openCompletionModal(nextScore, currentQuestions, currentAnswers);
+      }
     } finally {
       setSaving(false);
     }
@@ -1395,10 +1433,6 @@ export default function KatsuyouPage() {
                       ❌ 틀린 문제만 다시 풀기
                     </button>
                   </div>
-
-                  {saving ? (
-                    <p className="text-sm text-gray-400">저장 중...</p>
-                  ) : null}
                 </>
               )}
             </div>
@@ -1420,7 +1454,7 @@ export default function KatsuyouPage() {
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : reviewMode
                 ? "선택한 오답 문제를 찾지 못했습니다."
-                : "선택한 조건에 맞는 문제가 없습니다."}
+                : "이 조건은 거의 정복했어요. 다른 품사나 방향으로 넘어가 보세요."}
             </p>
           </div>
         )}
@@ -1456,7 +1490,7 @@ export default function KatsuyouPage() {
                   : "같은 조건으로 다음 10문항"}
               </button>
 
-              {wrongItems.length > 0 ? (
+              {completionWrongCount > 0 ? (
                 <button
                   type="button"
                   onClick={handleRetryWrongOnlyFromModal}
