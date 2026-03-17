@@ -495,6 +495,7 @@ export default function WordPage() {
         const jp_word = String(row.jp_word || "").trim();
         const reading = String(row.reading || "").trim();
         const meaning = String(row.meaning || "").trim();
+        const level = String((row as { level?: string }).level || "").trim();
         const pos = String(row.pos || "").trim().toLowerCase();
         const example_jp = String(
           (row as { example_jp?: string }).example_jp || ""
@@ -563,7 +564,7 @@ export default function WordPage() {
           jp_word,
           reading,
           meaning,
-          level: String((row as { level?: string }).level || "").trim(),
+          level,
           pos,
           qtype,
           prompt,
@@ -1632,14 +1633,14 @@ export default function WordPage() {
         ) : (
           <div
             className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
-                ? "border-red-200 bg-red-50"
-                : "border-gray-300 bg-white"
+              ? "border-red-200 bg-red-50"
+              : "border-gray-300 bg-white"
               }`}
           >
             <p
               className={`text-sm ${!isReviewMode && isDailyLimitReached
-                  ? "text-red-700"
-                  : "text-gray-500"
+                ? "text-red-700"
+                : "text-gray-500"
                 }`}
             >
               {!isReviewMode && isDailyLimitReached
