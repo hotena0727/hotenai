@@ -49,6 +49,33 @@ function formatDate(value?: string): string {
   }
 }
 
+function normalizeLevelValue(level?: string | null): string {
+  const raw = String(level || "").trim().toUpperCase();
+  if (["N5", "N4", "N3", "N2", "N1"].includes(raw)) return raw;
+  if (raw === "전체".toUpperCase()) return "전체";
+  return String(level || "").trim();
+}
+
+function levelLabel(level?: string | null): string {
+  const raw = normalizeLevelValue(level);
+  switch (raw) {
+    case "N5":
+      return "첫걸음";
+    case "N4":
+      return "기초";
+    case "N3":
+      return "실전";
+    case "N2":
+      return "심화";
+    case "N1":
+      return "완성";
+    case "전체":
+      return "전체";
+    default:
+      return raw || "-";
+  }
+}
+
 function qtypeLabel(qtype?: string): string {
   switch (qtype) {
     case "reading":
@@ -129,6 +156,7 @@ export default function WrongWordPage() {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [selectedQType, setSelectedQType] = useState("전체");
   const [selectedPos, setSelectedPos] = useState("전체");
+  const [selectedLevel, setSelectedLevel] = useState("전체");
   const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
@@ -204,12 +232,44 @@ export default function WrongWordPage() {
     return ["전체", ...values];
   }, [flattened, selectedQType]);
 
+  const levelOptions = useMemo(() => {
+    const filteredByQtypeAndPos = flattened.filter((item) => {
+      const qtypeOk = selectedQType === "전체" || (item.qtype || "") === selectedQType;
+      const posOk = selectedPos === "전체" || (item.pos || "") === selectedPos;
+      return qtypeOk && posOk;
+    });
+
+    const values = Array.from(
+      new Set(
+        filteredByQtypeAndPos
+          .map((item) => normalizeLevelValue(item.level))
+          .filter(Boolean)
+      )
+    ).sort((a, b) => {
+      const order = ["N5", "N4", "N3", "N2", "N1", "전체"];
+      return order.indexOf(a) - order.indexOf(b);
+    });
+
+    return ["전체", ...values.filter((v) => v !== "전체")];
+  }, [flattened, selectedQType, selectedPos]);
+
+  useEffect(() => {
+    if (!levelOptions.includes(selectedLevel)) {
+      setSelectedLevel("전체");
+    }
+  }, [levelOptions, selectedLevel]);
+
   const filteredItems = useMemo(() => {
     const q = searchText.trim().toLowerCase();
 
     return flattened.filter((item) => {
       const qtypeOk = selectedQType === "전체" || (item.qtype || "") === selectedQType;
       const posOk = selectedPos === "전체" || (item.pos || "") === selectedPos;
+      const levelOk =
+        selectedLevel === "전체" ||
+        normalizeLevelValue(item.level) === selectedLevel;
+
+      const displayLevel = levelLabel(item.level);
 
       const haystack = [
         item.jp_word || "",
@@ -219,6 +279,7 @@ export default function WrongWordPage() {
         item.correct || "",
         item.pos || "",
         item.level || "",
+        displayLevel,
         item.example_jp || "",
         item.example_kr || "",
       ]
@@ -226,9 +287,9 @@ export default function WrongWordPage() {
         .toLowerCase();
 
       const searchOk = !q || haystack.includes(q);
-      return qtypeOk && posOk && searchOk;
+      return qtypeOk && posOk && levelOk && searchOk;
     });
-  }, [flattened, selectedQType, selectedPos, searchText]);
+  }, [flattened, selectedQType, selectedPos, selectedLevel, searchText]);
 
   const makeSelectionKey = (item: FlattenedWrongItem) =>
     `${item.app}|${item.qtype}|${item.item_key}`;
@@ -355,6 +416,7 @@ export default function WrongWordPage() {
               onClick={() => {
                 setSelectedQType("전체");
                 setSelectedPos("전체");
+                setSelectedLevel("전체");
                 setSearchText("");
                 setSelectedKeys([]);
               }}
@@ -387,6 +449,7 @@ export default function WrongWordPage() {
                     onClick={() => {
                       setSelectedQType(item);
                       setSelectedPos("전체");
+                      setSelectedLevel("전체");
                       setSelectedKeys([]);
                     }}
                     className={
@@ -415,11 +478,40 @@ export default function WrongWordPage() {
                     type="button"
                     onClick={() => {
                       setSelectedPos(item);
+                      setSelectedLevel("전체");
                       setSelectedKeys([]);
                     }}
                     className={
                       active
                         ? "rounded-full border border-gray-900 bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+                        : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+                    }
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-gray-100 pt-5">
+            <p className="text-sm font-semibold text-gray-700">레벨</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {levelOptions.map((item) => {
+                const active = selectedLevel === item;
+                const label = item === "전체" ? "전체" : levelLabel(item);
+
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setSelectedLevel(item);
+                      setSelectedKeys([]);
+                    }}
+                    className={
+                      active
+                        ? "rounded-full border border-emerald-500 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700"
                         : "rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
                     }
                   >
@@ -462,7 +554,7 @@ export default function WrongWordPage() {
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
             <p className="text-lg font-semibold text-gray-900">현재 필터 조건에 맞는 오답이 없습니다.</p>
             <p className="mt-2 text-sm text-gray-600">
-              품사나 문제 유형을 넓혀 다시 확인해보세요.
+              레벨, 품사나 문제 유형을 넓혀 다시 확인해보세요.
             </p>
           </div>
         ) : (
@@ -505,7 +597,7 @@ export default function WrongWordPage() {
                       {posLabel(item.pos)}
                     </span>
                     <span className="rounded-full bg-gray-100 px-2 py-1">
-                      {item.level || "-"}
+                      {levelLabel(item.level)}
                     </span>
                     <span className="rounded-full bg-gray-100 px-2 py-1">
                       {formatDate(item.created_at)}
