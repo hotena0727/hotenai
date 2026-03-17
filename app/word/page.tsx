@@ -15,15 +15,6 @@ import type { PatternRow } from "@/app/types/pattern";
 import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
 import { hasSeenHomeToday } from "@/lib/home-gate";
 
-const LEVEL_OPTIONS = [
-  { value: "all", label: "전체" },
-  { value: "N5", label: "첫걸음" },
-  { value: "N4", label: "기초" },
-  { value: "N3", label: "실전" },
-  { value: "N2", label: "심화" },
-  { value: "N1", label: "완성" },
-] as const;
-
 const POS_GROUP_OPTIONS = [
   { value: "noun", label: "명사" },
   { value: "adj_i", label: "い형용사" },
@@ -175,6 +166,7 @@ export default function WordPage() {
   const [questions, setQuestions] = useState<WordQuestion[]>([]);
 
   const [selectedLevel, setSelectedLevel] = useState("all");
+  const [levelPanelOpen, setLevelPanelOpen] = useState(false);
   const [selectedPosGroup, setSelectedPosGroup] = useState("noun");
   const [selectedQType, setSelectedQType] = useState<WordQType>("reading");
 
@@ -241,6 +233,27 @@ export default function WordPage() {
 
     setReviewReady(true);
   }, []);
+
+  const availableLevels = useMemo(() => {
+    const levels = Array.from(
+      new Set(
+        rows
+          .map((row) => normalizeLevelValue((row as { level?: string }).level))
+          .filter(Boolean)
+      )
+    ).sort((a, b) => {
+      const order = ["N5", "N4", "N3", "N2", "N1"];
+      return order.indexOf(a) - order.indexOf(b);
+    });
+
+    return ["all", ...levels];
+  }, [rows]);
+
+  useEffect(() => {
+    if (!availableLevels.includes(selectedLevel)) {
+      setSelectedLevel("all");
+    }
+  }, [availableLevels, selectedLevel]);
 
   const visiblePatterns = useMemo(
     () =>
@@ -1175,29 +1188,65 @@ export default function WordPage() {
           </p>
         ) : null}
 
-        <div className="mt-8">
-          <p className="text-base font-semibold text-gray-700 sm:text-lg">
-            ✅ 레벨을 선택하세요
-          </p>
-          <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
-            {LEVEL_OPTIONS.map((item) => {
-              const active = selectedLevel === item.value;
-              return (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => setSelectedLevel(item.value)}
-                  className={
-                    active
-                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 py-3 text-sm font-semibold text-white sm:px-4 sm:text-base"
-                      : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900 sm:px-4 sm:text-base"
-                  }
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
+        <div className="mt-8 rounded-2xl border border-gray-300 bg-white">
+          <button
+            type="button"
+            onClick={() => setLevelPanelOpen((prev) => !prev)}
+            className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+          >
+            <div>
+              <p className="text-base font-semibold text-gray-700 sm:text-lg">
+                ✅ 레벨을 선택하세요
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                현재 선택: {getLevelDisplayLabel(selectedLevel)}
+              </p>
+            </div>
+            <span className="text-lg">{levelPanelOpen ? "⌄" : "›"}</span>
+          </button>
+
+          {levelPanelOpen ? (
+            <div className="border-t border-gray-200 px-4 py-4">
+              <div className="space-y-2">
+                {availableLevels.map((level) => {
+                  const active = selectedLevel === level;
+
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => {
+                        setSelectedLevel(level);
+                        setLevelPanelOpen(false);
+                      }}
+                      className={
+                        active
+                          ? "flex w-full items-center justify-between rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-left"
+                          : "flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left"
+                      }
+                    >
+                      <span
+                        className={
+                          active
+                            ? "font-semibold text-red-600"
+                            : "font-medium text-gray-800"
+                        }
+                      >
+                        {getLevelDisplayLabel(level)}
+                      </span>
+                      <span
+                        className={
+                          active ? "text-red-500" : "text-gray-300"
+                        }
+                      >
+                        {active ? "●" : "○"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-8">
