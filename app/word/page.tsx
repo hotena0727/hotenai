@@ -585,7 +585,7 @@ export default function WordPage() {
     const jp_word = String(row.jp_word || "").trim();
     const reading = String(row.reading || "").trim();
     const meaning = String(row.meaning || "").trim();
-    const pos = String(row.pos || "").trim().toLowerCase();
+    const level = String((row as { level?: string }).level || "").trim();
     const example_jp = String(
       (row as { example_jp?: string }).example_jp || ""
     ).trim();
@@ -649,9 +649,11 @@ export default function WordPage() {
     if (!prompt || !correct_text || choices.length < 2) return null;
 
     return {
+      app: "word",
       jp_word,
       reading,
       meaning,
+      level,
       pos,
       qtype,
       prompt,
