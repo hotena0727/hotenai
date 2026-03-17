@@ -586,7 +586,7 @@ export default function WordPage() {
     const reading = String(row.reading || "").trim();
     const meaning = String(row.meaning || "").trim();
     const level = String((row as { level?: string }).level || "").trim();
-    onst pos = String(row.pos || "").trim().toLowerCase();
+    const pos = String(row.pos || "").trim().toLowerCase();
     const example_jp = String(
       (row as { example_jp?: string }).example_jp || ""
     ).trim();
