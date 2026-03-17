@@ -5,7 +5,8 @@ import { fetchAttemptsByPrefix, type QuizAttemptRow } from "@/lib/attempts";
 import { supabase } from "@/lib/supabase";
 
 const JA_FONT_STYLE = {
-  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
+  fontFamily:
+    '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
 } as const;
 
 type WordWrongItem = {
@@ -215,7 +216,11 @@ export default function WrongWordPage() {
 
   const qtypeOptions = useMemo(() => {
     const values = Array.from(
-      new Set(flattened.map((item) => String(item.qtype || "").trim()).filter(Boolean))
+      new Set(
+        flattened
+          .map((item) => String(item.qtype || "").trim())
+          .filter(Boolean)
+      )
     );
     return ["전체", ...values];
   }, [flattened]);
@@ -227,14 +232,19 @@ export default function WrongWordPage() {
         : flattened.filter((item) => (item.qtype || "") === selectedQType);
 
     const values = Array.from(
-      new Set(filteredByQType.map((item) => String(item.pos || "").trim()).filter(Boolean))
+      new Set(
+        filteredByQType
+          .map((item) => String(item.pos || "").trim())
+          .filter(Boolean)
+      )
     );
     return ["전체", ...values];
   }, [flattened, selectedQType]);
 
   const levelOptions = useMemo(() => {
     const filteredByQtypeAndPos = flattened.filter((item) => {
-      const qtypeOk = selectedQType === "전체" || (item.qtype || "") === selectedQType;
+      const qtypeOk =
+        selectedQType === "전체" || (item.qtype || "") === selectedQType;
       const posOk = selectedPos === "전체" || (item.pos || "") === selectedPos;
       return qtypeOk && posOk;
     });
@@ -263,7 +273,8 @@ export default function WrongWordPage() {
     const q = searchText.trim().toLowerCase();
 
     return flattened.filter((item) => {
-      const qtypeOk = selectedQType === "전체" || (item.qtype || "") === selectedQType;
+      const qtypeOk =
+        selectedQType === "전체" || (item.qtype || "") === selectedQType;
       const posOk = selectedPos === "전체" || (item.pos || "") === selectedPos;
       const levelOk =
         selectedLevel === "전체" ||
@@ -317,9 +328,11 @@ export default function WrongWordPage() {
       return;
     }
 
-    const itemKeys = filteredItems
-      .filter((item) => selectedKeys.includes(makeSelectionKey(item)))
-      .map((item) => item.item_key);
+    const selectedItems = filteredItems.filter((item) =>
+      selectedKeys.includes(makeSelectionKey(item))
+    );
+
+    const itemKeys = selectedItems.map((item) => item.item_key);
 
     if (itemKeys.length === 0) {
       alert("복습할 문제를 찾지 못했습니다.");
@@ -327,10 +340,29 @@ export default function WrongWordPage() {
     }
 
     const qids = encodeURIComponent(itemKeys.join(","));
-    const qtype = encodeURIComponent(selectedQType === "전체" ? "" : selectedQType);
+    const qtype = encodeURIComponent(
+      selectedQType === "전체" ? "" : selectedQType
+    );
     const pos = encodeURIComponent(selectedPos === "전체" ? "" : selectedPos);
 
-    window.location.href = `/word?review=1&qids=${qids}&qtype=${qtype}&pos=${pos}`;
+    const uniqueLevels = Array.from(
+      new Set(
+        selectedItems
+          .map((item) => normalizeLevelValue(item.level))
+          .filter((lv) => ["N5", "N4", "N3", "N2", "N1"].includes(lv))
+      )
+    );
+
+    const resolvedLevel =
+      selectedLevel !== "전체"
+        ? selectedLevel
+        : uniqueLevels.length === 1
+          ? uniqueLevels[0]
+          : "";
+
+    const level = encodeURIComponent(resolvedLevel);
+
+    window.location.href = `/word?review=1&qids=${qids}&qtype=${qtype}&pos=${pos}&level=${level}`;
   };
 
   if (loading) {
@@ -523,7 +555,9 @@ export default function WrongWordPage() {
           </div>
 
           <div className="mt-5 border-t border-gray-100 pt-5">
-            <label className="block text-sm font-semibold text-gray-700">검색</label>
+            <label className="block text-sm font-semibold text-gray-700">
+              검색
+            </label>
             <input
               type="text"
               value={searchText}
@@ -539,7 +573,9 @@ export default function WrongWordPage() {
 
         {flattened.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <p className="text-lg font-semibold text-gray-900">좋아요. 저장된 단어 오답이 아직 없습니다.</p>
+            <p className="text-lg font-semibold text-gray-900">
+              좋아요. 저장된 단어 오답이 아직 없습니다.
+            </p>
             <p className="mt-2 text-sm text-gray-600">
               단어 문제를 풀고 다시 오면, 헷갈린 문제들이 여기에 정리됩니다.
             </p>
@@ -552,7 +588,9 @@ export default function WrongWordPage() {
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <p className="text-lg font-semibold text-gray-900">현재 필터 조건에 맞는 오답이 없습니다.</p>
+            <p className="text-lg font-semibold text-gray-900">
+              현재 필터 조건에 맞는 오답이 없습니다.
+            </p>
             <p className="mt-2 text-sm text-gray-600">
               레벨, 품사나 문제 유형을 넓혀 다시 확인해보세요.
             </p>
@@ -561,6 +599,7 @@ export default function WrongWordPage() {
           <div className="mt-6 space-y-4">
             {filteredItems.map((item, idx) => {
               const selectionKey = makeSelectionKey(item);
+              const itemLevel = normalizeLevelValue(item.level);
 
               return (
                 <div
@@ -580,8 +619,14 @@ export default function WrongWordPage() {
                     <a
                       href={`/word?review=1&qids=${encodeURIComponent(
                         item.item_key
-                      )}&qtype=${encodeURIComponent(item.qtype)}&pos=${encodeURIComponent(
+                      )}&qtype=${encodeURIComponent(
+                        item.qtype
+                      )}&pos=${encodeURIComponent(
                         item.pos || ""
+                      )}&level=${encodeURIComponent(
+                        ["N5", "N4", "N3", "N2", "N1"].includes(itemLevel)
+                          ? itemLevel
+                          : ""
                       )}`}
                       className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
                     >
@@ -607,10 +652,15 @@ export default function WrongWordPage() {
                   <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
                     <p className="text-sm font-medium text-blue-800">문제 단어</p>
                     <p className="mt-1 text-xl font-bold text-gray-900">
-                      <span lang="ja" style={JA_FONT_STYLE}>{item.jp_word || "-"}</span>
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.jp_word || "-"}
+                      </span>
                     </p>
                     <p className="mt-2 text-sm text-gray-600">
-                      읽기: <span lang="ja" style={JA_FONT_STYLE}>{item.reading || "-"}</span>
+                      읽기:{" "}
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.reading || "-"}
+                      </span>
                     </p>
                     <p className="mt-1 text-sm text-gray-600">
                       뜻: {item.meaning_kr || "-"}
@@ -618,16 +668,22 @@ export default function WrongWordPage() {
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-                    <p className="text-sm font-medium text-red-700">내가 고른 답</p>
+                    <p className="text-sm font-medium text-red-700">
+                      내가 고른 답
+                    </p>
                     <p className="mt-1 text-sm text-gray-800">
-                      <span lang="ja" style={JA_FONT_STYLE}>{item.selected || "-"}</span>
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.selected || "-"}
+                      </span>
                     </p>
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
                     <p className="text-sm font-medium text-green-700">정답</p>
                     <p className="mt-1 text-sm text-gray-800">
-                      <span lang="ja" style={JA_FONT_STYLE}>{item.correct || "-"}</span>
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.correct || "-"}
+                      </span>
                     </p>
                   </div>
 
@@ -636,11 +692,15 @@ export default function WrongWordPage() {
                       <p className="text-sm font-medium text-gray-700">예문</p>
                       {item.example_jp ? (
                         <p className="mt-1 text-sm text-gray-800">
-                          <span lang="ja" style={JA_FONT_STYLE}>{item.example_jp}</span>
+                          <span lang="ja" style={JA_FONT_STYLE}>
+                            {item.example_jp}
+                          </span>
                         </p>
                       ) : null}
                       {item.example_kr ? (
-                        <p className="mt-1 text-sm text-gray-600">{item.example_kr}</p>
+                        <p className="mt-1 text-sm text-gray-600">
+                          {item.example_kr}
+                        </p>
                       ) : null}
                     </div>
                   ) : null}

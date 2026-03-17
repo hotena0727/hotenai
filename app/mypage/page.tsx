@@ -69,7 +69,7 @@ function normalizeLevelValue(level?: string | null): string {
   return String(level || "").trim();
 }
 
-function levelLabel(level?: string | null): string {
+function wordLevelLabel(level?: string | null): string {
   const raw = normalizeLevelValue(level);
   switch (raw) {
     case "N5":
@@ -87,6 +87,23 @@ function levelLabel(level?: string | null): string {
     default:
       return raw || "-";
   }
+}
+
+function defaultLevelLabel(level?: string | null): string {
+  const raw = normalizeLevelValue(level);
+  return raw || "-";
+}
+
+function getAttemptDisplayLevel(item: QuizAttemptRow): string {
+  const kind = detectAppKind(item);
+
+  if (kind === "word") {
+    const label = wordLevelLabel(item.level);
+    return label && label !== "전체" ? label : "-";
+  }
+
+  const raw = defaultLevelLabel(item.level);
+  return raw && raw !== "전체" ? raw : "-";
 }
 
 function calcAveragePercent(attempts: QuizAttemptRow[]): number {
@@ -575,7 +592,7 @@ export default function MyPage() {
         item.pos_mode || "",
         withFullIfMissing(item.pos_mode),
         item.level || "",
-        levelLabel(item.level),
+        getAttemptDisplayLevel(item),
         String(item.score || ""),
         String(item.quiz_len || ""),
         String(item.wrong_count || ""),
@@ -1413,7 +1430,7 @@ export default function MyPage() {
                           {prettyAttemptLabel(withFullIfMissing(item.pos_mode))}
                         </p>
                         <p className="mt-2 text-sm text-gray-600">
-                          {levelLabel(item.level)} · {Number(item.score || 0)}/
+                          {getAttemptDisplayLevel(item)} · {Number(item.score || 0)}/
                           {Number(item.quiz_len || 0)} · 오답{" "}
                           {Number(item.wrong_count || 0)}
                         </p>
@@ -1513,7 +1530,7 @@ export default function MyPage() {
                             {prettyAttemptLabel(withFullIfMissing(item.pos_mode))}
                           </p>
                           <p className="mt-2 text-sm text-gray-600">
-                            {levelLabel(item.level)} ·{" "}
+                            {getAttemptDisplayLevel(item)} ·{" "}
                             {Number(item.score || 0)}/
                             {Number(item.quiz_len || 0)} · 오답{" "}
                             {Number(item.wrong_count || 0)}
