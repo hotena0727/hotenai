@@ -67,7 +67,8 @@ function uniqueStrings(values: string[]): string[] {
 }
 
 const JA_FONT_STYLE = {
-  fontFamily: `"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif`,
+  fontFamily:
+    '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
 } as const;
 
 const DAILY_FREE_SET_LIMIT = 3;
@@ -94,7 +95,6 @@ export default function KanjiPage() {
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
 
   const [excludedWords, setExcludedWords] = useState<ExcludedWordMap>({});
   const [errorMsg, setErrorMsg] = useState("");
@@ -114,6 +114,11 @@ export default function KanjiPage() {
   const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
   const [limitMessage, setLimitMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
+
+  const [completionModalOpen, setCompletionModalOpen] = useState(false);
+  const [completionTitle, setCompletionTitle] = useState("");
+  const [completionBody, setCompletionBody] = useState("");
+  const [completionWrongCount, setCompletionWrongCount] = useState(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -173,8 +178,8 @@ export default function KanjiPage() {
         kind === "perfect"
           ? `${BASE_SFX_URL}/perfect.mp3`
           : kind === "correct"
-            ? `${BASE_SFX_URL}/correct.mp3`
-            : `${BASE_SFX_URL}/wrong.mp3`;
+          ? `${BASE_SFX_URL}/correct.mp3`
+          : `${BASE_SFX_URL}/wrong.mp3`;
 
       const audio = new Audio(src);
       audio.preload = "auto";
@@ -224,7 +229,9 @@ export default function KanjiPage() {
     );
 
     return rows.filter((row) => {
-      const itemKey = String((row as { item_key?: string }).item_key || "").trim();
+      const itemKey = String(
+        (row as { item_key?: string }).item_key || ""
+      ).trim();
       const jpWord = String(row.jp_word || "").trim();
       const rowLevel = String(row.level || "").trim().toUpperCase();
 
@@ -338,7 +345,8 @@ export default function KanjiPage() {
       setAnswers({});
       setSubmitted(false);
       setScore(0);
-      setSaveMessage("");
+      setAudioError("");
+      setAudioLoadingKey("");
     }
   }, [isDailyLimitReached, isReviewMode]);
 
@@ -398,7 +406,8 @@ export default function KanjiPage() {
     const pool =
       reviewLevel && reviewLevel.length > 0
         ? allRows.filter(
-            (row) => String(row.level || "").trim().toUpperCase() === reviewLevel
+            (row) =>
+              String(row.level || "").trim().toUpperCase() === reviewLevel
           )
         : allRows;
 
@@ -486,7 +495,6 @@ export default function KanjiPage() {
           setAnswers({});
           setSubmitted(false);
           setScore(0);
-          setSaveMessage("복습할 문제가 없습니다.");
           setAudioError("");
           setAudioLoadingKey("");
           return;
@@ -508,7 +516,6 @@ export default function KanjiPage() {
           setAnswers({});
           setSubmitted(false);
           setScore(0);
-          setSaveMessage("선택한 복습 문제로 퀴즈를 만들지 못했습니다.");
           setAudioError("");
           setAudioLoadingKey("");
           return;
@@ -518,7 +525,6 @@ export default function KanjiPage() {
         setAnswers({});
         setSubmitted(false);
         setScore(0);
-        setSaveMessage("");
         setAudioError("");
         setAudioLoadingKey("");
         return;
@@ -553,7 +559,6 @@ export default function KanjiPage() {
       setAnswers({});
       setSubmitted(false);
       setScore(0);
-      setSaveMessage("");
       setAudioError("");
       setAudioLoadingKey("");
     } catch (error) {
@@ -584,15 +589,74 @@ export default function KanjiPage() {
     reviewLevel,
   ]);
 
+  const openCompletionModal = (
+    nextScore: number,
+    currentQuestions: KanjiQuestion[],
+    currentAnswers: AnswerMap
+  ) => {
+    const wrongCount = currentQuestions.filter(
+      (_, idx) => currentAnswers[idx] !== currentQuestions[idx].correct_text
+    ).length;
+
+    setCompletionWrongCount(wrongCount);
+
+    if (nextScore === currentQuestions.length) {
+      setCompletionTitle("🎉 한자 훈련 완료");
+      setCompletionBody(
+        `완벽합니다.\n${nextScore}/${currentQuestions.length} 정답이에요.\n같은 조건으로 다음 10문항을 이어서 풀까요?`
+      );
+      setCompletionModalOpen(true);
+      return;
+    }
+
+    setCompletionTitle("✅ 한자 훈련 완료");
+    setCompletionBody(
+      `${nextScore}/${currentQuestions.length} 정답이에요.\n틀린 문제는 ${wrongCount}개입니다.\n이어서 새 문제를 풀거나, 틀린 문제만 다시 볼 수 있어요.`
+    );
+    setCompletionModalOpen(true);
+  };
+
+  const closeCompletionModal = () => {
+    setCompletionModalOpen(false);
+    setCompletionWrongCount(0);
+  };
+
+  const handleContinueSameMode = () => {
+    setCompletionModalOpen(false);
+    setCompletionWrongCount(0);
+    makeNewQuiz();
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 0);
+  };
+
+  const handleRetryWrongOnlyFromModal = () => {
+    setCompletionModalOpen(false);
+    setCompletionWrongCount(0);
+    handleRetryWrongOnly();
+  };
+
+  const handleBackToSelect = () => {
+    setCompletionModalOpen(false);
+    setCompletionWrongCount(0);
+    setSubmitted(false);
+    setScore(0);
+    setQuestions([]);
+    setAnswers({});
+    setAudioError("");
+    setAudioLoadingKey("");
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 0);
+  };
+
   const makeNewQuiz = () => {
     if (isReviewMode) {
-      setSaveMessage("오답노트 복습에서는 전달된 문제만 풉니다.");
       generateQuiz();
       return;
     }
 
     generateQuiz();
-    setSaveMessage("");
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, 0);
@@ -683,7 +747,6 @@ export default function KanjiPage() {
 
     try {
       setSaving(true);
-      setSaveMessage("결과 저장 중...");
 
       const {
         data: { user },
@@ -692,7 +755,8 @@ export default function KanjiPage() {
 
       if (userError || !user) {
         console.error(userError);
-        setSaveMessage("로그인 정보가 없어 결과를 저장하지 못했습니다.");
+        alert("로그인 정보가 없어 결과를 저장하지 못했습니다.");
+        openCompletionModal(nextScore, currentQuestions, currentAnswers);
         return;
       }
 
@@ -722,7 +786,8 @@ export default function KanjiPage() {
       const result = await saveQuizAttempt(payload);
 
       if (!result.ok) {
-        setSaveMessage("결과 저장 중 오류가 발생했습니다.");
+        alert("결과 저장 중 오류가 발생했습니다.");
+        openCompletionModal(nextScore, currentQuestions, currentAnswers);
         return;
       }
 
@@ -735,10 +800,11 @@ export default function KanjiPage() {
         );
       }
 
-      setSaveMessage("결과가 저장되었습니다.");
+      openCompletionModal(nextScore, currentQuestions, currentAnswers);
     } catch (error) {
       console.error(error);
-      setSaveMessage("결과 저장 중 오류가 발생했습니다.");
+      alert("결과 저장 중 오류가 발생했습니다.");
+      openCompletionModal(nextScore, currentQuestions, currentAnswers);
     } finally {
       setSaving(false);
     }
@@ -859,10 +925,10 @@ export default function KanjiPage() {
                 {isPaidPlan(userPlan)
                   ? "자세한 이용 안내 보기"
                   : !isReviewMode && isDailyLimitReached
-                    ? "오늘 이용 완료"
-                    : remainingSets === 1
-                      ? "오늘 1세트 남음"
-                      : `오늘 ${remainingSets}세트 남음`}
+                  ? "오늘 이용 완료"
+                  : remainingSets === 1
+                  ? "오늘 1세트 남음"
+                  : `오늘 ${remainingSets}세트 남음`}
               </p>
             </div>
             <span
@@ -888,8 +954,8 @@ export default function KanjiPage() {
                 {isPaidPlan(userPlan)
                   ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
                   : !isReviewMode && isDailyLimitReached
-                    ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
-                    : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+                  ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
+                  : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
@@ -921,8 +987,8 @@ export default function KanjiPage() {
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 이용 완료"
                 : isReviewMode
-                  ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
-                  : "🔄 새문제(랜덤 10문항)"}
+                ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
+                : "🔄 새문제(랜덤 10문항)"}
             </button>
 
             <button
@@ -949,9 +1015,14 @@ export default function KanjiPage() {
             <div className="border-t border-gray-200 px-4 py-4">
               <div className="grid grid-cols-5 gap-3 text-center">
                 {LEVEL_OPTIONS.map((lv) => (
-                  <div key={lv} className="rounded-2xl border border-gray-200 p-4">
+                  <div
+                    key={lv}
+                    className="rounded-2xl border border-gray-200 p-4"
+                  >
                     <p className="text-lg font-bold">{lv}</p>
-                    <p className="mt-2 text-sm text-gray-600">{levelCounts[lv]}개</p>
+                    <p className="mt-2 text-sm text-gray-600">
+                      {levelCounts[lv]}개
+                    </p>
                   </div>
                 ))}
               </div>
@@ -963,10 +1034,6 @@ export default function KanjiPage() {
           <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
             {audioError ? (
               <p className="mb-4 text-sm text-red-500">{audioError}</p>
-            ) : null}
-
-            {saveMessage ? (
-              <p className="mb-4 text-sm text-blue-600">{saveMessage}</p>
             ) : null}
 
             <div className="space-y-8">
@@ -1027,8 +1094,8 @@ export default function KanjiPage() {
                                 isCorrectChoice
                                   ? "font-semibold text-green-600"
                                   : isWrongChoice
-                                    ? "font-semibold text-red-600"
-                                    : ""
+                                  ? "font-semibold text-red-600"
+                                  : ""
                               }
                             >
                               <span lang="ja" style={JA_FONT_STYLE}>
@@ -1047,8 +1114,8 @@ export default function KanjiPage() {
                             isRight
                               ? "text-sm font-semibold text-green-600"
                               : isWrong
-                                ? "text-sm font-semibold text-red-600"
-                                : "text-sm text-gray-500"
+                              ? "text-sm font-semibold text-red-600"
+                              : "text-sm text-gray-500"
                           }
                         >
                           {isRight ? "정답입니다." : "오답입니다."}
@@ -1082,7 +1149,10 @@ export default function KanjiPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                speakJapanese(q.reading || q.jp_word, `answer-${idx}`)
+                                speakJapanese(
+                                  q.reading || q.jp_word,
+                                  `answer-${idx}`
+                                )
                               }
                               disabled={audioLoadingKey === `answer-${idx}`}
                               className="rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
@@ -1163,7 +1233,8 @@ export default function KanjiPage() {
                                   </span>
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
-                                  {item.question.prompt} · 레벨: {item.question.level} · 유형:{" "}
+                                  {item.question.prompt} · 레벨:{" "}
+                                  {item.question.level} · 유형:{" "}
                                   {qtypeLabel(item.question.qtype)}
                                 </p>
                               </div>
@@ -1249,12 +1320,70 @@ export default function KanjiPage() {
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : isReviewMode
-                  ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
-                  : "선택한 조건에 맞는 문제가 없습니다."}
+                ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
+                : "이 조건은 거의 정복했어요. 다른 레벨이나 유형으로 넘어가 보세요."}
             </p>
           </div>
         )}
       </div>
+
+      {completionModalOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900">
+                {completionTitle}
+              </p>
+              <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
+                {completionBody}
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={handleContinueSameMode}
+                disabled={saving || (!isReviewMode && isDailyLimitReached)}
+                className={
+                  saving || (!isReviewMode && isDailyLimitReached)
+                    ? "w-full rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-lg font-semibold text-gray-400"
+                    : "w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
+                }
+              >
+                {!isReviewMode && isDailyLimitReached
+                  ? "오늘 이용 완료"
+                  : "같은 조건으로 다음 10문항"}
+              </button>
+
+              {completionWrongCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleRetryWrongOnlyFromModal}
+                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-900"
+                >
+                  틀린 문제만 다시 풀기
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleBackToSelect}
+                className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
+              >
+                선택으로 돌아가기
+              </button>
+
+              <button
+                type="button"
+                onClick={closeCompletionModal}
+                className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

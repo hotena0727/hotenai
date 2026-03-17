@@ -77,7 +77,8 @@ function circleNumber(index: number): string {
 }
 
 const JA_FONT_STYLE = {
-  fontFamily: `"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif`,
+  fontFamily:
+    '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
 } as const;
 
 const DAILY_FREE_SET_LIMIT = 3;
@@ -104,7 +105,6 @@ export default function KatsuyouPage() {
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
 
   const [excludedWords, setExcludedWords] = useState<ExcludedWordMap>({});
   const [errorMsg, setErrorMsg] = useState("");
@@ -126,6 +126,10 @@ export default function KatsuyouPage() {
   const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
   const [limitMessage, setLimitMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
+
+  const [completionModalOpen, setCompletionModalOpen] = useState(false);
+  const [completionTitle, setCompletionTitle] = useState("");
+  const [completionBody, setCompletionBody] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -312,7 +316,8 @@ export default function KatsuyouPage() {
       setAnswers({});
       setSubmitted(false);
       setScore(0);
-      setSaveMessage("");
+      setAudioError("");
+      setAudioLoadingKey("");
     }
   }, [isDailyLimitReached]);
 
@@ -461,7 +466,6 @@ export default function KatsuyouPage() {
       setAnswers({});
       setSubmitted(false);
       setScore(0);
-      setSaveMessage("");
       setAudioError("");
       setAudioLoadingKey("");
 
@@ -520,7 +524,6 @@ export default function KatsuyouPage() {
       setAnswers({});
       setSubmitted(false);
       setScore(0);
-      setSaveMessage("");
       setAudioError("");
       setAudioLoadingKey("");
 
@@ -579,7 +582,6 @@ export default function KatsuyouPage() {
         setAnswers((lastSet.answers as AnswerMap) || {});
         setSubmitted(Boolean(lastSet.submitted));
         setScore(Number(lastSet.score || 0));
-        setSaveMessage("");
         setAudioError("");
         setAudioLoadingKey("");
       } catch (error) {
@@ -625,6 +627,77 @@ export default function KatsuyouPage() {
     reviewQType,
   ]);
 
+  const openCompletionModal = (
+    nextScore: number,
+    currentQuestions: KatsuyouQuestion[],
+    currentAnswers: AnswerMap
+  ) => {
+    const wrongCount = currentQuestions.filter(
+      (_, idx) => currentAnswers[idx] !== currentQuestions[idx].correct_text
+    ).length;
+
+    if (reviewMode) {
+      setCompletionTitle("🎉 활용 복습 완료");
+      setCompletionBody(
+        `${nextScore}/${currentQuestions.length} 정답이에요.\n선택한 복습 문제를 끝까지 완료했습니다.`
+      );
+      setCompletionModalOpen(true);
+      return;
+    }
+
+    if (nextScore === currentQuestions.length) {
+      setCompletionTitle("🎉 활용 훈련 완료");
+      setCompletionBody(
+        `완벽합니다.\n${nextScore}/${currentQuestions.length} 정답이에요.\n같은 조건으로 다음 10문항을 이어서 풀까요?`
+      );
+      setCompletionModalOpen(true);
+      return;
+    }
+
+    setCompletionTitle("✅ 활용 훈련 완료");
+    setCompletionBody(
+      `${nextScore}/${currentQuestions.length} 정답이에요.\n틀린 문제는 ${wrongCount}개입니다.\n이어서 새 문제를 풀거나, 틀린 문제만 다시 볼 수 있어요.`
+    );
+    setCompletionModalOpen(true);
+  };
+
+  const closeCompletionModal = () => {
+    setCompletionModalOpen(false);
+  };
+
+  const handleContinueSameMode = () => {
+    setCompletionModalOpen(false);
+
+    if (reviewMode) {
+      void clearKatsuyouSavedSet();
+      window.location.href = "/katsuyou";
+      return;
+    }
+
+    makeNewQuiz();
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 0);
+  };
+
+  const handleRetryWrongOnlyFromModal = () => {
+    setCompletionModalOpen(false);
+    handleRetryWrongOnly();
+  };
+
+  const handleBackToSelect = () => {
+    setCompletionModalOpen(false);
+    setSubmitted(false);
+    setScore(0);
+    setQuestions([]);
+    setAnswers({});
+    setAudioError("");
+    setAudioLoadingKey("");
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 0);
+  };
+
   const makeNewQuiz = () => {
     if (reviewMode) {
       void clearKatsuyouSavedSet();
@@ -633,7 +706,6 @@ export default function KatsuyouPage() {
     }
 
     generateQuiz();
-    setSaveMessage("");
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, 0);
@@ -760,7 +832,6 @@ export default function KatsuyouPage() {
 
     try {
       setSaving(true);
-      setSaveMessage("결과 저장 중...");
 
       const {
         data: { user },
@@ -769,7 +840,8 @@ export default function KatsuyouPage() {
 
       if (userError || !user) {
         console.error(userError);
-        setSaveMessage("로그인 정보가 없어 결과를 저장하지 못했습니다.");
+        alert("로그인 정보가 없어 결과를 저장하지 못했습니다.");
+        openCompletionModal(nextScore, currentQuestions, currentAnswers);
         return;
       }
 
@@ -796,7 +868,8 @@ export default function KatsuyouPage() {
       const result = await saveQuizAttempt(payload);
 
       if (!result.ok) {
-        setSaveMessage("결과 저장 중 오류가 발생했습니다.");
+        alert("결과 저장 중 오류가 발생했습니다.");
+        openCompletionModal(nextScore, currentQuestions, currentAnswers);
         return;
       }
 
@@ -813,10 +886,11 @@ export default function KatsuyouPage() {
         await clearKatsuyouSavedSet();
       }
 
-      setSaveMessage("결과가 저장되었습니다.");
+      openCompletionModal(nextScore, currentQuestions, currentAnswers);
     } catch (error) {
       console.error(error);
-      setSaveMessage("결과 저장 중 오류가 발생했습니다.");
+      alert("결과 저장 중 오류가 발생했습니다.");
+      openCompletionModal(nextScore, currentQuestions, currentAnswers);
     } finally {
       setSaving(false);
     }
@@ -1325,9 +1399,6 @@ export default function KatsuyouPage() {
                   {saving ? (
                     <p className="text-sm text-gray-400">저장 중...</p>
                   ) : null}
-                  {saveMessage ? (
-                    <p className="text-sm text-gray-500">{saveMessage}</p>
-                  ) : null}
                 </>
               )}
             </div>
@@ -1354,6 +1425,66 @@ export default function KatsuyouPage() {
           </div>
         )}
       </div>
+
+      {completionModalOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900">
+                {completionTitle}
+              </p>
+              <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
+                {completionBody}
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={handleContinueSameMode}
+                disabled={saving || (!reviewMode && isDailyLimitReached)}
+                className={
+                  saving || (!reviewMode && isDailyLimitReached)
+                    ? "w-full rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-lg font-semibold text-gray-400"
+                    : "w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
+                }
+              >
+                {reviewMode
+                  ? "일반 활용 문제로 돌아가기"
+                  : !reviewMode && isDailyLimitReached
+                  ? "오늘 이용 완료"
+                  : "같은 조건으로 다음 10문항"}
+              </button>
+
+              {wrongItems.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleRetryWrongOnlyFromModal}
+                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-900"
+                >
+                  틀린 문제만 다시 풀기
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleBackToSelect}
+                className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
+              >
+                선택으로 돌아가기
+              </button>
+
+              <button
+                type="button"
+                onClick={closeCompletionModal}
+                className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
