@@ -843,8 +843,8 @@ export default function AdminPage() {
       const queryOk = !q
         ? true
         : String(item.user_email || "").toLowerCase().includes(q) ||
-          String(item.level || "").toLowerCase().includes(q) ||
-          String(item.pos_mode || "").toLowerCase().includes(q);
+        String(item.level || "").toLowerCase().includes(q) ||
+        String(item.pos_mode || "").toLowerCase().includes(q);
 
       const wrongOk = !logOnlyWrong ? true : Number(item.wrong_count || 0) > 0;
       return typeOk && queryOk && wrongOk;
@@ -1133,8 +1133,8 @@ export default function AdminPage() {
 
           const status =
             rawStatus === "open" ||
-            rawStatus === "coming" ||
-            rawStatus === "draft"
+              rawStatus === "coming" ||
+              rawStatus === "draft"
               ? rawStatus
               : "draft";
 
@@ -1150,15 +1150,15 @@ export default function AdminPage() {
           };
         })
         .filter(Boolean) as Array<{
-        title: string;
-        slug: string;
-        level: string;
-        description: string;
-        status: "draft" | "open" | "coming";
-        sort_order: number;
-        thumbnail_url: string | null;
-        is_visible: boolean;
-      }>;
+          title: string;
+          slug: string;
+          level: string;
+          description: string;
+          status: "draft" | "open" | "coming";
+          sort_order: number;
+          thumbnail_url: string | null;
+          is_visible: boolean;
+        }>;
 
       const normalized = normalizeSequentialSortOrder(
         cleaned.sort((a, b) => a.sort_order - b.sort_order)
@@ -1310,19 +1310,19 @@ export default function AdminPage() {
           };
         })
         .filter(Boolean) as Array<{
-        course_id: string;
-        title: string;
-        description: string;
-        sort_order: number;
-        is_preview: boolean;
-        is_visible: boolean;
-        video_source: "youtube" | "vimeo" | "server";
-        video_url: string | null;
-        video_embed_url: string | null;
-        video_seconds: number | null;
-        attachment_url: string | null;
-        poster_url: string | null;
-      }>;
+          course_id: string;
+          title: string;
+          description: string;
+          sort_order: number;
+          is_preview: boolean;
+          is_visible: boolean;
+          video_source: "youtube" | "vimeo" | "server";
+          video_url: string | null;
+          video_embed_url: string | null;
+          video_seconds: number | null;
+          attachment_url: string | null;
+          poster_url: string | null;
+        }>;
 
       const normalized = normalizeSequentialSortOrder(
         cleaned.sort((a, b) => a.sort_order - b.sort_order)
@@ -1493,12 +1493,27 @@ export default function AdminPage() {
       setRemovingEnrollmentId(enrollmentId);
       setEnrollmentMessage("");
 
-      const { error } = await supabase
-        .from("course_enrollments")
-        .delete()
-        .eq("id", enrollmentId);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (error) throw error;
+      const accessToken = session?.access_token || "";
+      if (!accessToken) throw new Error("로그인 세션을 찾지 못했습니다.");
+
+      const res = await fetch("/api/admin/course-enrollment/remove", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ enrollmentId }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "강의 배정 해제 중 오류가 발생했습니다.");
+      }
 
       if (selectedEnrollmentUserId) {
         await loadUserEnrollments(selectedEnrollmentUserId);
@@ -1606,14 +1621,14 @@ export default function AdminPage() {
         prev.map((course) =>
           course.id === courseId
             ? {
-                ...course,
-                title: draft.title.trim(),
-                slug: draft.slug.trim(),
-                level: draft.level.trim() || "입문",
-                description: draft.description.trim(),
-                status: draft.status,
-                thumbnail_url: draft.thumbnail_url.trim() || null,
-              }
+              ...course,
+              title: draft.title.trim(),
+              slug: draft.slug.trim(),
+              level: draft.level.trim() || "입문",
+              description: draft.description.trim(),
+              status: draft.status,
+              thumbnail_url: draft.thumbnail_url.trim() || null,
+            }
             : course
         )
       );
@@ -1760,18 +1775,18 @@ export default function AdminPage() {
         prev.map((lesson) =>
           lesson.id === lessonId
             ? {
-                ...lesson,
-                title: draft.title.trim(),
-                description: draft.description.trim(),
-                sort_order: Number(draft.sort_order || 1),
-                is_preview: Boolean(draft.is_preview),
-                video_source: draft.video_source,
-                video_url: draft.video_url.trim() || null,
-                video_embed_url: draft.video_embed_url.trim() || null,
-                video_seconds: Number(draft.video_seconds || 0) || null,
-                attachment_url: draft.attachment_url.trim() || null,
-                poster_url: draft.poster_url.trim() || null,
-              }
+              ...lesson,
+              title: draft.title.trim(),
+              description: draft.description.trim(),
+              sort_order: Number(draft.sort_order || 1),
+              is_preview: Boolean(draft.is_preview),
+              video_source: draft.video_source,
+              video_url: draft.video_url.trim() || null,
+              video_embed_url: draft.video_embed_url.trim() || null,
+              video_seconds: Number(draft.video_seconds || 0) || null,
+              attachment_url: draft.attachment_url.trim() || null,
+              poster_url: draft.poster_url.trim() || null,
+            }
             : lesson
         )
       );
@@ -1816,9 +1831,9 @@ export default function AdminPage() {
         prev.map((lesson) =>
           lesson.id === lessonId
             ? {
-                ...lesson,
-                is_visible: nextVisible,
-              }
+              ...lesson,
+              is_visible: nextVisible,
+            }
             : lesson
         )
       );
@@ -2093,11 +2108,11 @@ export default function AdminPage() {
         prev.map((item) =>
           item.id === userId
             ? {
-                ...item,
-                plan: nextPlan,
-                plan_started_at: nextPlan !== "free" ? nowIso : null,
-                plan_expires_at: expiresIso,
-              }
+              ...item,
+              plan: nextPlan,
+              plan_started_at: nextPlan !== "free" ? nowIso : null,
+              plan_expires_at: expiresIso,
+            }
             : item
         )
       );
@@ -2386,15 +2401,15 @@ export default function AdminPage() {
       const payload =
         memberMsgTarget === "plan"
           ? {
-              mode: "plan",
-              plan: memberMsgPlan,
-              probeOnly: true,
-            }
+            mode: "plan",
+            plan: memberMsgPlan,
+            probeOnly: true,
+          }
           : {
-              mode: "selected",
-              userId: selectedMemberId,
-              probeOnly: true,
-            };
+            mode: "selected",
+            userId: selectedMemberId,
+            probeOnly: true,
+          };
 
       const res = await fetch("/api/admin/push", {
         method: "POST",
@@ -2458,19 +2473,19 @@ export default function AdminPage() {
       const payload =
         memberMsgTarget === "plan"
           ? {
-              mode: "plan",
-              plan: memberMsgPlan,
-              title: memberMsgTitle.trim(),
-              body: memberMsgBody.trim(),
-              url: pushUrl.trim(),
-            }
+            mode: "plan",
+            plan: memberMsgPlan,
+            title: memberMsgTitle.trim(),
+            body: memberMsgBody.trim(),
+            url: pushUrl.trim(),
+          }
           : {
-              mode: "selected",
-              title: memberMsgTitle.trim(),
-              body: memberMsgBody.trim(),
-              url: pushUrl.trim(),
-              userId: selectedMemberId,
-            };
+            mode: "selected",
+            title: memberMsgTitle.trim(),
+            body: memberMsgBody.trim(),
+            url: pushUrl.trim(),
+            userId: selectedMemberId,
+          };
 
       const res = await fetch("/api/admin/push", {
         method: "POST",
