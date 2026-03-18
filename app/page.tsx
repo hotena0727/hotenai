@@ -82,6 +82,13 @@ function getPlanProgressColors(plan: PlanCode) {
   }
 }
 
+function getGoalRingColors() {
+  return {
+    main: "#006241",
+    rest: "#d7efe6",
+  };
+}
+
 function normalizeLevelValue(level?: string | null): string {
   const raw = String(level || "").trim().toUpperCase();
   if (["N5", "N4", "N3", "N2", "N1"].includes(raw)) return raw;
@@ -90,20 +97,7 @@ function normalizeLevelValue(level?: string | null): string {
 
 function levelLabel(level?: string | null): string {
   const raw = normalizeLevelValue(level);
-  switch (raw) {
-    case "N5":
-      return "첫걸음";
-    case "N4":
-      return "기초";
-    case "N3":
-      return "실전";
-    case "N2":
-      return "심화";
-    case "N1":
-      return "완성";
-    default:
-      return raw || "-";
-  }
+  return raw || "-";
 }
 
 export default function HomePage() {
@@ -247,10 +241,10 @@ export default function HomePage() {
           setShowCoursesSection(Boolean(pageRow?.show_courses_section));
         }
 
-        const { data: dashboardData, error: dashboardError } =
-          await supabase.rpc("get_home_dashboard_summary", {
-            p_user_id: user.id,
-          });
+        const { data: dashboardData, error: dashboardError } = await supabase.rpc(
+          "get_home_dashboard_summary",
+          { p_user_id: user.id }
+        );
 
         if (dashboardError) {
           console.error(dashboardError);
@@ -321,21 +315,9 @@ export default function HomePage() {
       1
     );
 
-    const totalQuestions = Number(safeDashboard.totalAttempts || 0) * 10;
-    const solvedCorrect = Math.max(
-      totalQuestions - Number(safeDashboard.totalWrong || 0),
-      0
-    );
-    const overallAccuracy =
-      totalQuestions > 0
-        ? Math.round((solvedCorrect / totalQuestions) * 100)
-        : 0;
-
     return {
       totalAttempts: Number(safeDashboard.totalAttempts || 0),
       totalWrong: Number(safeDashboard.totalWrong || 0),
-      totalCorrect: solvedCorrect,
-      overallAccuracy,
       wordCount: Number(safeDashboard.wordCount || 0),
       kanjiCount: Number(safeDashboard.kanjiCount || 0),
       katsuyouCount: Number(safeDashboard.katsuyouCount || 0),
@@ -356,8 +338,7 @@ export default function HomePage() {
         goalSets
       ),
       levelProgress: (safeDashboard.levelProgress || []).map((item) => ({
-        level: item.level,
-        displayLevel: levelLabel(item.level),
+        level: normalizeLevelValue(item.level),
         count: Number(item.count || 0),
         widthPct: Math.round(
           ((Number(item.count || 0) || 0) / maxLevelCount) * 100
@@ -449,6 +430,7 @@ export default function HomePage() {
   const userPlan = profile?.plan || "free";
   const planTheme = getPlanTheme(userPlan);
   const progressColors = getPlanProgressColors(userPlan);
+  const goalRingColors = getGoalRingColors();
 
   const canWord = canAccess(
     userPlan,
@@ -786,12 +768,12 @@ export default function HomePage() {
             <div
               className="flex h-44 w-44 items-center justify-center rounded-full shadow-sm"
               style={{
-                background: `conic-gradient(${progressColors.main} ${
+                background: `conic-gradient(${goalRingColors.main} ${
                   (stats.goalPercent / 100) * 360
-                }deg, ${progressColors.rest} 0deg)`,
+                }deg, ${goalRingColors.rest} 0deg)`,
               }}
             >
-              <div className="flex h-32 w-32 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
+              <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
                 <p className="text-3xl font-bold">{stats.goalPercent}%</p>
                 <p className="mt-1 text-sm text-gray-600">오늘 목표</p>
                 <p className="mt-1 text-xs text-gray-500">{goalSets}세트 기준</p>
@@ -849,7 +831,7 @@ export default function HomePage() {
         <div className="mt-10 rounded-3xl border border-gray-200 bg-gray-50/70 p-6">
           <div className="flex items-center justify-between">
             <p className="text-xl font-bold">📊 레벨 진행</p>
-            <p className="text-sm text-gray-500">최근 학습 기준</p>
+            <p className="text-sm text-gray-500">한자 기준</p>
           </div>
 
           <div className="mt-5 space-y-4">
@@ -858,7 +840,7 @@ export default function HomePage() {
                 key={item.level}
                 className="grid grid-cols-[64px_1fr_32px] items-center gap-3"
               >
-                <p className="font-semibold text-gray-700">{item.displayLevel}</p>
+                <p className="font-semibold text-gray-700">{item.level}</p>
                 <div className="h-3 rounded-full bg-white">
                   <div
                     className="h-3 rounded-full bg-blue-300"
@@ -1056,20 +1038,18 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="min-h-[108px] rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs text-gray-500">평균 정답률</p>
-                <p className="mt-2 text-2xl font-bold">
-                  {stats.overallAccuracy}%
-                </p>
-              </div>
-              <div className="min-h-[108px] rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs text-gray-500">맞힌 문제 수</p>
-                <p className="mt-2 text-2xl font-bold">
-                  {stats.totalCorrect}
-                </p>
-              </div>
-              <div className="min-h-[108px] rounded-2xl border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs text-gray-500">총 오답 수</p>
                 <p className="mt-2 text-2xl font-bold">{stats.totalWrong}</p>
+              </div>
+              <div className="min-h-[108px] rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">단어 + 한자 + 활용</p>
+                <p className="mt-2 text-2xl font-bold">
+                  {stats.wordCount + stats.kanjiCount + stats.katsuyouCount}
+                </p>
+              </div>
+              <div className="min-h-[108px] rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">회화</p>
+                <p className="mt-2 text-2xl font-bold">{stats.talkCount}</p>
               </div>
             </div>
           </div>
