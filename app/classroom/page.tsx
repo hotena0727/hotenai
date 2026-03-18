@@ -497,9 +497,7 @@ export default function ClassroomPage() {
                     </span>
                   </div>
 
-                  <p className="mt-3 text-sm leading-6 text-gray-600">{course.description}</p>
-
-                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-gray-200">
+                  <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-semibold text-gray-500">최근 학습</p>
                     <p className="mt-1 text-sm font-semibold text-gray-900">
                       {course.lastLessonTitle ?? "아직 학습 기록이 없습니다."}
