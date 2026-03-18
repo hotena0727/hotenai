@@ -1238,8 +1238,8 @@ export default function WordPage() {
           </div>
         </div>
 
-        {visibleLevelOptions.length > 0 ? (
-          <div className="mt-5 rounded-2xl border border-gray-300 bg-white">
+        {visibleLevelOptions.length > 1 ? (
+          <div className="mt-8 rounded-2xl border border-gray-300 bg-white">
             <button
               type="button"
               onClick={() => setLevelPanelOpen((prev) => !prev)}
@@ -1248,9 +1248,6 @@ export default function WordPage() {
               <span className="text-lg">{levelPanelOpen ? "⌄" : "›"}</span>
               <div className="min-w-0">
                 <span className="block text-lg font-semibold">레벨 선택</span>
-                <span className="mt-1 block text-sm text-gray-500">
-                  현재 선택: {levelLabel(selectedLevel)}
-                </span>
               </div>
             </button>
 
@@ -1281,6 +1278,38 @@ export default function WordPage() {
           </div>
         ) : null}
 
+        <div className="mt-6">
+          <p className="text-base font-semibold text-gray-700 sm:text-lg">
+            ✅ 품사를 선택하세요
+          </p>
+          <div className="mt-3 grid grid-cols-5 gap-3">
+            {POS_GROUP_OPTIONS.map((item) => {
+              const active = selectedPosGroup === item.value;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setSelectedPosGroup(item.value)}
+                  className={
+                    active
+                      ? "rounded-2xl border border-red-400 bg-red-500 px-3 py-3 text-sm font-semibold text-white sm:px-4 sm:text-lg"
+                      : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-900 sm:px-4 sm:text-lg"
+                  }
+                >
+                  <span
+                    className={
+                      item.value === "adj_i" || item.value === "adj_na"
+                        ? "text-[13px] leading-tight sm:text-base"
+                        : ""
+                    }
+                  >
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {selectedPosGroup === "other" ? (
           <div className="mt-5 rounded-2xl border border-gray-300 bg-white">
