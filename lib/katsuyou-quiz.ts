@@ -87,6 +87,13 @@ function haForms(root: string) {
 function reuForms(root: string) {
   const map: Record<string, { past: string; polite: string; te: string }> = {
     빠르: { past: "빨랐다", polite: "빠릅니다", te: "빨라" },
+    이르: { past: "일렀다", polite: "이릅니다", te: "일러" },
+    다르: { past: "달랐다", polite: "다릅니다", te: "달라" },
+    고르: { past: "골랐다", polite: "고릅니다", te: "골라" },
+    누르: { past: "눌렀다", polite: "누릅니다", te: "눌러" },
+    부르: { past: "불렀다", polite: "부릅니다", te: "불러" },
+    모르: { past: "몰랐다", polite: "모릅니다", te: "몰라" },
+    어리: { past: "어렸다", polite: "어립니다", te: "어려" },
     가늘: { past: "가늘었다", polite: "가늘습니다", te: "가늘어" },
   };
 
@@ -95,6 +102,26 @@ function reuForms(root: string) {
     polite: `${root}습니다`,
     te: `${root}어`,
   };
+}
+
+function normalizeKrFormText(text: string): string {
+  return text
+    .replace(/어리었습니다/g, "어렸습니다")
+    .replace(/어리었다/g, "어렸다")
+    .replace(/이르습니다/g, "이릅니다")
+    .replace(/이르었습니다/g, "일렀습니다")
+    .replace(/빠르었습니다/g, "빨랐습니다")
+    .replace(/빠르었다/g, "빨랐다")
+    .replace(/다르었습니다/g, "달랐습니다")
+    .replace(/다르었다/g, "달랐다")
+    .replace(/고르었습니다/g, "골랐습니다")
+    .replace(/고르었다/g, "골랐다")
+    .replace(/누르었습니다/g, "눌렀습니다")
+    .replace(/누르었다/g, "눌렀다")
+    .replace(/부르었습니다/g, "불렀습니다")
+    .replace(/부르었다/g, "불렀다")
+    .replace(/모르었습니다/g, "몰랐습니다")
+    .replace(/모르었다/g, "몰랐다");
 }
 
 const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
@@ -210,7 +237,20 @@ function buildKrFormsByPattern(
     };
   }
 
-  return forms;
+  return {
+    ...forms,
+    plain_present: normalizeKrFormText(forms.plain_present),
+    polite_present: normalizeKrFormText(forms.polite_present),
+    plain_negative: normalizeKrFormText(forms.plain_negative),
+    polite_negative: normalizeKrFormText(forms.polite_negative),
+    plain_past: normalizeKrFormText(forms.plain_past),
+    polite_past: normalizeKrFormText(forms.polite_past),
+    plain_negative_past: normalizeKrFormText(forms.plain_negative_past),
+    polite_negative_past: normalizeKrFormText(forms.polite_negative_past),
+    adverbial: normalizeKrFormText(forms.adverbial),
+    te_form_a: normalizeKrFormText(forms.te_form_a),
+    te_form_b: normalizeKrFormText(forms.te_form_b),
+  };
 }
 
 /* =========================
