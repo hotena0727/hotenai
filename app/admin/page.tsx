@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Papa from "papaparse";
 import { supabase } from "@/lib/supabase";
 import { fetchAllAttempts, type QuizAttemptRow } from "@/lib/attempts";
 import {
@@ -122,6 +123,31 @@ type CourseEnrollmentRow = {
   is_completed: boolean;
 };
 
+type CourseCsvRow = {
+  title?: string;
+  slug?: string;
+  level?: string;
+  description?: string;
+  status?: string;
+  sort_order?: string | number;
+  thumbnail_url?: string;
+  is_visible?: string | boolean;
+};
+
+type LessonCsvRow = {
+  title?: string;
+  description?: string;
+  sort_order?: string | number;
+  is_preview?: string | boolean;
+  is_visible?: string | boolean;
+  video_source?: string;
+  video_url?: string;
+  video_embed_url?: string;
+  video_seconds?: string | number;
+  attachment_url?: string;
+  poster_url?: string;
+};
+
 const PLAN_DURATION_OPTIONS = [
   { value: 30, label: "30일" },
   { value: 90, label: "90일" },
@@ -212,6 +238,91 @@ function getMenuStatusLabel(show: boolean, minPlan: PlanCode) {
 function canUserSeeMenu(userPlan: PlanCode, show: boolean, minPlan: PlanCode) {
   if (!show) return false;
   return hasPlan(userPlan, minPlan);
+}
+
+function readCsvFile<T = Record<string, unknown>>(file: File): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<T>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.errors?.length) {
+          reject(new Error(results.errors[0].message));
+          return;
+        }
+        resolve(results.data || []);
+      },
+      error: (error) => reject(error),
+    });
+  });
+}
+
+function parseBooleanLike(value: unknown, fallback = false) {
+  if (typeof value === "boolean") return value;
+
+  const raw = String(value ?? "").trim().toLowerCase();
+
+  if (["true", "1", "y", "yes", "예", "on"].includes(raw)) return true;
+  if (["false", "0", "n", "no", "아니오", "off"].includes(raw)) return false;
+
+  return fallback;
+}
+
+function parseNumberLike(value: unknown, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function normalizeVideoSource(value: unknown): "youtube" | "vimeo" | "server" {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "vimeo") return "vimeo";
+  if (raw === "server") return "server";
+  return "youtube";
+}
+
+function slugifyKoreanSafe(value: unknown) {
+  const raw = String(value ?? "").trim().toLowerCase();
+
+  return raw
+    .replace(/[^a-z0-9가-힣\s-_]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function makeUniqueSlug(base: string, used: Set<string>) {
+  const seed = slugifyKoreanSafe(base) || `course-${Date.now()}`;
+  let next = seed;
+  let i = 2;
+
+  while (used.has(next)) {
+    next = `${seed}-${i}`;
+    i += 1;
+  }
+
+  used.add(next);
+  return next;
+}
+
+function normalizeSequentialSortOrder<T extends { sort_order?: number | null }>(
+  rows: T[]
+) {
+  return rows.map((row, index) => ({
+    ...row,
+    sort_order: index + 1,
+  }));
+}
+
+function downloadCsvFile(filename: string, csvText: string) {
+  const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
 }
 
 function TabButton({
@@ -425,6 +536,37 @@ export default function AdminPage() {
   );
   const [assigningCourseId, setAssigningCourseId] = useState("");
   const [removingEnrollmentId, setRemovingEnrollmentId] = useState("");
+
+  const [courseCsvBusy, setCourseCsvBusy] = useState(false);
+  const [courseCsvFile, setCourseCsvFile] = useState<File | null>(null);
+  const [courseCsvPreview, setCourseCsvPreview] = useState<{
+    totalRows: number;
+    validRows: number;
+    invalidRows: number;
+    rows: Array<{
+      title: string;
+      slug: string;
+      level: string;
+      status: "draft" | "open" | "coming";
+      sort_order: number;
+    }>;
+    invalidDetails: string[];
+  } | null>(null);
+
+  const [lessonCsvBusy, setLessonCsvBusy] = useState(false);
+  const [lessonCsvFile, setLessonCsvFile] = useState<File | null>(null);
+  const [lessonCsvPreview, setLessonCsvPreview] = useState<{
+    totalRows: number;
+    validRows: number;
+    invalidRows: number;
+    rows: Array<{
+      title: string;
+      sort_order: number;
+      video_source: "youtube" | "vimeo" | "server";
+      is_preview: boolean;
+    }>;
+    invalidDetails: string[];
+  } | null>(null);
 
   useEffect(() => {
     const loadAdmin = async () => {
@@ -701,8 +843,8 @@ export default function AdminPage() {
       const queryOk = !q
         ? true
         : String(item.user_email || "").toLowerCase().includes(q) ||
-        String(item.level || "").toLowerCase().includes(q) ||
-        String(item.pos_mode || "").toLowerCase().includes(q);
+          String(item.level || "").toLowerCase().includes(q) ||
+          String(item.pos_mode || "").toLowerCase().includes(q);
 
       const wrongOk = !logOnlyWrong ? true : Number(item.wrong_count || 0) > 0;
       return typeOk && queryOk && wrongOk;
@@ -851,6 +993,363 @@ export default function AdminPage() {
     if (error) throw error;
 
     setUserEnrollments((data || []) as CourseEnrollmentRow[]);
+  };
+
+  const handleDownloadCourseCsvSample = () => {
+    const header =
+      "title,slug,level,description,status,sort_order,thumbnail_url,is_visible";
+    const rows = [
+      '일본어 입문 코스,starter-japanese,입문,처음 시작하는 학습자를 위한 코스,open,1,https://example.com/course1.jpg,true',
+      '패턴 회화 코스,pattern-speaking,N3~N2,자주 쓰는 패턴 중심 회화,coming,2,https://example.com/course2.jpg,true',
+    ];
+
+    downloadCsvFile("courses_sample.csv", [header, ...rows].join("\n"));
+  };
+
+  const handleDownloadLessonCsvSample = () => {
+    const header =
+      "title,description,sort_order,is_preview,is_visible,video_source,video_url,video_embed_url,video_seconds,attachment_url,poster_url";
+    const rows = [
+      '1강 인사 표현,기본 인사와 자기소개,1,true,true,youtube,https://youtube.com/watch?v=aaa,https://www.youtube.com/embed/aaa,600,https://example.com/lesson1.pdf,https://example.com/poster1.jpg',
+      '2강 기본 회화,자주 쓰는 회화 패턴,2,false,true,youtube,https://youtube.com/watch?v=bbb,https://www.youtube.com/embed/bbb,720,,https://example.com/poster2.jpg',
+    ];
+
+    downloadCsvFile("lessons_sample.csv", [header, ...rows].join("\n"));
+  };
+
+  const handlePreviewCoursesCsv = async (file: File) => {
+    try {
+      setCourseCsvBusy(true);
+      setClassroomMessage("");
+      setCourseCsvFile(file);
+      setCourseCsvPreview(null);
+
+      const rows = await readCsvFile<CourseCsvRow>(file);
+
+      const existingSlugSet = new Set(
+        courses.map((course) => String(course.slug || "").trim().toLowerCase())
+      );
+
+      const invalidDetails: string[] = [];
+
+      const cleaned = rows.map((row, index) => {
+        const title = String(row.title ?? "").trim();
+        const rawSlug = String(row.slug ?? "").trim();
+        const level = String(row.level ?? "").trim() || "입문";
+        const description = String(row.description ?? "").trim();
+
+        const rawStatus = String(row.status ?? "").trim().toLowerCase();
+        const status =
+          rawStatus === "open" || rawStatus === "coming" || rawStatus === "draft"
+            ? rawStatus
+            : "draft";
+
+        if (!title) {
+          invalidDetails.push(`${index + 1}행: title 없음`);
+          return null;
+        }
+
+        const slug = makeUniqueSlug(rawSlug || title, existingSlugSet);
+
+        return {
+          title,
+          slug,
+          level,
+          description,
+          status: status as "draft" | "open" | "coming",
+          sort_order: parseNumberLike(row.sort_order, index + 1),
+          thumbnail_url: String(row.thumbnail_url ?? "").trim() || null,
+          is_visible: parseBooleanLike(row.is_visible, true),
+        };
+      });
+
+      const valid = cleaned.filter(Boolean) as Array<{
+        title: string;
+        slug: string;
+        level: string;
+        description: string;
+        status: "draft" | "open" | "coming";
+        sort_order: number;
+        thumbnail_url: string | null;
+        is_visible: boolean;
+      }>;
+
+      const normalized = normalizeSequentialSortOrder(
+        valid.sort((a, b) => a.sort_order - b.sort_order)
+      );
+
+      setCourseCsvPreview({
+        totalRows: rows.length,
+        validRows: normalized.length,
+        invalidRows: rows.length - normalized.length,
+        rows: normalized.slice(0, 10).map((row) => ({
+          title: row.title,
+          slug: row.slug,
+          level: row.level,
+          status: row.status,
+          sort_order: row.sort_order,
+        })),
+        invalidDetails: invalidDetails.slice(0, 10),
+      });
+
+      setClassroomMessage(
+        `강의 CSV 미리보기 완료 · 전체 ${rows.length}행 / 유효 ${normalized.length}행 / 제외 ${rows.length - normalized.length}행`
+      );
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error
+          ? error.message
+          : "강의 CSV 분석 중 오류가 발생했습니다."
+      );
+    } finally {
+      setCourseCsvBusy(false);
+    }
+  };
+
+  const handleImportCoursesCsv = async () => {
+    if (!courseCsvFile) {
+      setClassroomMessage("강의 CSV 파일을 먼저 선택해 주세요.");
+      return;
+    }
+
+    try {
+      setCourseCsvBusy(true);
+      setClassroomMessage("");
+
+      const rows = await readCsvFile<CourseCsvRow>(courseCsvFile);
+
+      const existingSlugSet = new Set(
+        courses.map((course) => String(course.slug || "").trim().toLowerCase())
+      );
+
+      const cleaned = rows
+        .map((row, index) => {
+          const title = String(row.title ?? "").trim();
+          if (!title) return null;
+
+          const rawSlug = String(row.slug ?? "").trim();
+          const rawStatus = String(row.status ?? "").trim().toLowerCase();
+
+          const status =
+            rawStatus === "open" ||
+            rawStatus === "coming" ||
+            rawStatus === "draft"
+              ? rawStatus
+              : "draft";
+
+          return {
+            title,
+            slug: makeUniqueSlug(rawSlug || title, existingSlugSet),
+            level: String(row.level ?? "").trim() || "입문",
+            description: String(row.description ?? "").trim(),
+            status: status as "draft" | "open" | "coming",
+            sort_order: parseNumberLike(row.sort_order, index + 1),
+            thumbnail_url: String(row.thumbnail_url ?? "").trim() || null,
+            is_visible: parseBooleanLike(row.is_visible, true),
+          };
+        })
+        .filter(Boolean) as Array<{
+        title: string;
+        slug: string;
+        level: string;
+        description: string;
+        status: "draft" | "open" | "coming";
+        sort_order: number;
+        thumbnail_url: string | null;
+        is_visible: boolean;
+      }>;
+
+      const normalized = normalizeSequentialSortOrder(
+        cleaned.sort((a, b) => a.sort_order - b.sort_order)
+      );
+
+      if (normalized.length === 0) {
+        setClassroomMessage("업로드 가능한 강의 데이터가 없습니다.");
+        return;
+      }
+
+      const { error } = await supabase.from("courses").insert(normalized);
+      if (error) throw error;
+
+      await loadCourses();
+      setCourseCsvFile(null);
+      setCourseCsvPreview(null);
+      setClassroomMessage(`강의 CSV 업로드 완료 · ${normalized.length}건 추가`);
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error
+          ? error.message
+          : "강의 CSV 업로드 중 오류가 발생했습니다."
+      );
+    } finally {
+      setCourseCsvBusy(false);
+    }
+  };
+
+  const handlePreviewLessonsCsv = async (file: File) => {
+    if (!selectedCourseId) {
+      setClassroomMessage("먼저 강의를 선택해 주세요.");
+      return;
+    }
+
+    try {
+      setLessonCsvBusy(true);
+      setClassroomMessage("");
+      setLessonCsvFile(file);
+      setLessonCsvPreview(null);
+
+      const rows = await readCsvFile<LessonCsvRow>(file);
+      const invalidDetails: string[] = [];
+
+      const cleaned = rows.map((row, index) => {
+        const title = String(row.title ?? "").trim();
+
+        if (!title) {
+          invalidDetails.push(`${index + 1}행: title 없음`);
+          return null;
+        }
+
+        return {
+          title,
+          description: String(row.description ?? "").trim(),
+          sort_order: parseNumberLike(row.sort_order, index + 1),
+          is_preview: parseBooleanLike(row.is_preview, false),
+          is_visible: parseBooleanLike(row.is_visible, true),
+          video_source: normalizeVideoSource(row.video_source),
+          video_url: String(row.video_url ?? "").trim() || null,
+          video_embed_url: String(row.video_embed_url ?? "").trim() || null,
+          video_seconds: parseNumberLike(row.video_seconds, 0) || null,
+          attachment_url: String(row.attachment_url ?? "").trim() || null,
+          poster_url: String(row.poster_url ?? "").trim() || null,
+        };
+      });
+
+      const valid = cleaned.filter(Boolean) as Array<{
+        title: string;
+        description: string;
+        sort_order: number;
+        is_preview: boolean;
+        is_visible: boolean;
+        video_source: "youtube" | "vimeo" | "server";
+        video_url: string | null;
+        video_embed_url: string | null;
+        video_seconds: number | null;
+        attachment_url: string | null;
+        poster_url: string | null;
+      }>;
+
+      const normalized = normalizeSequentialSortOrder(
+        valid.sort((a, b) => a.sort_order - b.sort_order)
+      );
+
+      setLessonCsvPreview({
+        totalRows: rows.length,
+        validRows: normalized.length,
+        invalidRows: rows.length - normalized.length,
+        rows: normalized.slice(0, 10).map((row) => ({
+          title: row.title,
+          sort_order: row.sort_order,
+          video_source: row.video_source,
+          is_preview: row.is_preview,
+        })),
+        invalidDetails: invalidDetails.slice(0, 10),
+      });
+
+      setClassroomMessage(
+        `레슨 CSV 미리보기 완료 · 전체 ${rows.length}행 / 유효 ${normalized.length}행 / 제외 ${rows.length - normalized.length}행`
+      );
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error
+          ? error.message
+          : "레슨 CSV 분석 중 오류가 발생했습니다."
+      );
+    } finally {
+      setLessonCsvBusy(false);
+    }
+  };
+
+  const handleImportLessonsCsv = async () => {
+    if (!lessonCsvFile) {
+      setClassroomMessage("레슨 CSV 파일을 먼저 선택해 주세요.");
+      return;
+    }
+
+    if (!selectedCourseId) {
+      setClassroomMessage("먼저 강의를 선택해 주세요.");
+      return;
+    }
+
+    try {
+      setLessonCsvBusy(true);
+      setClassroomMessage("");
+
+      const rows = await readCsvFile<LessonCsvRow>(lessonCsvFile);
+
+      const cleaned = rows
+        .map((row, index) => {
+          const title = String(row.title ?? "").trim();
+          if (!title) return null;
+
+          return {
+            course_id: selectedCourseId,
+            title,
+            description: String(row.description ?? "").trim(),
+            sort_order: parseNumberLike(row.sort_order, index + 1),
+            is_preview: parseBooleanLike(row.is_preview, false),
+            is_visible: parseBooleanLike(row.is_visible, true),
+            video_source: normalizeVideoSource(row.video_source),
+            video_url: String(row.video_url ?? "").trim() || null,
+            video_embed_url: String(row.video_embed_url ?? "").trim() || null,
+            video_seconds: parseNumberLike(row.video_seconds, 0) || null,
+            attachment_url: String(row.attachment_url ?? "").trim() || null,
+            poster_url: String(row.poster_url ?? "").trim() || null,
+          };
+        })
+        .filter(Boolean) as Array<{
+        course_id: string;
+        title: string;
+        description: string;
+        sort_order: number;
+        is_preview: boolean;
+        is_visible: boolean;
+        video_source: "youtube" | "vimeo" | "server";
+        video_url: string | null;
+        video_embed_url: string | null;
+        video_seconds: number | null;
+        attachment_url: string | null;
+        poster_url: string | null;
+      }>;
+
+      const normalized = normalizeSequentialSortOrder(
+        cleaned.sort((a, b) => a.sort_order - b.sort_order)
+      );
+
+      if (normalized.length === 0) {
+        setClassroomMessage("업로드 가능한 레슨 데이터가 없습니다.");
+        return;
+      }
+
+      const { error } = await supabase.from("course_lessons").insert(normalized);
+      if (error) throw error;
+
+      await loadLessons(selectedCourseId);
+      setLessonCsvFile(null);
+      setLessonCsvPreview(null);
+      setClassroomMessage(`레슨 CSV 업로드 완료 · ${normalized.length}건 추가`);
+    } catch (error) {
+      console.error(error);
+      setClassroomMessage(
+        error instanceof Error
+          ? error.message
+          : "레슨 CSV 업로드 중 오류가 발생했습니다."
+      );
+    } finally {
+      setLessonCsvBusy(false);
+    }
   };
 
   const handleCreateCourse = async () => {
@@ -1107,14 +1606,14 @@ export default function AdminPage() {
         prev.map((course) =>
           course.id === courseId
             ? {
-              ...course,
-              title: draft.title.trim(),
-              slug: draft.slug.trim(),
-              level: draft.level.trim() || "입문",
-              description: draft.description.trim(),
-              status: draft.status,
-              thumbnail_url: draft.thumbnail_url.trim() || null,
-            }
+                ...course,
+                title: draft.title.trim(),
+                slug: draft.slug.trim(),
+                level: draft.level.trim() || "입문",
+                description: draft.description.trim(),
+                status: draft.status,
+                thumbnail_url: draft.thumbnail_url.trim() || null,
+              }
             : course
         )
       );
@@ -1261,18 +1760,18 @@ export default function AdminPage() {
         prev.map((lesson) =>
           lesson.id === lessonId
             ? {
-              ...lesson,
-              title: draft.title.trim(),
-              description: draft.description.trim(),
-              sort_order: Number(draft.sort_order || 1),
-              is_preview: Boolean(draft.is_preview),
-              video_source: draft.video_source,
-              video_url: draft.video_url.trim() || null,
-              video_embed_url: draft.video_embed_url.trim() || null,
-              video_seconds: Number(draft.video_seconds || 0) || null,
-              attachment_url: draft.attachment_url.trim() || null,
-              poster_url: draft.poster_url.trim() || null,
-            }
+                ...lesson,
+                title: draft.title.trim(),
+                description: draft.description.trim(),
+                sort_order: Number(draft.sort_order || 1),
+                is_preview: Boolean(draft.is_preview),
+                video_source: draft.video_source,
+                video_url: draft.video_url.trim() || null,
+                video_embed_url: draft.video_embed_url.trim() || null,
+                video_seconds: Number(draft.video_seconds || 0) || null,
+                attachment_url: draft.attachment_url.trim() || null,
+                poster_url: draft.poster_url.trim() || null,
+              }
             : lesson
         )
       );
@@ -1317,9 +1816,9 @@ export default function AdminPage() {
         prev.map((lesson) =>
           lesson.id === lessonId
             ? {
-              ...lesson,
-              is_visible: nextVisible,
-            }
+                ...lesson,
+                is_visible: nextVisible,
+              }
             : lesson
         )
       );
@@ -1594,11 +2093,11 @@ export default function AdminPage() {
         prev.map((item) =>
           item.id === userId
             ? {
-              ...item,
-              plan: nextPlan,
-              plan_started_at: nextPlan !== "free" ? nowIso : null,
-              plan_expires_at: expiresIso,
-            }
+                ...item,
+                plan: nextPlan,
+                plan_started_at: nextPlan !== "free" ? nowIso : null,
+                plan_expires_at: expiresIso,
+              }
             : item
         )
       );
@@ -1887,15 +2386,15 @@ export default function AdminPage() {
       const payload =
         memberMsgTarget === "plan"
           ? {
-            mode: "plan",
-            plan: memberMsgPlan,
-            probeOnly: true,
-          }
+              mode: "plan",
+              plan: memberMsgPlan,
+              probeOnly: true,
+            }
           : {
-            mode: "selected",
-            userId: selectedMemberId,
-            probeOnly: true,
-          };
+              mode: "selected",
+              userId: selectedMemberId,
+              probeOnly: true,
+            };
 
       const res = await fetch("/api/admin/push", {
         method: "POST",
@@ -1959,19 +2458,19 @@ export default function AdminPage() {
       const payload =
         memberMsgTarget === "plan"
           ? {
-            mode: "plan",
-            plan: memberMsgPlan,
-            title: memberMsgTitle.trim(),
-            body: memberMsgBody.trim(),
-            url: pushUrl.trim(),
-          }
+              mode: "plan",
+              plan: memberMsgPlan,
+              title: memberMsgTitle.trim(),
+              body: memberMsgBody.trim(),
+              url: pushUrl.trim(),
+            }
           : {
-            mode: "selected",
-            title: memberMsgTitle.trim(),
-            body: memberMsgBody.trim(),
-            url: pushUrl.trim(),
-            userId: selectedMemberId,
-          };
+              mode: "selected",
+              title: memberMsgTitle.trim(),
+              body: memberMsgBody.trim(),
+              url: pushUrl.trim(),
+              userId: selectedMemberId,
+            };
 
       const res = await fetch("/api/admin/push", {
         method: "POST",
@@ -3619,6 +4118,104 @@ export default function AdminPage() {
                     {classroomLoading ? "처리 중..." : "강의 추가"}
                   </button>
                 </div>
+
+                <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">CSV로 강의 한꺼번에 추가</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        title, slug, level, description, status, sort_order, thumbnail_url, is_visible
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadCourseCsvSample}
+                      className="rounded-2xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-800"
+                    >
+                      샘플 다운로드
+                    </button>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="inline-flex cursor-pointer rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800">
+                      CSV 선택
+                      <input
+                        type="file"
+                        accept=".csv,text/csv"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          await handlePreviewCoursesCsv(file);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {courseCsvFile ? (
+                    <p className="mt-3 text-sm text-gray-600">선택 파일: {courseCsvFile.name}</p>
+                  ) : null}
+
+                  {courseCsvPreview ? (
+                    <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
+                      <p className="text-sm font-semibold text-gray-900">
+                        미리보기 · 전체 {courseCsvPreview.totalRows}행 / 유효 {courseCsvPreview.validRows}행 / 제외 {courseCsvPreview.invalidRows}행
+                      </p>
+
+                      <div className="mt-3 space-y-2">
+                        {courseCsvPreview.rows.map((row, idx) => (
+                          <div
+                            key={`${row.slug}-${idx}`}
+                            className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-700"
+                          >
+                            {row.sort_order}. {row.title} / {row.slug} / {row.level} / {row.status}
+                          </div>
+                        ))}
+                      </div>
+
+                      {courseCsvPreview.invalidDetails.length > 0 ? (
+                        <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3">
+                          <p className="text-sm font-semibold text-red-700">제외된 행</p>
+                          <div className="mt-2 space-y-1">
+                            {courseCsvPreview.invalidDetails.map((item, idx) => (
+                              <p key={`${item}-${idx}`} className="text-xs text-red-600">
+                                {item}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleImportCoursesCsv}
+                          disabled={courseCsvBusy}
+                          className={
+                            courseCsvBusy
+                              ? "rounded-2xl border border-gray-200 bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-400"
+                              : "rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
+                          }
+                        >
+                          {courseCsvBusy ? "업로드 중..." : "미리보기 확인 후 강의 반영"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCourseCsvFile(null);
+                            setCourseCsvPreview(null);
+                          }}
+                          className="rounded-2xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700"
+                        >
+                          초기화
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -3964,6 +4561,104 @@ export default function AdminPage() {
               >
                 {classroomLoading ? "처리 중..." : "레슨 추가"}
               </button>
+
+              <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">CSV로 레슨 한꺼번에 추가</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      title, description, sort_order, is_preview, is_visible, video_source, video_url, video_embed_url, video_seconds, attachment_url, poster_url
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadLessonCsvSample}
+                    className="rounded-2xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-800"
+                  >
+                    샘플 다운로드
+                  </button>
+                </div>
+
+                <div className="mt-4">
+                  <label className="inline-flex cursor-pointer rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800">
+                    CSV 선택
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        await handlePreviewLessonsCsv(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {lessonCsvFile ? (
+                  <p className="mt-3 text-sm text-gray-600">선택 파일: {lessonCsvFile.name}</p>
+                ) : null}
+
+                {lessonCsvPreview ? (
+                  <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm font-semibold text-gray-900">
+                      미리보기 · 전체 {lessonCsvPreview.totalRows}행 / 유효 {lessonCsvPreview.validRows}행 / 제외 {lessonCsvPreview.invalidRows}행
+                    </p>
+
+                    <div className="mt-3 space-y-2">
+                      {lessonCsvPreview.rows.map((row, idx) => (
+                        <div
+                          key={`${row.title}-${idx}`}
+                          className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-700"
+                        >
+                          {row.sort_order}. {row.title} / {row.video_source} / {row.is_preview ? "미리보기" : "일반"}
+                        </div>
+                      ))}
+                    </div>
+
+                    {lessonCsvPreview.invalidDetails.length > 0 ? (
+                      <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3">
+                        <p className="text-sm font-semibold text-red-700">제외된 행</p>
+                        <div className="mt-2 space-y-1">
+                          {lessonCsvPreview.invalidDetails.map((item, idx) => (
+                            <p key={`${item}-${idx}`} className="text-xs text-red-600">
+                              {item}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={handleImportLessonsCsv}
+                        disabled={lessonCsvBusy || !selectedCourseId}
+                        className={
+                          lessonCsvBusy || !selectedCourseId
+                            ? "rounded-2xl border border-gray-200 bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-400"
+                            : "rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white"
+                        }
+                      >
+                        {lessonCsvBusy ? "업로드 중..." : "미리보기 확인 후 레슨 반영"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLessonCsvFile(null);
+                          setLessonCsvPreview(null);
+                        }}
+                        className="rounded-2xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700"
+                      >
+                        초기화
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
