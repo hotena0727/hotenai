@@ -247,10 +247,10 @@ export default function HomePage() {
           setShowCoursesSection(Boolean(pageRow?.show_courses_section));
         }
 
-        const { data: dashboardData, error: dashboardError } = await supabase.rpc(
-          "get_home_dashboard_summary",
-          { p_user_id: user.id }
-        );
+        const { data: dashboardData, error: dashboardError } =
+          await supabase.rpc("get_home_dashboard_summary", {
+            p_user_id: user.id,
+          });
 
         if (dashboardError) {
           console.error(dashboardError);
@@ -321,9 +321,21 @@ export default function HomePage() {
       1
     );
 
+    const totalQuestions = Number(safeDashboard.totalAttempts || 0) * 10;
+    const solvedCorrect = Math.max(
+      totalQuestions - Number(safeDashboard.totalWrong || 0),
+      0
+    );
+    const overallAccuracy =
+      totalQuestions > 0
+        ? Math.round((solvedCorrect / totalQuestions) * 100)
+        : 0;
+
     return {
       totalAttempts: Number(safeDashboard.totalAttempts || 0),
       totalWrong: Number(safeDashboard.totalWrong || 0),
+      totalCorrect: solvedCorrect,
+      overallAccuracy,
       wordCount: Number(safeDashboard.wordCount || 0),
       kanjiCount: Number(safeDashboard.kanjiCount || 0),
       katsuyouCount: Number(safeDashboard.katsuyouCount || 0),
@@ -779,7 +791,7 @@ export default function HomePage() {
                 }deg, ${progressColors.rest} 0deg)`,
               }}
             >
-              <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
+              <div className="flex h-32 w-32 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
                 <p className="text-3xl font-bold">{stats.goalPercent}%</p>
                 <p className="mt-1 text-sm text-gray-600">오늘 목표</p>
                 <p className="mt-1 text-xs text-gray-500">{goalSets}세트 기준</p>
@@ -877,7 +889,7 @@ export default function HomePage() {
 
               <div className="mt-auto flex items-end justify-between gap-3 pt-5">
                 <div>
-                  <p className="text-sm text-gray-500">평균 점수</p>
+                  <p className="text-sm text-gray-500">평균 정답률</p>
                   <p className="mt-1 text-2xl font-bold">{stats.wordAvg}%</p>
                 </div>
                 <a
@@ -907,7 +919,7 @@ export default function HomePage() {
 
               <div className="mt-auto flex items-end justify-between gap-3 pt-5">
                 <div>
-                  <p className="text-sm text-gray-500">평균 점수</p>
+                  <p className="text-sm text-gray-500">평균 정답률</p>
                   <p className="mt-1 text-2xl font-bold">{stats.kanjiAvg}%</p>
                 </div>
                 <a
@@ -937,7 +949,7 @@ export default function HomePage() {
 
               <div className="mt-auto flex items-end justify-between gap-3 pt-5">
                 <div>
-                  <p className="text-sm text-gray-500">평균 점수</p>
+                  <p className="text-sm text-gray-500">평균 정답률</p>
                   <p className="mt-1 text-2xl font-bold">
                     {stats.katsuyouAvg}%
                   </p>
@@ -969,7 +981,7 @@ export default function HomePage() {
 
               <div className="mt-auto flex items-end justify-between gap-3 pt-5">
                 <div>
-                  <p className="text-sm text-gray-500">평균 점수</p>
+                  <p className="text-sm text-gray-500">평균 정답률</p>
                   <p className="mt-1 text-2xl font-bold">{stats.talkAvg}%</p>
                 </div>
                 <a
@@ -1044,18 +1056,20 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="min-h-[108px] rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs text-gray-500">총 오답 수</p>
-                <p className="mt-2 text-2xl font-bold">{stats.totalWrong}</p>
-              </div>
-              <div className="min-h-[108px] rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs text-gray-500">단어 + 한자 + 활용</p>
+                <p className="text-xs text-gray-500">평균 정답률</p>
                 <p className="mt-2 text-2xl font-bold">
-                  {stats.wordCount + stats.kanjiCount + stats.katsuyouCount}
+                  {stats.overallAccuracy}%
                 </p>
               </div>
               <div className="min-h-[108px] rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs text-gray-500">회화</p>
-                <p className="mt-2 text-2xl font-bold">{stats.talkCount}</p>
+                <p className="text-xs text-gray-500">맞힌 문제 수</p>
+                <p className="mt-2 text-2xl font-bold">
+                  {stats.totalCorrect}
+                </p>
+              </div>
+              <div className="min-h-[108px] rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">총 오답 수</p>
+                <p className="mt-2 text-2xl font-bold">{stats.totalWrong}</p>
               </div>
             </div>
           </div>
