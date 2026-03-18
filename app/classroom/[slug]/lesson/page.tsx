@@ -80,50 +80,6 @@ function getEmbedUrl(lesson: LessonRow | null) {
   return lesson.video_embed_url;
 }
 
-function getVideoBadge(source?: string | null) {
-  if (source === "youtube") return "YouTube";
-  if (source === "vimeo") return "Vimeo";
-  if (source === "server") return "서버 영상";
-  return "영상 준비 중";
-}
-
-function LessonPoster({
-  src,
-  title,
-  compact = false,
-}: {
-  src?: string | null;
-  title: string;
-  compact?: boolean;
-}) {
-  if (src) {
-    return (
-      <div className="overflow-hidden rounded-[20px] border border-gray-200 bg-white">
-        <img
-          src={src}
-          alt={title}
-          className={`w-full object-cover ${compact ? "h-20" : "h-[220px] sm:h-[280px]"}`}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`flex items-center justify-center rounded-[20px] border border-dashed border-gray-300 bg-white text-gray-400 ${
-        compact ? "h-20" : "h-[220px] sm:h-[280px]"
-      }`}
-    >
-      <div className="text-center">
-        <p className={compact ? "text-xl" : "text-4xl"}>🎬</p>
-        <p className={`mt-2 font-semibold ${compact ? "text-[11px]" : "text-sm"}`}>
-          포스터 준비 중
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function LessonVideoPage() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
@@ -407,10 +363,10 @@ export default function LessonVideoPage() {
                 <h2 className="mt-1 text-xl font-bold text-gray-900">{course.title}</h2>
               </div>
               <Link
-                href={`/classroom/${course.slug}`}
+                href="/classroom"
                 className="rounded-full border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-800"
               >
-                상세로
+                나의 강의실
               </Link>
             </div>
 
@@ -456,41 +412,35 @@ export default function LessonVideoPage() {
                         : "border-gray-200 bg-white hover:border-gray-300"
                     } ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="w-20 shrink-0">
-                        <LessonPoster src={lesson.poster_url} title={lesson.title} compact />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-[11px] font-semibold text-gray-500">
-                              Lesson {index + 1}
-                            </p>
-                            <p className="mt-1 truncate text-sm font-bold text-gray-900">
-                              {lesson.title}
-                            </p>
-                            <p className="mt-1 text-xs text-gray-500">
-                              {formatSeconds(lesson.video_seconds)}
-                            </p>
-                          </div>
-
-                          <span
-                            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                              lesson.state === "done"
-                                ? "bg-green-100 text-green-700"
-                                : lesson.state === "doing"
-                                ? "bg-black text-white"
-                                : "bg-gray-100 text-gray-500"
-                            }`}
-                          >
-                            {lesson.state === "done"
-                              ? "완료"
-                              : lesson.state === "doing"
-                              ? "학습 가능"
-                              : "잠금"}
-                          </span>
+                    <div className="min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold text-gray-500">
+                            Lesson {index + 1}
+                          </p>
+                          <p className="mt-1 truncate text-sm font-bold text-gray-900">
+                            {lesson.title}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {formatSeconds(lesson.video_seconds)}
+                          </p>
                         </div>
+
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                            lesson.state === "done"
+                              ? "bg-green-100 text-green-700"
+                              : lesson.state === "doing"
+                              ? "bg-black text-white"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {lesson.state === "done"
+                            ? "완료"
+                            : lesson.state === "doing"
+                            ? "학습 가능"
+                            : "잠금"}
+                        </span>
                       </div>
                     </div>
                   </button>
@@ -507,9 +457,6 @@ export default function LessonVideoPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
                         {course.level}
-                      </span>
-                      <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600">
-                        {getVideoBadge(selectedLesson.video_source)}
                       </span>
                       {selectedLesson.is_preview ? (
                         <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
@@ -597,13 +544,7 @@ export default function LessonVideoPage() {
                   )}
                 </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
-                  <div className="rounded-2xl bg-gray-50 p-4">
-                    <p className="text-xs font-semibold text-gray-500">영상 소스</p>
-                    <p className="mt-1 text-sm font-bold text-gray-900">
-                      {getVideoBadge(selectedLesson.video_source)}
-                    </p>
-                  </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
                   <div className="rounded-2xl bg-gray-50 p-4">
                     <p className="text-xs font-semibold text-gray-500">영상 길이</p>
                     <p className="mt-1 text-sm font-bold text-gray-900">
