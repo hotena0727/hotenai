@@ -36,6 +36,38 @@ function getIAdjStem(baseJp: string): string {
  * い형용사 한국어 생성 보조
  * ========================= */
 
+function getLastHangulVowelIndex(text: string): number | null {
+  const last = text[text.length - 1];
+  if (!last) return null;
+
+  const code = last.charCodeAt(0);
+  const HANGUL_BASE = 0xac00;
+  const HANGUL_END = 0xd7a3;
+
+  if (code < HANGUL_BASE || code > HANGUL_END) return null;
+
+  const syllableIndex = code - HANGUL_BASE;
+  const jung = Math.floor((syllableIndex % 588) / 28);
+  return jung;
+}
+
+function usesAhSeries(root: string): boolean {
+  const jung = getLastHangulVowelIndex(root);
+  return jung === 0 || jung === 2 || jung === 8; // ㅏ, ㅑ, ㅗ
+}
+
+function buildItPatternForms(root: string) {
+  const ah = usesAhSeries(root);
+  const base = root.endsWith("시") ? root.slice(0, -1) : root;
+
+  return {
+    polite: root.endsWith("시") ? `${base}십니다` : `${root}습니다`,
+    past: root.endsWith("시") ? `${base}셨다` : `${root}${ah ? "았다" : "었다"}`,
+    politePast: root.endsWith("시") ? `${base}셨습니다` : `${root}${ah ? "았습니다" : "었습니다"}`,
+    te: root.endsWith("시") ? `${base}셔서` : `${root}${ah ? "아서" : "어서"}`,
+  };
+}
+
 function euForms(root: string) {
   const map: Record<string, { past: string; polite: string; te: string }> = {
     슬프: { past: "슬펐다", polite: "슬픕니다", te: "슬퍼" },
@@ -121,7 +153,12 @@ function normalizeKrFormText(text: string): string {
     .replace(/부르었습니다/g, "불렀습니다")
     .replace(/부르었다/g, "불렀다")
     .replace(/모르었습니다/g, "몰랐습니다")
-    .replace(/모르었다/g, "몰랐다");
+    .replace(/모르었다/g, "몰랐다")
+    .replace(/눈부시습니다/g, "눈부십니다")
+    .replace(/달었습니다/g, "달았습니다")
+    .replace(/달었다/g, "달았다")
+    .replace(/짧었습니다/g, "짧았습니다")
+    .replace(/짧었다/g, "짧았다");
 }
 
 const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
@@ -160,6 +197,25 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     te_form_a: "아프고",
     te_form_b: "아파서",
   },
+  눈부시: {
+    polite_present: "눈부십니다",
+    plain_past: "눈부셨다",
+    polite_past: "눈부셨습니다",
+    te_form_a: "눈부시고",
+    te_form_b: "눈부셔서",
+  },
+  달: {
+    plain_past: "달았다",
+    polite_past: "달았습니다",
+    te_form_a: "달고",
+    te_form_b: "달아서",
+  },
+  짧: {
+    plain_past: "짧았다",
+    polite_past: "짧았습니다",
+    te_form_a: "짧고",
+    te_form_b: "짧아서",
+  },
 };
 
 function buildKrFormsByPattern(
@@ -179,13 +235,15 @@ function buildKrFormsByPattern(
   let forms: KrForms;
 
   if (pattern === "it") {
+    const f = buildItPatternForms(root);
+
     forms = {
       ...common,
-      polite_present: `${root}습니다`,
-      plain_past: `${root}었다`,
-      polite_past: `${root}었습니다`,
+      polite_present: f.polite,
+      plain_past: f.past,
+      polite_past: f.politePast,
       te_form_a: `${root}고`,
-      te_form_b: `${root}어서`,
+      te_form_b: f.te,
     };
   } else if (pattern === "eu") {
     const f = euForms(root);
