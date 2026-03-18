@@ -288,7 +288,7 @@ export default function ClassroomPage() {
           ctaLabel: "이어서 학습",
           href: `/classroom/${course.slug}`,
           thumbnailUrl: course.thumbnail_url ?? null,
-          lastLessonTitle: enrollment.last_lesson_title ?? "최근 학습 기록",
+          lastLessonTitle: enrollment.last_lesson_title ?? "최근 학습 내용",
           lastStudiedAt: enrollment.last_studied_at ?? null,
         };
       }
@@ -353,8 +353,7 @@ export default function ClassroomPage() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
-                이제 강의실은 공개 강의 전체가 아니라, 회원님에게 실제로 배정된 강의와
-                최근 학습 기록을 중심으로 보여주는 구조입니다.
+                현재 수강 중인 강의와 최근 학습 내용을 한눈에 확인해 보세요.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-3">
@@ -362,7 +361,7 @@ export default function ClassroomPage() {
                   현재 플랜 {planLabel}
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  배정 강의 {assignedVisibleCoursesCount}개
+                  등록 강의 {assignedVisibleCoursesCount}개
                 </span>
                 <span className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
                   학습 중 {inProgressCoursesCount}개
@@ -392,20 +391,20 @@ export default function ClassroomPage() {
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-gray-500">이어서 보기</p>
+            <p className="text-sm font-semibold text-gray-500">이어보기</p>
             <p className="mt-2 text-lg font-bold text-gray-900">
               {continueCourse
                 ? continueCourse.title
                 : firstAssignedCourse
                   ? firstAssignedCourse.title
-                  : "아직 배정된 강의가 없습니다."}
+                  : "현재 수강 중인 강의가 없습니다."}
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
               {continueCourse
-                ? `${continueCourse.progress}% 진행 중 · ${continueCourse.lastLessonTitle ?? "최근 기록"}`
+                ? `${continueCourse.progress}% 진행 중 · ${continueCourse.lastLessonTitle ?? "최근 학습 내용"}`
                 : firstAssignedCourse
-                  ? "배정된 강의가 있습니다. 첫 강의부터 시작해 보세요."
-                  : "강의를 배정받으면 이곳에 이어볼 강의가 표시됩니다."}
+                  ? "수강 중인 강의가 있어요. 첫 강의부터 가볍게 시작해 보세요."
+                  : "현재 수강 중인 강의가 없습니다."}
             </p>
           </div>
 
@@ -417,17 +416,17 @@ export default function ClassroomPage() {
                 : "기록 없음"}
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              실제 학습 버튼과 연결하면 마지막 학습 시점이 자동으로 더 정확하게 반영됩니다.
+              학습을 시작하면 최근 학습일이 자동으로 업데이트됩니다.
             </p>
           </div>
 
           <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-gray-500">강의실 운영 상태</p>
+            <p className="text-sm font-semibold text-gray-500">수강 상태</p>
             <p className="mt-2 text-lg font-bold text-gray-900">
-              {coursesLoading ? "불러오는 중" : coursesError ? "점검 필요" : "배정 강의 기준 표시 중"}
+              {coursesLoading ? "불러오는 중" : coursesError ? "확인 필요" : "현재 수강 중인 강의"}
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              {coursesError || "이제 나의 강의실은 배정된 강의만 표시하도록 연결되어 있습니다."}
+              {coursesError || "현재 수강 중인 강의만 모아 볼 수 있습니다."}
             </p>
           </div>
         </section>
@@ -436,7 +435,7 @@ export default function ClassroomPage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-500">내 강의 목록</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">배정 강의 중심 강의실</h2>
+              <h2 className="mt-2 text-2xl font-bold text-gray-900">현재 수강 중인 강의</h2>
             </div>
             <p className="text-sm text-gray-500">내 수강 기록에 따라 카드 상태가 달라집니다.</p>
           </div>
@@ -451,9 +450,9 @@ export default function ClassroomPage() {
             </div>
           ) : courses.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-6">
-              <p className="text-sm text-gray-700">아직 배정된 강의가 없습니다.</p>
+              <p className="text-sm text-gray-700">현재 수강 중인 강의가 없습니다.</p>
               <p className="mt-2 text-sm text-gray-500">
-                강의 카탈로그에서 어떤 강의가 있는지 먼저 확인하거나, 관리자에게 강의 배정을 요청해 주세요.
+                강의 카탈로그를 먼저 둘러보거나, 관리자에게 수강 등록을 요청해 주세요.
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <Link
@@ -497,7 +496,7 @@ export default function ClassroomPage() {
                     </span>
                   </div>
 
-                  <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-gray-200">
+                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-semibold text-gray-500">최근 학습</p>
                     <p className="mt-1 text-sm font-semibold text-gray-900">
                       {course.lastLessonTitle ?? "아직 학습 기록이 없습니다."}
