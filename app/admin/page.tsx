@@ -96,6 +96,7 @@ type ClassroomLesson = {
   video_embed_url?: string | null;
   video_seconds?: number | null;
   attachment_url?: string | null;
+  audio_url?: string | null;
   poster_url?: string | null;
 };
 
@@ -110,6 +111,7 @@ type LessonDraft = {
   video_embed_url: string;
   video_seconds: number;
   attachment_url: string;
+  audio_url: string;
   poster_url: string;
 };
 
@@ -145,6 +147,7 @@ type LessonCsvRow = {
   video_embed_url?: string;
   video_seconds?: string | number;
   attachment_url?: string;
+  audio_url?: string;
   poster_url?: string;
 };
 
@@ -525,6 +528,7 @@ export default function AdminPage() {
   const [newLessonEmbedUrl, setNewLessonEmbedUrl] = useState("");
   const [newLessonVideoSeconds, setNewLessonVideoSeconds] = useState(600);
   const [newLessonAttachmentUrl, setNewLessonAttachmentUrl] = useState("");
+  const [newLessonAudioUrl, setNewLessonAudioUrl] = useState("");
   const [newLessonPosterUrl, setNewLessonPosterUrl] = useState("");
 
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(false);
@@ -843,8 +847,8 @@ export default function AdminPage() {
       const queryOk = !q
         ? true
         : String(item.user_email || "").toLowerCase().includes(q) ||
-        String(item.level || "").toLowerCase().includes(q) ||
-        String(item.pos_mode || "").toLowerCase().includes(q);
+          String(item.level || "").toLowerCase().includes(q) ||
+          String(item.pos_mode || "").toLowerCase().includes(q);
 
       const wrongOk = !logOnlyWrong ? true : Number(item.wrong_count || 0) > 0;
       return typeOk && queryOk && wrongOk;
@@ -942,6 +946,7 @@ export default function AdminPage() {
         video_embed_url,
         video_seconds,
         attachment_url,
+        audio_url,
         poster_url
       `)
       .eq("course_id", courseId)
@@ -969,6 +974,7 @@ export default function AdminPage() {
             video_embed_url: lesson.video_embed_url || "",
             video_seconds: Number(lesson.video_seconds || 0),
             attachment_url: lesson.attachment_url || "",
+            audio_url: lesson.audio_url || "",
             poster_url: lesson.poster_url || "",
           },
         ])
@@ -1008,10 +1014,10 @@ export default function AdminPage() {
 
   const handleDownloadLessonCsvSample = () => {
     const header =
-      "title,description,sort_order,is_preview,is_visible,video_source,video_url,video_embed_url,video_seconds,attachment_url,poster_url";
+      "title,description,sort_order,is_preview,is_visible,video_source,video_url,video_embed_url,video_seconds,attachment_url,audio_url,poster_url";
     const rows = [
-      '1강 인사 표현,기본 인사와 자기소개,1,true,true,youtube,https://youtube.com/watch?v=aaa,https://www.youtube.com/embed/aaa,600,https://example.com/lesson1.pdf,https://example.com/poster1.jpg',
-      '2강 기본 회화,자주 쓰는 회화 패턴,2,false,true,youtube,https://youtube.com/watch?v=bbb,https://www.youtube.com/embed/bbb,720,,https://example.com/poster2.jpg',
+      '1강 인사 표현,기본 인사와 자기소개,1,true,true,youtube,https://youtube.com/watch?v=aaa,https://www.youtube.com/embed/aaa,600,https://example.com/lesson1.pdf,https://example.com/lesson1.mp3,https://example.com/poster1.jpg',
+      '2강 기본 회화,자주 쓰는 회화 패턴,2,false,true,youtube,https://youtube.com/watch?v=bbb,https://www.youtube.com/embed/bbb,720,https://example.com/lesson2.pdf,https://example.com/lesson2.mp3,https://example.com/poster2.jpg',
     ];
 
     downloadCsvFile("lessons_sample.csv", [header, ...rows].join("\n"));
@@ -1133,8 +1139,8 @@ export default function AdminPage() {
 
           const status =
             rawStatus === "open" ||
-              rawStatus === "coming" ||
-              rawStatus === "draft"
+            rawStatus === "coming" ||
+            rawStatus === "draft"
               ? rawStatus
               : "draft";
 
@@ -1150,15 +1156,15 @@ export default function AdminPage() {
           };
         })
         .filter(Boolean) as Array<{
-          title: string;
-          slug: string;
-          level: string;
-          description: string;
-          status: "draft" | "open" | "coming";
-          sort_order: number;
-          thumbnail_url: string | null;
-          is_visible: boolean;
-        }>;
+        title: string;
+        slug: string;
+        level: string;
+        description: string;
+        status: "draft" | "open" | "coming";
+        sort_order: number;
+        thumbnail_url: string | null;
+        is_visible: boolean;
+      }>;
 
       const normalized = normalizeSequentialSortOrder(
         cleaned.sort((a, b) => a.sort_order - b.sort_order)
@@ -1222,6 +1228,7 @@ export default function AdminPage() {
           video_embed_url: String(row.video_embed_url ?? "").trim() || null,
           video_seconds: parseNumberLike(row.video_seconds, 0) || null,
           attachment_url: String(row.attachment_url ?? "").trim() || null,
+          audio_url: String(row.audio_url ?? "").trim() || null,
           poster_url: String(row.poster_url ?? "").trim() || null,
         };
       });
@@ -1237,6 +1244,7 @@ export default function AdminPage() {
         video_embed_url: string | null;
         video_seconds: number | null;
         attachment_url: string | null;
+        audio_url: string | null;
         poster_url: string | null;
       }>;
 
@@ -1306,23 +1314,25 @@ export default function AdminPage() {
             video_embed_url: String(row.video_embed_url ?? "").trim() || null,
             video_seconds: parseNumberLike(row.video_seconds, 0) || null,
             attachment_url: String(row.attachment_url ?? "").trim() || null,
+            audio_url: String(row.audio_url ?? "").trim() || null,
             poster_url: String(row.poster_url ?? "").trim() || null,
           };
         })
         .filter(Boolean) as Array<{
-          course_id: string;
-          title: string;
-          description: string;
-          sort_order: number;
-          is_preview: boolean;
-          is_visible: boolean;
-          video_source: "youtube" | "vimeo" | "server";
-          video_url: string | null;
-          video_embed_url: string | null;
-          video_seconds: number | null;
-          attachment_url: string | null;
-          poster_url: string | null;
-        }>;
+        course_id: string;
+        title: string;
+        description: string;
+        sort_order: number;
+        is_preview: boolean;
+        is_visible: boolean;
+        video_source: "youtube" | "vimeo" | "server";
+        video_url: string | null;
+        video_embed_url: string | null;
+        video_seconds: number | null;
+        attachment_url: string | null;
+        audio_url: string | null;
+        poster_url: string | null;
+      }>;
 
       const normalized = normalizeSequentialSortOrder(
         cleaned.sort((a, b) => a.sort_order - b.sort_order)
@@ -1421,6 +1431,7 @@ export default function AdminPage() {
         video_embed_url: newLessonEmbedUrl.trim() || null,
         video_seconds: newLessonVideoSeconds || null,
         attachment_url: newLessonAttachmentUrl.trim() || null,
+        audio_url: newLessonAudioUrl.trim() || null,
         poster_url: newLessonPosterUrl.trim() || null,
       });
 
@@ -1435,6 +1446,7 @@ export default function AdminPage() {
       setNewLessonEmbedUrl("");
       setNewLessonVideoSeconds(600);
       setNewLessonAttachmentUrl("");
+      setNewLessonAudioUrl("");
       setNewLessonPosterUrl("");
 
       await loadLessons(selectedCourseId);
@@ -1621,14 +1633,14 @@ export default function AdminPage() {
         prev.map((course) =>
           course.id === courseId
             ? {
-              ...course,
-              title: draft.title.trim(),
-              slug: draft.slug.trim(),
-              level: draft.level.trim() || "입문",
-              description: draft.description.trim(),
-              status: draft.status,
-              thumbnail_url: draft.thumbnail_url.trim() || null,
-            }
+                ...course,
+                title: draft.title.trim(),
+                slug: draft.slug.trim(),
+                level: draft.level.trim() || "입문",
+                description: draft.description.trim(),
+                status: draft.status,
+                thumbnail_url: draft.thumbnail_url.trim() || null,
+              }
             : course
         )
       );
@@ -1727,6 +1739,7 @@ export default function AdminPage() {
       | "video_embed_url"
       | "video_seconds"
       | "attachment_url"
+      | "audio_url"
       | "poster_url",
     value: string | number | boolean | null
   ) => {
@@ -1764,6 +1777,7 @@ export default function AdminPage() {
           video_embed_url: draft.video_embed_url.trim() || null,
           video_seconds: Number(draft.video_seconds || 0) || null,
           attachment_url: draft.attachment_url.trim() || null,
+          audio_url: draft.audio_url.trim() || null,
           poster_url: draft.poster_url.trim() || null,
           updated_at: new Date().toISOString(),
         })
@@ -1775,18 +1789,19 @@ export default function AdminPage() {
         prev.map((lesson) =>
           lesson.id === lessonId
             ? {
-              ...lesson,
-              title: draft.title.trim(),
-              description: draft.description.trim(),
-              sort_order: Number(draft.sort_order || 1),
-              is_preview: Boolean(draft.is_preview),
-              video_source: draft.video_source,
-              video_url: draft.video_url.trim() || null,
-              video_embed_url: draft.video_embed_url.trim() || null,
-              video_seconds: Number(draft.video_seconds || 0) || null,
-              attachment_url: draft.attachment_url.trim() || null,
-              poster_url: draft.poster_url.trim() || null,
-            }
+                ...lesson,
+                title: draft.title.trim(),
+                description: draft.description.trim(),
+                sort_order: Number(draft.sort_order || 1),
+                is_preview: Boolean(draft.is_preview),
+                video_source: draft.video_source,
+                video_url: draft.video_url.trim() || null,
+                video_embed_url: draft.video_embed_url.trim() || null,
+                video_seconds: Number(draft.video_seconds || 0) || null,
+                attachment_url: draft.attachment_url.trim() || null,
+                audio_url: draft.audio_url.trim() || null,
+                poster_url: draft.poster_url.trim() || null,
+              }
             : lesson
         )
       );
@@ -1831,9 +1846,9 @@ export default function AdminPage() {
         prev.map((lesson) =>
           lesson.id === lessonId
             ? {
-              ...lesson,
-              is_visible: nextVisible,
-            }
+                ...lesson,
+                is_visible: nextVisible,
+              }
             : lesson
         )
       );
@@ -2108,11 +2123,11 @@ export default function AdminPage() {
         prev.map((item) =>
           item.id === userId
             ? {
-              ...item,
-              plan: nextPlan,
-              plan_started_at: nextPlan !== "free" ? nowIso : null,
-              plan_expires_at: expiresIso,
-            }
+                ...item,
+                plan: nextPlan,
+                plan_started_at: nextPlan !== "free" ? nowIso : null,
+                plan_expires_at: expiresIso,
+              }
             : item
         )
       );
@@ -2401,15 +2416,15 @@ export default function AdminPage() {
       const payload =
         memberMsgTarget === "plan"
           ? {
-            mode: "plan",
-            plan: memberMsgPlan,
-            probeOnly: true,
-          }
+              mode: "plan",
+              plan: memberMsgPlan,
+              probeOnly: true,
+            }
           : {
-            mode: "selected",
-            userId: selectedMemberId,
-            probeOnly: true,
-          };
+              mode: "selected",
+              userId: selectedMemberId,
+              probeOnly: true,
+            };
 
       const res = await fetch("/api/admin/push", {
         method: "POST",
@@ -2473,19 +2488,19 @@ export default function AdminPage() {
       const payload =
         memberMsgTarget === "plan"
           ? {
-            mode: "plan",
-            plan: memberMsgPlan,
-            title: memberMsgTitle.trim(),
-            body: memberMsgBody.trim(),
-            url: pushUrl.trim(),
-          }
+              mode: "plan",
+              plan: memberMsgPlan,
+              title: memberMsgTitle.trim(),
+              body: memberMsgBody.trim(),
+              url: pushUrl.trim(),
+            }
           : {
-            mode: "selected",
-            title: memberMsgTitle.trim(),
-            body: memberMsgBody.trim(),
-            url: pushUrl.trim(),
-            userId: selectedMemberId,
-          };
+              mode: "selected",
+              title: memberMsgTitle.trim(),
+              body: memberMsgBody.trim(),
+              url: pushUrl.trim(),
+              userId: selectedMemberId,
+            };
 
       const res = await fetch("/api/admin/push", {
         method: "POST",
@@ -2557,7 +2572,7 @@ export default function AdminPage() {
           const data = await res.json();
           if (data?.error) message = String(data.error);
         } catch {
-          // ignore
+          //
         }
         throw new Error(message);
       }
@@ -3117,7 +3132,7 @@ export default function AdminPage() {
                   }
                   className={
                     memberMsgProbeBusy ||
-                      (memberMsgTarget === "selected" && !selectedMemberId)
+                    (memberMsgTarget === "selected" && !selectedMemberId)
                       ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-400"
                       : "inline-flex rounded-2xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-800"
                   }
@@ -3159,9 +3174,9 @@ export default function AdminPage() {
                 }
                 className={
                   memberMsgBusy ||
-                    !memberMsgTitle.trim() ||
-                    !memberMsgBody.trim() ||
-                    (memberMsgTarget === "selected" && !selectedMemberId)
+                  !memberMsgTitle.trim() ||
+                  !memberMsgBody.trim() ||
+                  (memberMsgTarget === "selected" && !selectedMemberId)
                     ? "inline-flex w-full items-center justify-center rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
                     : "inline-flex w-full items-center justify-center rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white"
                 }
@@ -3373,9 +3388,9 @@ export default function AdminPage() {
                   }
                   className={
                     pushBusy ||
-                      !pushTitle.trim() ||
-                      !pushBody.trim() ||
-                      (pushMode === "selected" && !selectedPushUserId)
+                    !pushTitle.trim() ||
+                    !pushBody.trim() ||
+                    (pushMode === "selected" && !selectedPushUserId)
                       ? "inline-flex rounded-2xl border border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-400"
                       : "inline-flex rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white"
                   }
@@ -4547,6 +4562,12 @@ export default function AdminPage() {
                   className="xl:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
                 />
                 <input
+                  value={newLessonAudioUrl}
+                  onChange={(e) => setNewLessonAudioUrl(e.target.value)}
+                  placeholder="음성 MP3 URL"
+                  className="xl:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"
+                />
+                <input
                   value={newLessonPosterUrl}
                   onChange={(e) => setNewLessonPosterUrl(e.target.value)}
                   placeholder="포스터 이미지 URL"
@@ -4582,7 +4603,7 @@ export default function AdminPage() {
                   <div>
                     <p className="text-sm font-semibold text-gray-900">CSV로 레슨 한꺼번에 추가</p>
                     <p className="mt-1 text-xs text-gray-500">
-                      title, description, sort_order, is_preview, is_visible, video_source, video_url, video_embed_url, video_seconds, attachment_url, poster_url
+                      title, description, sort_order, is_preview, is_visible, video_source, video_url, video_embed_url, video_seconds, attachment_url, audio_url, poster_url
                     </p>
                   </div>
 
@@ -4691,10 +4712,11 @@ export default function AdminPage() {
                     return (
                       <div
                         key={lesson.id}
-                        className={`rounded-2xl border p-4 ${lesson.is_visible
-                          ? "border-gray-200 bg-gray-50"
-                          : "border-red-200 bg-red-50/60"
-                          }`}
+                        className={`rounded-2xl border p-4 ${
+                          lesson.is_visible
+                            ? "border-gray-200 bg-gray-50"
+                            : "border-red-200 bg-red-50/60"
+                        }`}
                       >
                         {editingLessonId === lesson.id && draft ? (
                           <div className="space-y-3">
@@ -4807,6 +4829,15 @@ export default function AdminPage() {
                                 )
                               }
                               placeholder="첨부자료 URL"
+                              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+                            />
+
+                            <input
+                              value={draft.audio_url}
+                              onChange={(e) =>
+                                handleLessonDraftChange(lesson.id, "audio_url", e.target.value)
+                              }
+                              placeholder="음성 MP3 URL"
                               className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
                             />
 

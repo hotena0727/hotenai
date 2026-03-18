@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -32,6 +32,7 @@ type LessonRow = {
   is_preview: boolean;
   is_visible: boolean;
   attachment_url?: string | null;
+  audio_url?: string | null;
   video_seconds?: number | null;
 };
 
@@ -88,8 +89,9 @@ function getProgressTone(progress: number, isCompleted: boolean) {
     badge: "시작 가능",
     badgeClass: "bg-gray-200 text-gray-800",
     buttonLabel: "학습 시작하기",
-    buttonClass: "border border-gray-300 bg-white text-gray-900 hover:bg-gray-100",
-  };
+    buttonClass:
+      "border border-gray-300 bg-white text-gray-900 hover:bg-gray-100",
+    };
 }
 
 function getLessonState(index: number, total: number, progress: number) {
@@ -135,7 +137,6 @@ function CourseHeroThumbnail({
 
 export default function ClassroomCourseDetailPage() {
   const params = useParams<{ slug: string }>();
-  const router = useRouter();
   const slug = Array.isArray(params?.slug) ? params.slug[0] : params?.slug ?? "";
 
   const [loading, setLoading] = useState(true);
@@ -160,7 +161,9 @@ export default function ClassroomCourseDetailPage() {
 
         const { data: courseData, error: courseError } = await supabase
           .from("courses")
-          .select("id, slug, title, level, description, status, thumbnail_url, is_visible")
+          .select(
+            "id, slug, title, level, description, status, thumbnail_url, is_visible"
+          )
           .eq("slug", slug)
           .eq("is_visible", true)
           .maybeSingle();
@@ -182,7 +185,9 @@ export default function ClassroomCourseDetailPage() {
         if (user) {
           const { data, error } = await supabase
             .from("course_enrollments")
-            .select("course_id, progress, last_lesson_title, last_studied_at, is_completed")
+            .select(
+              "course_id, progress, last_lesson_title, last_studied_at, is_completed"
+            )
             .eq("user_id", user.id)
             .eq("course_id", courseData.id)
             .maybeSingle();
@@ -194,7 +199,7 @@ export default function ClassroomCourseDetailPage() {
         const { data: lessonsData, error: lessonError } = await supabase
           .from("course_lessons")
           .select(
-            "id, title, description, sort_order, is_preview, is_visible, attachment_url, video_seconds"
+            "id, title, description, sort_order, is_preview, is_visible, attachment_url, audio_url, video_seconds"
           )
           .eq("course_id", courseData.id)
           .eq("is_visible", true)
@@ -315,7 +320,9 @@ export default function ClassroomCourseDetailPage() {
                   <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600">
                     {getStatusLabel(course.status)}
                   </span>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tone.badgeClass}`}>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${tone.badgeClass}`}
+                  >
                     {tone.badge}
                   </span>
                 </div>
@@ -410,7 +417,9 @@ export default function ClassroomCourseDetailPage() {
                 현재 수강 중인 강의
               </h2>
             </div>
-            <p className="text-sm text-gray-500">재생 또는 자료 버튼으로 바로 이동할 수 있습니다.</p>
+            <p className="text-sm text-gray-500">
+              재생 또는 자료 버튼으로 바로 이동할 수 있습니다.
+            </p>
           </div>
 
           {lessons.length === 0 ? (
@@ -436,6 +445,7 @@ export default function ClassroomCourseDetailPage() {
 
                 const playHref = `/classroom/${course.slug}/lesson?lessonId=${lesson.id}`;
                 const hasAttachment = Boolean(lesson.attachment_url);
+                const hasAudio = Boolean(lesson.audio_url);
 
                 return (
                   <article
@@ -457,12 +467,16 @@ export default function ClassroomCourseDetailPage() {
                               미리보기
                             </span>
                           ) : null}
-                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}
+                          >
                             {badgeLabel}
                           </span>
                         </div>
 
-                        <h3 className="mt-3 text-lg font-bold text-gray-900">{lesson.title}</h3>
+                        <h3 className="mt-3 text-lg font-bold text-gray-900">
+                          {lesson.title}
+                        </h3>
 
                         <p className="mt-2 text-sm text-gray-500">
                           {formatSeconds(lesson.video_seconds)}
@@ -507,6 +521,25 @@ export default function ClassroomCourseDetailPage() {
                             className="rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400"
                           >
                             자료 없음
+                          </button>
+                        )}
+
+                        {hasAudio ? (
+                          <a
+                            href={lesson.audio_url!}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
+                          >
+                            음성
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled
+                            className="rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400"
+                          >
+                            음성 없음
                           </button>
                         )}
                       </div>

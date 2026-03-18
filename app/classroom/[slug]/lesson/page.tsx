@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 type CourseRow = {
@@ -29,6 +29,7 @@ type LessonRow = {
   video_embed_url?: string | null;
   video_seconds?: number | null;
   attachment_url?: string | null;
+  audio_url?: string | null;
   poster_url?: string | null;
 };
 
@@ -83,7 +84,10 @@ function getEmbedUrl(lesson: LessonRow | null) {
 export default function LessonVideoPage() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const slug = Array.isArray(params?.slug) ? params.slug[0] : params?.slug ?? "";
+  const requestedLessonId = searchParams.get("lessonId") || "";
 
   const [loading, setLoading] = useState(true);
   const [blockedState, setBlockedState] = useState(false);
@@ -111,7 +115,9 @@ export default function LessonVideoPage() {
 
         const { data: courseData, error: courseError } = await supabase
           .from("courses")
-          .select("id, slug, title, level, description, status, thumbnail_url, is_visible")
+          .select(
+            "id, slug, title, level, description, status, thumbnail_url, is_visible"
+          )
           .eq("slug", slug)
           .eq("is_visible", true)
           .maybeSingle();
@@ -138,6 +144,7 @@ export default function LessonVideoPage() {
             video_embed_url,
             video_seconds,
             attachment_url,
+            audio_url,
             poster_url
           `)
           .eq("course_id", courseData.id)
@@ -159,7 +166,9 @@ export default function LessonVideoPage() {
 
         const { data: enrollmentDataRaw, error: enrollmentError } = await supabase
           .from("course_enrollments")
-          .select("course_id, progress, last_lesson_title, last_studied_at, is_completed")
+          .select(
+            "course_id, progress, last_lesson_title, last_studied_at, is_completed"
+          )
           .eq("user_id", user.id)
           .eq("course_id", courseData.id)
           .maybeSingle();
@@ -174,7 +183,7 @@ export default function LessonVideoPage() {
           setLessons([]);
           setEnrollment(null);
           setBlockedState(true);
-          setMessage("이 강의는 아직 회원님에게 배정되지 않았습니다.");
+          setMessage("이 강의는 아직 회원님에게 등록되지 않았습니다.");
           return;
         }
 
@@ -194,13 +203,19 @@ export default function LessonVideoPage() {
         setEnrollment(enrollmentData);
         setLessons(mappedLessons);
 
+        const requestedLesson = requestedLessonId
+          ? mappedLessons.find(
+              (lesson) => lesson.id === requestedLessonId && lesson.state !== "locked"
+            ) ?? null
+          : null;
+
         const firstDoing =
           mappedLessons.find((lesson) => lesson.state === "doing") ??
           mappedLessons.find((lesson) => lesson.state === "done") ??
           mappedLessons[0] ??
           null;
 
-        setSelectedLessonId(firstDoing?.id ?? "");
+        setSelectedLessonId(requestedLesson?.id ?? firstDoing?.id ?? "");
       } catch (error) {
         console.error(error);
         if (mounted) {
@@ -216,7 +231,7 @@ export default function LessonVideoPage() {
     return () => {
       mounted = false;
     };
-  }, [slug]);
+  }, [slug, requestedLessonId]);
 
   const selectedLesson = useMemo(
     () => lessons.find((lesson) => lesson.id === selectedLessonId) ?? lessons[0] ?? null,
@@ -328,7 +343,7 @@ export default function LessonVideoPage() {
             이 강의에 바로 들어갈 수 없습니다.
           </h1>
           <p className="mt-3 text-sm leading-6 text-gray-600">
-            {message || "배정된 수강생만 접근할 수 있습니다."}
+            {message || "등록된 수강생만 접근할 수 있습니다."}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -363,7 +378,7 @@ export default function LessonVideoPage() {
                 <h2 className="mt-1 text-xl font-bold text-gray-900">{course.title}</h2>
               </div>
               <Link
-                href="/classroom"
+                href={`/classroom/${course.slug}`}
                 className="rounded-full border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-800"
               >
                 나의 강의실
@@ -559,17 +574,32 @@ export default function LessonVideoPage() {
                   </div>
                 </div>
 
-                {selectedLesson.attachment_url ? (
+                {(selectedLesson.attachment_url || selectedLesson.audio_url) ? (
                   <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm font-semibold text-gray-500">첨부 자료</p>
-                    <a
-                      href={selectedLesson.attachment_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-2 inline-flex rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-900"
-                    >
-                      자료 열기
-                    </a>
+                    <p className="text-sm font-semibold text-gray-500">학습 자료</p>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      {selectedLesson.attachment_url ? (
+                        <a
+                          href={selectedLesson.attachment_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-900"
+                        >
+                          자료 열기
+                        </a>
+                      ) : null}
+
+                      {selectedLesson.audio_url ? (
+                        <a
+                          href={selectedLesson.audio_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-900"
+                        >
+                          음성 열기
+                        </a>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
 
