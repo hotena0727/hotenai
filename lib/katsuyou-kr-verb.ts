@@ -140,7 +140,7 @@ function makePolitePresent(baseKr: string): string {
     사: "삽니다",
     놀: "놉니다",
     만들: "만듭니다",
-    알: "압니다"
+    알: "압니다",
     나가: "나갑니다",
     일어나: "일어납니다",
     열: "엽니다",
