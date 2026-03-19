@@ -768,9 +768,8 @@ export default function HomePage() {
             <div
               className="flex h-44 w-44 items-center justify-center rounded-full shadow-sm"
               style={{
-                background: `conic-gradient(${goalRingColors.main} ${
-                  (stats.goalPercent / 100) * 360
-                }deg, ${goalRingColors.rest} 0deg)`,
+                background: `conic-gradient(${goalRingColors.main} ${(stats.goalPercent / 100) * 360
+                  }deg, ${goalRingColors.rest} 0deg)`,
               }}
             >
               <div className="flex h-30 w-30 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
@@ -812,9 +811,8 @@ export default function HomePage() {
                     }
                   />
                   <p
-                    className={`mt-3 text-sm ${
-                      isToday ? "font-semibold text-gray-900" : "text-gray-500"
-                    }`}
+                    className={`mt-3 text-sm ${isToday ? "font-semibold text-gray-900" : "text-gray-500"
+                      }`}
                   >
                     {day.label}
                   </p>
@@ -853,19 +851,19 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2">
           {canWord ? (
             <div className="flex h-full flex-col rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-6 transition hover:shadow-md">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
                   <p className="text-2xl font-bold">📝 단어</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                  <p className="mt-2 min-h-[48px] break-keep text-sm leading-6 text-gray-600">
                     기본 어휘를 문제와 패턴 카드로 익혀보세요.
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="w-[72px] shrink-0 text-right">
                   <p className="text-xl font-bold">{stats.wordCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
+                  <p className="mt-1 text-xs leading-4 text-gray-500">학습 횟수</p>
                 </div>
               </div>
 
@@ -999,9 +997,8 @@ export default function HomePage() {
                     <div className="flex min-h-[56px] flex-col justify-center">
                       <p className="text-base font-semibold">{routine.title}</p>
                       <p
-                        className={`mt-1 text-sm leading-6 ${
-                          isPrimary ? "text-gray-200" : "text-gray-600"
-                        }`}
+                        className={`mt-1 text-sm leading-6 ${isPrimary ? "text-gray-200" : "text-gray-600"
+                          }`}
                       >
                         {routine.desc}
                       </p>
