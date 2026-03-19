@@ -255,11 +255,13 @@ function normalizeKrFormText(text: string): string {
     .replace(/모르었다/g, "몰랐다")
     .replace(/눈부시습니다/g, "눈부십니다")
     .replace(/성가시습니다/g, "성가십니다")
+    .replace(/성가시었다/g, "성가셨다")
+    .replace(/성가시었습니다/g, "성가셨습니다")
     .replace(/건방지습니다/g, "건방집니다")
+    .replace(/건방지었다/g, "건방졌다")
+    .replace(/건방지었습니다/g, "건방졌습니다")
     .replace(/야무지었습니다/g, "야무졌습니다")
     .replace(/야무지었다/g, "야무졌다")
-    .replace(/건방지었습니다/g, "건방졌습니다")
-    .replace(/건방지었다/g, "건방졌다")
     .replace(/새롭웠습니다/g, "새로웠습니다")
     .replace(/새롭웠다/g, "새로웠다")
     .replace(/달었습니다/g, "달았습니다")
@@ -268,10 +270,10 @@ function normalizeKrFormText(text: string): string {
     .replace(/짧었다/g, "짧았다")
     .replace(/희습니다/g, "흽니다")
     .replace(/뻔뻔스럽어서/g, "뻔뻔스러워서")
-    .replace(/더럽어서/g, "더러워서")
-    .replace(/시끄럽어서/g, "시끄러워서")
     .replace(/뻔뻔스럽었다/g, "뻔뻔스러웠다")
     .replace(/뻔뻔스럽었습니다/g, "뻔뻔스러웠습니다")
+    .replace(/더럽어서/g, "더러워서")
+    .replace(/시끄럽어서/g, "시끄러워서")
     .replace(/노랗았습니다/g, "노랬습니다")
     .replace(/노랗았다/g, "노랬다")
     .replace(/파랗았습니다/g, "파랬습니다")
@@ -302,14 +304,11 @@ function normalizeKrFormText(text: string): string {
     .replace(/품위 있였다/g, "품위 있었다")
     .replace(/괜찮었습니다/g, "괜찮았습니다")
     .replace(/괜찮었다/g, "괜찮았다")
-    .replace(/야무지었습니다/g, "야무졌습니다")
-    .replace(/야무지었다/g, "야무졌다")
-    .replace(/성가시습니다/g, "성가십니다")
-    .replace(/성가시었다/g, "성가셨다")
-    .replace(/성가시었습니다/g, "성가셨습니다")
+    .replace(/사치스럽어서/g, "사치스러워서")
     .replace(/사치스럽었다/g, "사치스러웠다")
     .replace(/사치스럽었습니다/g, "사치스러웠습니다")
-    .replace(/사치스럽어서/g, "사치스러워서");
+    .replace(/같었다/g, "같았다")
+    .replace(/같었습니다/g, "같았습니다");
 }
 
 const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
@@ -478,6 +477,12 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     polite_past: "사치스러웠습니다",
     te_form_a: "사치스럽고",
     te_form_b: "사치스러워서",
+  },
+  같: {
+    plain_past: "같았다",
+    polite_past: "같았습니다",
+    te_form_a: "같고",
+    te_form_b: "같아서",
   },
 };
 
