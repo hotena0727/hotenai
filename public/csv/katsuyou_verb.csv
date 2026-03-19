@@ -1,360 +1,52 @@
-﻿pos,base_jp,base_kr,reading,verb_group,can_potential,passive_type,can_causative,can_causative_passive,can_volitional,can_imperative,kr_connective_a,kr_connective_b,kr_passive_override,kr_potential_override,kr_imperative_override,kr_polite_present_override,kr_past_override
-verb,する,하다,する,irregular,Y,descriptive,Y,Y,Y,Y,하고,해서,,할 수 있다,해라,합니다,했다
-verb,やる,하다,やる,godan,Y,descriptive,Y,Y,Y,Y,하고,해서,,할 수 있다,해라,합니다,했다
-verb,食べる,먹다,たべる,ichidan,Y,natural,Y,Y,Y,Y,먹고,먹어서,먹히다,먹을 수 있다,먹어라,먹습니다,먹었다
-verb,見る,보다,みる,ichidan,Y,natural,Y,Y,Y,Y,보고,봐서,보이다,볼 수 있다,봐라,봅니다,봤다
-verb,飲む,마시다,のむ,godan,Y,natural,Y,Y,Y,Y,마시고,마셔서,마셔지다,마실 수 있다,마셔라,마십니다,마셨다
-verb,言う,말하다,いう,godan,Y,descriptive,Y,Y,Y,Y,말하고,말해서,,말할 수 있다,말해라,말합니다,말했다
-verb,聞く,"듣다, 묻다",きく,godan,Y,natural,Y,Y,Y,Y,듣고,들어서,들리다,들을 수 있다,들어라,듣습니다,들었다
-verb,聞こえる,들리다,きこえる,ichidan,N,none,N,N,N,N,들리고,들려서,,,,들립니다,들렸다
-verb,行く,가다,いく,godan,Y,descriptive,Y,Y,Y,Y,가고,가서,,갈 수 있다,가라,갑니다,갔다
-verb,来る,오다,くる,irregular,Y,descriptive,Y,Y,Y,Y,오고,와서,,올 수 있다,와라,옵니다,왔다
-verb,着る,입다,きる,ichidan,Y,descriptive,Y,Y,Y,Y,입고,입어서,,입을 수 있다,입어라,입습니다,입었다
-verb,脱ぐ,벗다,ぬぐ,godan,Y,descriptive,Y,Y,Y,Y,벗고,벗어서,,벗을 수 있다,벗어라,벗습니다,벗었다
-verb,寝る,자다,ねる,ichidan,Y,descriptive,Y,Y,Y,Y,자고,자서,,잘 수 있다,자라,잡니다,잤다
-verb,起きる,일어나다,おきる,ichidan,Y,descriptive,Y,Y,Y,Y,일어나고,일어나서,,일어날 수 있다,일어나라,일어납니다,일어났다
-verb,起こす,일으키다,おこす,godan,Y,descriptive,Y,Y,Y,Y,일으키고,일으켜서,,일으킬 수 있다,일으켜라,일으킵니다,일으켰다
-verb,買う,사다,かう,godan,Y,natural,Y,Y,Y,Y,사고,사서,,살 수 있다,사라,삽니다,샀다
-verb,売る,팔다,うる,godan,Y,natural,Y,Y,Y,Y,팔고,팔아서,팔리다,팔 수 있다,팔아라,팝니다,팔았다
-verb,会う,만나다,あう,godan,Y,descriptive,Y,Y,Y,Y,만나고,만나서,,만날 수 있다,만나라,만납니다,만났다
-verb,別れる,헤어지다,わかれる,ichidan,Y,none,Y,Y,Y,Y,헤어지고,헤어져서,,헤어질 수 있다,헤어져라,헤어집니다,헤어졌다
-verb,思う,생각하다,おもう,godan,Y,descriptive,Y,Y,Y,Y,생각하고,생각해서,,생각할 수 있다,생각해라,생각합니다,생각했다
-verb,考える,생각하다,かんがえる,ichidan,Y,descriptive,Y,Y,Y,Y,생각하고,생각해서,,생각할 수 있다,생각해라,생각합니다,생각했다
-verb,持つ,들다,もつ,godan,Y,descriptive,Y,Y,Y,Y,들고,들어서,,들 수 있다,들어라,듭니다,들었다
-verb,運ぶ,옮기다,はこぶ,godan,Y,descriptive,Y,Y,Y,Y,옮기고,옮겨서,,옮길 수 있다,옮겨라,옮깁니다,옮겼다
-verb,触る,만지다,さわる,godan,Y,none,Y,Y,Y,Y,만지고,만져서,,만질 수 있다,만져라,만집니다,만졌다
-verb,感じる,느끼다,かんじる,ichidan,Y,descriptive,Y,Y,Y,Y,느끼고,느껴서,,느낄 수 있다,느껴라,느낍니다,느꼈다
-verb,歌う,노래부르다,うたう,godan,Y,descriptive,Y,Y,Y,Y,노래부르고,노래불러서,,노래부를 수 있다,노래불러라,노래부릅니다,노래불렀다
-verb,喋る,떠들다,しゃべる,godan,Y,descriptive,Y,Y,Y,Y,떠들고,떠들어서,,떠들 수 있다,떠들어라,떠듭니다,떠들었다
-verb,書く,쓰다,かく,godan,Y,natural,Y,Y,Y,Y,쓰고,쓰어서,쓰이다,쓸 수 있다,쓰어라,씁니다,쓰었다
-verb,消す,지우다,けす,godan,Y,natural,Y,Y,Y,Y,지우고,지워서,지워지다,지울 수 있다,지워라,지웁니다,지웠다
-verb,消える,"지워지다, 사라지다",きえる,ichidan,Y,none,Y,Y,Y,N,지워지고,지워져서,,지워질 수 있다,,지워집니다,지워졌다
-verb,押す,누르다,おす,godan,Y,natural,Y,Y,Y,Y,누르고,눌러서,눌리다,누를 수 있다,눌러라,누릅니다,눌렀다
-verb,引く,당기다,ひく,godan,Y,natural,Y,Y,Y,Y,당기고,당겨서,당겨지다,당길 수 있다,당겨라,당깁니다,당겼다
-verb,乗る,타다,のる,godan,Y,descriptive,Y,Y,Y,Y,타고,타서,,탈 수 있다,타라,탑니다,탔다
-verb,乗せる,태우다,のせる,ichidan,Y,natural,Y,Y,Y,Y,태우고,태워서,,태울 수 있다,태워라,태웁니다,태웠다
-verb,降りる,내리다,おりる,ichidan,Y,none,Y,Y,Y,Y,내리고,내려서,,내릴 수 있다,내려라,내립니다,내렸다
-verb,降ろす,"내려뜨리다, 내려놓다",おろす,godan,Y,descriptive,Y,Y,Y,Y,내려뜨리고,내려뜨려서,,내려뜨릴 수 있다,내려뜨려라,내려뜨립니다,내려뜨렸다
-verb,立つ,서다,たつ,godan,Y,descriptive,Y,Y,Y,Y,서고,서서,,설 수 있다,서라,섭니다,섰다
-verb,座る,앉다,すわる,godan,Y,descriptive,Y,Y,Y,Y,앉고,앉아서,,앉을 수 있다,앉아라,앉습니다,앉았다
-verb,入れる,넣다,いれる,ichidan,Y,descriptive,Y,Y,Y,Y,넣고,넣어서,들다,넣을 수 있다,넣어라,넣습니다,넣었다
-verb,抜く,빼다,ぬく,godan,Y,descriptive,Y,Y,Y,Y,빼고,빼서,빠지다,뺄 수 있다,빼라,뺍니다,뺐다
-verb,抜ける,"빠지다, 뽑아지다",ぬける,ichidan,Y,none,Y,Y,Y,N,빠지고,빠져서,,빠질 수 있다,,빠집니다,빠졌다
-verb,始める,"시작하다, 개시하다",はじめる,ichidan,Y,descriptive,Y,Y,Y,Y,시작하고,시작해서,시작되다,시작할 수 있다,시작해라,시작합니다,시작했다
-verb,始まる,"시작되다, 개시되다",はじまる,godan,Y,none,Y,Y,Y,N,시작되고,시작되어서,,시작될 수 있다,,시작됩니다,시작되었다
-verb,終える,끝내다,おえる,ichidan,Y,descriptive,Y,Y,Y,Y,끝내고,끝내서,끝나다,끝낼 수 있다,끝내라,끝냅니다,끝냈다
-verb,終わる,"끝나다, 마치다",おわる,godan,Y,none,Y,Y,Y,N,끝나고,끝나서,,끝날 수 있다,,끝납니다,끝났다
-verb,休む,쉬다,やすむ,godan,Y,descriptive,Y,Y,Y,Y,쉬고,쉬어서,,쉴 수 있다,쉬어라,쉽니다,쉬었다
-verb,働く,일하다,はたらく,godan,Y,descriptive,Y,Y,Y,Y,일하고,일해서,,일할 수 있다,일해라,일합니다,일했다
-verb,笑う,웃다,わらう,godan,Y,descriptive,Y,Y,Y,Y,웃고,웃어서,,웃을 수 있다,웃어라,웃습니다,웃었다
-verb,泣く,울다,なく,godan,Y,descriptive,Y,Y,Y,Y,울고,울어서,,울 수 있다,울어라,웁니다,울었다
-verb,覚える,외우다,おぼえる,ichidan,Y,descriptive,Y,Y,Y,Y,외우고,외워서,,외울 수 있다,외워라,외웁니다,외웠다
-verb,忘れる,잊다,わすれる,ichidan,Y,descriptive,Y,Y,Y,Y,잊고,잊어서,,잊을 수 있다,잊어라,잊습니다,잊었다
-verb,信じる,믿다,しんじる,ichidan,Y,descriptive,Y,Y,Y,Y,믿고,믿어서,,믿을 수 있다,믿어라,믿습니다,믿었다
-verb,裏切る,배신하다,うらぎる,godan,Y,descriptive,Y,Y,Y,Y,배신하고,배신해서,,배신할 수 있다,배신해라,배신합니다,배신했다
-verb,歩く,걷다,あるく,godan,Y,descriptive,Y,Y,Y,Y,걷고,걸어서,,걸을 수 있다,걸어라,걷습니다,걸었다
-verb,走る,뛰다,はしる,godan,Y,descriptive,Y,Y,Y,Y,뛰고,뛰어서,,뛸 수 있다,뛰어라,뜁니다,뛰었다
-verb,切る,자르다,きる,godan,Y,descriptive,Y,Y,Y,Y,자르고,잘라서,끊어지다,자를 수 있다,잘라라,자릅니다,잘랐다
-verb,切れる,끊어지다,きれる,ichidan,Y,none,Y,Y,Y,N,끊어지고,끊어져서,,끊어질 수 있다,,끊어집니다,끊어졌다
-verb,払う,지불하다,はらう,godan,Y,descriptive,Y,Y,Y,Y,지불하고,지불해서,,지불할 수 있다,지불해라,지불합니다,지불했다
-verb,勝つ,이기다,かつ,godan,Y,descriptive,Y,Y,Y,Y,이기고,이겨서,,이길 수 있다,이겨라,이깁니다,이겼다
-verb,負ける,지다,まける,ichidan,Y,none,Y,Y,Y,N,지고,져서,,질 수 있다,,집니다,졌다
-verb,生きる,살다,いきる,ichidan,Y,none,N,N,Y,N,살고,살아서,,살 수 있다,,삽니다,살았다
-verb,死ぬ,죽다,しぬ,godan,Y,none,N,N,Y,N,죽고,죽어서,,죽을 수 있다,,죽습니다,죽었다
-verb,温める,데우다,あたためる,ichidan,Y,descriptive,Y,Y,Y,Y,데우고,데워서,따뜻해지다,데울 수 있다,데워라,데웁니다,데웠다
-verb,温まる,따뜻해지다,あたたまる,godan,Y,none,Y,Y,Y,Y,따뜻해지고,따뜻해져서,,따뜻해질 수 있다,따뜻해져라,따뜻해집니다,따뜻해졌다
-verb,冷やす,차게하다,ひやす,godan,Y,descriptive,Y,Y,Y,Y,차게하고,차게해서,식다,차게할 수 있다,차게해라,차게합니다,차게했다
-verb,冷える,"식다, 차가워지다",ひえる,ichidan,Y,none,Y,Y,Y,N,식고,식어서,,식을 수 있다,,식습니다,식었다
-verb,洗う,씻다,あらう,godan,Y,descriptive,Y,Y,Y,Y,씻고,씻어서,,씻을 수 있다,씻어라,씻습니다,씻었다
-verb,汚す,더럽히다,けがす,godan,Y,descriptive,Y,Y,Y,Y,더럽히고,더럽혀서,더러워지다,더럽힐 수 있다,더럽혀라,더럽힙니다,더럽혔다
-verb,汚す,더럽히다,よごす,godan,Y,descriptive,Y,Y,Y,Y,더럽히고,더럽혀서,더러워지다,더럽힐 수 있다,더럽혀라,더럽힙니다,더럽혔다
-verb,汚れる,더러워지다,よごれる,ichidan,Y,none,Y,Y,Y,N,더러워지고,더러워져서,,더러워질 수 있다,,더러워집니다,더러워졌다
-verb,呼ぶ,부르다,よぶ,godan,Y,descriptive,Y,Y,Y,Y,부르고,불러서,,부를 수 있다,불러라,부릅니다,불렀다
-verb,答える,대답하다,こたえる,ichidan,Y,descriptive,Y,Y,Y,Y,대답하고,대답해서,,대답할 수 있다,대답해라,대답합니다,대답했다
-verb,喜ぶ,기뻐하다,よろこぶ,godan,Y,descriptive,Y,Y,Y,Y,기뻐하고,기뻐해서,,기뻐할 수 있다,기뻐해라,기뻐합니다,기뻐했다
-verb,悲しむ,슬퍼하다,かなしむ,godan,Y,descriptive,Y,Y,Y,Y,슬퍼하고,슬퍼해서,,슬퍼할 수 있다,슬퍼해라,슬퍼합니다,슬퍼했다
-verb,褒める,칭찬하다,ほめる,ichidan,Y,descriptive,Y,Y,Y,Y,칭찬하고,칭찬해서,,칭찬할 수 있다,칭찬해라,칭찬합니다,칭찬했다
-verb,怒る,화내다,おこる,godan,Y,descriptive,Y,Y,Y,Y,화내고,화내서,,화낼 수 있다,화내라,화냅니다,화냈다
-verb,結ぶ,묶다,むすぶ,godan,Y,descriptive,Y,Y,Y,Y,묶고,묶어서,,묶을 수 있다,묶어라,묶습니다,묶었다
-verb,解く,풀다,ほどく,godan,Y,descriptive,Y,Y,Y,Y,풀고,풀어서,,풀 수 있다,풀어라,풉니다,풀었다
-verb,太る,살찌다,ふとる,godan,Y,descriptive,Y,Y,Y,Y,살찌고,살쪄서,,살찔 수 있다,살쪄라,살찝니다,살쪘다
-verb,痩せる,살빠지다,やせる,ichidan,Y,none,Y,Y,Y,Y,살빠지고,살빠져서,,살빠질 수 있다,살빠져라,살빠집니다,살빠졌다
-verb,諦める,포기하다,あきらめる,ichidan,Y,descriptive,Y,Y,Y,Y,포기하고,포기해서,,포기할 수 있다,포기해라,포기합니다,포기했다
-verb,耐える,견디다,たえる,ichidan,Y,descriptive,Y,Y,Y,Y,견디고,견뎌서,,견딜 수 있다,견뎌라,견딥니다,견뎠다
-verb,守る,지키다,まもる,godan,Y,descriptive,Y,Y,Y,Y,지키고,지켜서,,지킬 수 있다,지켜라,지킵니다,지켰다
-verb,破る,깨다,やぶる,godan,Y,descriptive,Y,Y,Y,Y,깨고,깨서,찢어지다,깰 수 있다,깨라,깹니다,깼다
-verb,破れる,찢어지다,やぶれる,ichidan,Y,none,Y,Y,Y,N,찢어지고,찢어져서,,찢어질 수 있다,,찢어집니다,찢어졌다
-verb,入る,"들다, 들어가다",はいる,godan,Y,descriptive,Y,Y,Y,Y,들고,들어서,,들 수 있다,들어라,듭니다,들었다
-verb,出る,나오다,でる,ichidan,Y,descriptive,Y,Y,Y,Y,나오고,나와서,,나올 수 있다,나와라,나옵니다,나왔다
-verb,出す,"내다, 내놓다, 제출하다",だす,godan,Y,descriptive,Y,Y,Y,Y,내고,내서,,낼 수 있다,내라,냅니다,냈다
-verb,頼む,부탁하다,たのむ,godan,Y,descriptive,Y,Y,Y,Y,부탁하고,부탁해서,,부탁할 수 있다,부탁해라,부탁합니다,부탁했다
-verb,断る,거절하다,ことわる,godan,Y,descriptive,Y,Y,Y,Y,거절하고,거절해서,,거절할 수 있다,거절해라,거절합니다,거절했다
-verb,送る,보내다,おくる,godan,Y,descriptive,Y,Y,Y,Y,보내고,보내서,,보낼 수 있다,보내라,보냅니다,보냈다
-verb,迎える,마중하다,むかえる,ichidan,Y,descriptive,Y,Y,Y,Y,마중하고,마중해서,,마중할 수 있다,마중해라,마중합니다,마중했다
-verb,開ける,열다,あける,ichidan,Y,natural,Y,Y,Y,Y,열고,열어서,열다,열 수 있다,열어라,엽니다,열었다
-verb,閉める,닫다,しめる,ichidan,Y,natural,Y,Y,Y,Y,닫고,닫아서,닫다,닫을 수 있다,닫아라,닫습니다,닫았다
-verb,止める,세우다,とめる,ichidan,Y,descriptive,Y,Y,Y,Y,세우고,세워서,,세울 수 있다,세워라,세웁니다,세웠다
-verb,動く,움직이다,うごく,godan,Y,descriptive,Y,Y,Y,Y,움직이고,움직여서,,움직일 수 있다,움직여라,움직입니다,움직였다
-verb,止める,그만두다,やめる,ichidan,Y,descriptive,Y,Y,Y,Y,그만두고,그만둬서,,그만둘 수 있다,그만둬라,그만둡니다,그만뒀다
-verb,続ける,계속하다,つづける,ichidan,Y,descriptive,Y,Y,Y,Y,계속하고,계속해서,,계속할 수 있다,계속해라,계속합니다,계속했다
-verb,上げる,올리다,あげる,ichidan,Y,descriptive,Y,Y,Y,Y,올리고,올려서,,올릴 수 있다,올려라,올립니다,올렸다
-verb,下げる,내리다,さげる,ichidan,Y,none,Y,Y,Y,Y,내리고,내려서,,내릴 수 있다,내려라,내립니다,내렸다
-verb,増やす,늘리다,ふやす,godan,Y,natural,Y,Y,Y,Y,늘리고,늘려서,,늘릴 수 있다,늘려라,늘립니다,늘렸다
-verb,減らす,줄이다,へらす,godan,Y,natural,Y,Y,Y,Y,줄이고,줄여서,,줄일 수 있다,줄여라,줄입니다,줄였다
-verb,探す,찾다,さがす,godan,Y,descriptive,Y,Y,Y,Y,찾고,찾아서,,찾을 수 있다,찾아라,찾습니다,찾았다
-verb,見つける,찾아내다,みつける,ichidan,Y,descriptive,Y,Y,Y,Y,찾아내고,찾아내서,,찾아낼 수 있다,찾아내라,찾아냅니다,찾아냈다
-verb,決める,"정하다, 결정하다",きめる,ichidan,Y,descriptive,Y,Y,Y,Y,정하고,정해서,,정할 수 있다,정해라,정합니다,정했다
-verb,取る,취하다,とる,godan,Y,descriptive,Y,Y,Y,Y,취하고,취해서,,취할 수 있다,취해라,취합니다,취했다
-verb,頑張る,힘내다,がんばる,godan,Y,descriptive,Y,Y,Y,Y,힘내고,힘내서,,힘낼 수 있다,힘내라,힘냅니다,힘냈다
-verb,掛ける,"걸다, 채우다",かける,ichidan,Y,natural,Y,Y,Y,Y,걸고,걸어서,걸리다,걸 수 있다,걸어라,겁니다,걸었다
-verb,掛かる,"걸리다, 채워지다",かかる,godan,Y,none,Y,Y,Y,N,걸리고,걸려서,,걸릴 수 있다,,걸립니다,걸렸다
-verb,伝える,전하다,つたえる,ichidan,Y,natural,Y,Y,Y,Y,전하고,전해서,전해지다,전할 수 있다,전해라,전합니다,전했다
-verb,伝わる,"전해지다, 전달되다",つたわる,godan,Y,none,Y,Y,Y,N,전해지고,전해져서,,전해질 수 있다,,전해집니다,전해졌다
-verb,作る,만들다,つくる,godan,Y,descriptive,Y,Y,Y,Y,만들고,만들어서,,만들 수 있다,만들어라,만듭니다,만들었다
-verb,教える,알려주다,おしえる,ichidan,Y,natural,Y,Y,Y,Y,알려주고,알려줘서,가르쳐지다,알려줄 수 있다,알려줘라,알려줍니다,알려줬다
-verb,教わる,배우다,おそわる,godan,Y,descriptive,Y,Y,Y,Y,배우고,배워서,,배울 수 있다,배워라,배웁니다,배웠다
-verb,習う,배우다,ならう,godan,Y,descriptive,Y,Y,Y,Y,배우고,배워서,,배울 수 있다,배워라,배웁니다,배웠다
-verb,変える,바꾸다,かえる,ichidan,Y,natural,Y,Y,Y,Y,바꾸고,바꿔서,바뀌다,바꿀 수 있다,바꿔라,바꿉니다,바꿨다
-verb,変わる,"바뀌다, 변화되다",かわる,godan,Y,none,Y,Y,Y,N,바뀌고,바뀌어서,,바뀔 수 있다,,바뀝니다,바뀌었다
-verb,帰る,돌아가다,かえる,godan,Y,descriptive,Y,Y,Y,Y,돌아가고,돌아가서,,돌아갈 수 있다,돌아가라,돌아갑니다,돌아갔다
-verb,知る,알다,しる,godan,Y,descriptive,Y,Y,Y,Y,알고,알아서,,알 수 있다,알아라,압니다,알았다
-verb,分かる,이해하다,わかる,godan,N,none,N,N,N,N,이해하고,이해해서,,,,이해합니다,이해했다
-verb,誘う,"꾀다, 유혹하다, 부르다",さそう,godan,Y,descriptive,Y,Y,Y,Y,꾀고,꾀어서,,꾈 수 있다,꾀어라,꾑니다,꾀었다
-verb,出会う,"마주치다, (남녀)만나다",であう,godan,Y,descriptive,Y,Y,Y,Y,마주치고,마주쳐서,,마주칠 수 있다,마주쳐라,마주칩니다,마주쳤다
-verb,付き合う,"사귀다, 어울리다",つきあう,godan,Y,descriptive,Y,Y,Y,Y,사귀고,사귀어서,,사귈 수 있다,사귀어라,사귑니다,사귀었다
-verb,振られる,차이다,ふられる,ichidan,Y,descriptive,Y,Y,Y,Y,차이고,차여서,,차일 수 있다,차여라,차입니다,차였다
-verb,片付ける,"치우다, 정리(정돈)하다",かたづける,ichidan,Y,descriptive,Y,Y,Y,Y,치우고,치워서,,치울 수 있다,치워라,치웁니다,치웠다
-verb,置く,"두다, 놓다",おく,godan,Y,descriptive,Y,Y,Y,Y,두고,둬서,,둘 수 있다,둬라,둡니다,뒀다
-verb,間に合う,"충분하다, 시간에 대다",まにあう,godan,Y,none,Y,Y,Y,N,충분하고,충분해서,,충분할 수 있다,,충분합니다,충분했다
-verb,楽しむ,"즐기다, 기대하다",たのしむ,godan,Y,descriptive,Y,Y,Y,Y,즐기고,즐겨서,,즐길 수 있다,즐겨라,즐깁니다,즐겼다
-verb,読む,읽다,よむ,godan,Y,natural,Y,Y,Y,Y,읽고,읽어서,읽히다,읽을 수 있다,읽어라,읽습니다,읽었다
-verb,泳ぐ,"수영하다, 헤엄치다",およぐ,godan,Y,descriptive,Y,Y,Y,Y,수영하고,수영해서,,수영할 수 있다,수영해라,수영합니다,수영했다
-verb,選ぶ,"고르다, 선택하다",えらぶ,godan,Y,descriptive,Y,Y,Y,Y,고르고,골라서,,고를 수 있다,골라라,고릅니다,골랐다
-verb,確かめる,확인하다,たしかめる,ichidan,Y,descriptive,Y,Y,Y,Y,확인하고,확인해서,,확인할 수 있다,확인해라,확인합니다,확인했다
-verb,稼ぐ,"(돈, 시간을)벌다",かせぐ,godan,Y,descriptive,Y,Y,Y,Y,(돈고,(돈아서,,(돈을 수 있다,(돈아라,(돈습니다,(돈았다
-verb,怠ける,게으름 피우다,なまける,ichidan,Y,descriptive,Y,Y,Y,Y,게으름 피우고,게으름 피워서,,게으름 피울 수 있다,게으름 피워라,게으름 피웁니다,게으름 피웠다
-verb,亡くなる,"죽다, 돌아가시다",なくなる,godan,Y,none,N,N,N,N,죽고,죽어서,,죽을 수 있다,,죽습니다,죽었다
-verb,無くなる,없어지다,なくなる,godan,Y,none,N,N,N,N,없어지고,없어져서,,없어질 수 있다,,없어집니다,없어졌다
-verb,携わる,(어떤일에)종사하다,たずさわる,godan,Y,descriptive,Y,Y,Y,Y,(어떤일에)종사하고,(어떤일에)종사해서,,(어떤일에)종사할 수 있다,(어떤일에)종사해라,(어떤일에)종사합니다,(어떤일에)종사했다
-verb,出掛ける,외출하다,でかける,ichidan,Y,descriptive,Y,Y,Y,Y,외출하고,외출해서,,외출할 수 있다,외출해라,외출합니다,외출했다
-verb,急ぐ,서두르다,いそぐ,godan,Y,descriptive,Y,Y,Y,Y,서두르고,서둘러서,,서두를 수 있다,서둘러라,서두릅니다,서둘렀다
-verb,着く,도착하다,つく,godan,Y,none,Y,Y,Y,N,도착하고,도착해서,,도착할 수 있다,,도착합니다,도착했다
-verb,行う,"행하다, 시행(처리)하다",おこなう,godan,Y,descriptive,Y,Y,Y,Y,행하고,행해서,,행할 수 있다,행해라,행합니다,행했다
-verb,開く,"열다, 열리다, 벌어지다",ひらく,godan,Y,descriptive,Y,Y,Y,Y,열고,열어서,,열 수 있다,열어라,엽니다,열었다
-verb,閉じる,"닫다, 닫히다",とじる,ichidan,Y,descriptive,Y,Y,Y,Y,닫고,닫아서,,닫을 수 있다,닫아라,닫습니다,닫았다
-verb,炒める,"(기름에)볶다, 지지다",いためる,ichidan,Y,descriptive,Y,Y,Y,Y,(기름에)볶고,(기름에)볶아서,,(기름에)볶을 수 있다,(기름에)볶아라,(기름에)볶습니다,(기름에)볶았다
-verb,煮る,"끓이다, 조리다, 삶다",にる,ichidan,Y,descriptive,Y,Y,Y,Y,끓이고,끓여서,,끓일 수 있다,끓여라,끓입니다,끓였다
-verb,蒸す,찌다,むす,godan,Y,descriptive,Y,Y,Y,Y,찌고,쪄서,,찔 수 있다,쪄라,찝니다,쪘다
-verb,茹でる,"삶다, 데치다",ゆでる,ichidan,Y,descriptive,Y,Y,Y,Y,삶고,삶아서,,삶을 수 있다,삶아라,삶습니다,삶았다
-verb,焦げる,"타다, 눋다",こげる,ichidan,Y,none,Y,Y,Y,N,타고,타서,,탈 수 있다,,탑니다,탔다
-verb,漬ける,"절이다, 담그다",つける,ichidan,Y,descriptive,Y,Y,Y,Y,절이고,절여서,,절일 수 있다,절여라,절입니다,절였다
-verb,和える,"무치다, 버무리다",あえる,ichidan,Y,descriptive,Y,Y,Y,Y,무치고,무쳐서,,무칠 수 있다,무쳐라,무칩니다,무쳤다
-verb,手伝う,"(남의 일을)거들다, 돕다",てつだう,godan,Y,descriptive,Y,Y,Y,Y,(남의 일을)거들고,(남의 일을)거들어서,,(남의 일을)거들 수 있다,(남의 일을)거들어라,(남의 일을)거듭니다,(남의 일을)거들었다
-verb,奢る,"한턱내다, 사치하다",おごる,godan,Y,descriptive,Y,Y,Y,Y,한턱내고,한턱내서,,한턱낼 수 있다,한턱내라,한턱냅니다,한턱냈다
-verb,飾る,"장식하다, 꾸미다",かざる,godan,Y,descriptive,Y,Y,Y,Y,장식하고,장식해서,,장식할 수 있다,장식해라,장식합니다,장식했다
-verb,包む,"포장하다, 감싸다",つつむ,godan,Y,descriptive,Y,Y,Y,Y,포장하고,포장해서,,포장할 수 있다,포장해라,포장합니다,포장했다
-verb,剥く,"벗기다, 까다",むく,godan,Y,descriptive,Y,Y,Y,Y,벗기고,벗겨서,,벗길 수 있다,벗겨라,벗깁니다,벗겼다
-verb,揚げる,"높이 올리다, 튀기다",あげる,ichidan,Y,descriptive,Y,Y,Y,Y,높이 올리고,높이 올려서,,높이 올릴 수 있다,높이 올려라,높이 올립니다,높이 올렸다
-verb,出来上がる,"완성되다, 다 만들어지다",できあがる,godan,N,none,N,N,N,N,완성되고,완성되어서,,,,완성됩니다,완성되었다
-verb,冷める,식다,さめる,ichidan,Y,none,N,N,N,N,식고,식어서,,식을 수 있다,,식습니다,식었다
-verb,飽きる,질리다,あきる,ichidan,Y,none,N,N,N,N,질리고,질려서,,질릴 수 있다,,질립니다,질렸다
-verb,取り消す,취소하다,とりけす,godan,Y,descriptive,Y,Y,Y,Y,취소하고,취소해서,,취소할 수 있다,취소해라,취소합니다,취소했다
-verb,落ち着く,침착하다,おちつく,godan,Y,descriptive,Y,Y,Y,Y,침착하고,침착해서,,침착할 수 있다,침착해라,침착합니다,침착했다
-verb,焦る,"안달하다, 초조해하다",あせる,godan,Y,none,N,N,N,N,안달하고,안달해서,,안달할 수 있다,,안달합니다,안달했다
-verb,慌てる,"당황하다, 허둥대다",あわてる,ichidan,Y,none,N,N,N,N,당황하고,당황해서,,당황할 수 있다,,당황합니다,당황했다
-verb,急かす,재촉하다,せかす,godan,Y,descriptive,Y,Y,Y,Y,재촉하고,재촉해서,,재촉할 수 있다,재촉해라,재촉합니다,재촉했다
-verb,届く,도착하다,とどく,godan,Y,none,Y,Y,Y,N,도착하고,도착해서,,도착할 수 있다,,도착합니다,도착했다
-verb,去る,떠나다,さる,godan,Y,descriptive,Y,Y,Y,Y,떠나고,떠나서,,떠날 수 있다,떠나라,떠납니다,떠났다
-verb,踏む,밟다,ふむ,godan,Y,descriptive,Y,Y,Y,Y,밟고,밟아서,,밟을 수 있다,밟아라,밟습니다,밟았다
-verb,貼る,붙이다,はる,godan,Y,descriptive,Y,Y,Y,Y,붙이고,붙여서,,붙일 수 있다,붙여라,붙입니다,붙였다
-verb,吹く,불다,ふく,godan,Y,descriptive,Y,Y,Y,Y,불고,불어서,,불 수 있다,불어라,붑니다,불었다
-verb,叩く,"두드리다, 때리다, 털다",たたく,godan,Y,descriptive,Y,Y,Y,Y,두드리고,두드려서,,두드릴 수 있다,두드려라,두드립니다,두드렸다
-verb,打つ,치다,うつ,godan,Y,descriptive,Y,Y,Y,Y,치고,쳐서,,칠 수 있다,쳐라,칩니다,쳤다
-verb,保つ,"유지하다, 지키다",たもつ,godan,Y,descriptive,Y,Y,Y,Y,유지하고,유지해서,,유지할 수 있다,유지해라,유지합니다,유지했다
-verb,戦う,싸우다,たたかう,godan,Y,descriptive,Y,Y,Y,Y,싸우고,싸워서,,싸울 수 있다,싸워라,싸웁니다,싸웠다
-verb,争う,다투다,あらそう,godan,Y,descriptive,Y,Y,Y,Y,다투고,다퉈서,,다툴 수 있다,다퉈라,다툽니다,다퉜다
-verb,殴る,때리다,なぐる,godan,Y,descriptive,Y,Y,Y,Y,때리고,때려서,,때릴 수 있다,때려라,때립니다,때렸다
-verb,蹴る,차다,ける,ichidan,Y,descriptive,Y,Y,Y,Y,차고,차서,,찰 수 있다,차라,찹니다,찼다
-verb,足す,"더하다, 보태다",たす,godan,Y,descriptive,Y,Y,Y,Y,더하고,더해서,,더할 수 있다,더해라,더합니다,더했다
-verb,引く,"빼다, 끌다",ひく,godan,Y,natural,Y,Y,Y,Y,빼고,빼서,당겨지다,뺄 수 있다,빼라,뺍니다,뺐다
-verb,刺す,찌르다,さす,godan,Y,descriptive,Y,Y,Y,Y,찌르고,찔러서,,찌를 수 있다,찔러라,찌릅니다,찔렀다
-verb,防ぐ,"막다, 방어하다",ふせぐ,godan,Y,descriptive,Y,Y,Y,Y,막고,막아서,,막을 수 있다,막아라,막습니다,막았다
-verb,悩む,고민하다,なやむ,godan,Y,descriptive,Y,Y,Y,Y,고민하고,고민해서,,고민할 수 있다,고민해라,고민합니다,고민했다
-verb,交わす,"주고받다, 교환하다",かわす,godan,Y,descriptive,Y,Y,Y,Y,주고받고,주고받아서,,주고받을 수 있다,주고받아라,주고받습니다,주고받았다
-verb,疑う,의심하다,うたがう,godan,Y,descriptive,Y,Y,Y,Y,의심하고,의심해서,,의심할 수 있다,의심해라,의심합니다,의심했다
-verb,向く,향하다,むく,godan,Y,descriptive,Y,Y,Y,Y,향하고,향해서,,향할 수 있다,향해라,향합니다,향했다
-verb,握る,"쥐다, 잡다",にぎる,godan,Y,descriptive,Y,Y,Y,Y,쥐고,쥐어서,,쥘 수 있다,쥐어라,쥡니다,쥐었다
-verb,組む,"짜다, 끼다, 엇걸다",くむ,godan,Y,descriptive,Y,Y,Y,Y,짜고,짜서,,짤 수 있다,짜라,짭니다,짰다
-verb,似る,닮다,にる,ichidan,N,descriptive,Y,Y,Y,Y,닮고,닮아서,,,닮아라,닮습니다,닮았다
-verb,老ける,"늙다, 나이를 먹다",ふける,ichidan,N,none,N,N,N,N,늙고,늙어서,,,,늙습니다,늙었다
-verb,老いる,"늙다, 노쇠하다",おいる,ichidan,N,none,N,N,N,N,늙고,늙어서,,,,늙습니다,늙었다
-verb,晴れる,"(하늘이)맑다, 개다",はれる,ichidan,N,none,N,N,N,N,(하늘이)맑고,(하늘이)맑아서,,,,(하늘이)맑습니다,(하늘이)맑았다
-verb,曇る,"흐리다, 흐려지다",くもる,godan,N,none,N,N,N,N,흐리고,흐려서,,,,흐립니다,흐렸다
-verb,滑る,미끌어지다,すべる,godan,Y,none,Y,Y,Y,Y,미끌어지고,미끌어져서,,미끌어질 수 있다,미끌어져라,미끌어집니다,미끌어졌다
-verb,転ぶ,넘어지다,ころぶ,godan,Y,none,Y,Y,Y,Y,넘어지고,넘어져서,,넘어질 수 있다,넘어져라,넘어집니다,넘어졌다
-verb,認める,인정하다,みとめる,ichidan,Y,descriptive,Y,Y,Y,Y,인정하고,인정해서,,인정할 수 있다,인정해라,인정합니다,인정했다
-verb,責める,"비난하다, 나무라다",せめる,ichidan,Y,descriptive,Y,Y,Y,Y,비난하고,비난해서,,비난할 수 있다,비난해라,비난합니다,비난했다
-verb,咲く,(꽃이)피다,さく,godan,Y,descriptive,Y,Y,Y,Y,(꽃이)피고,(꽃이)펴서,,(꽃이)필 수 있다,(꽃이)펴라,(꽃이)핍니다,(꽃이)폈다
-verb,漏れる,"누설되다, 빠지다, 새다",もれる,ichidan,Y,none,Y,Y,Y,N,누설되고,누설되어서,,누설될 수 있다,,누설됩니다,누설되었다
-verb,引っ越す,이사하다,ひっこす,godan,Y,descriptive,Y,Y,Y,Y,이사하고,이사해서,,이사할 수 있다,이사해라,이사합니다,이사했다
-verb,植える,(나무를)심다,うえる,ichidan,Y,descriptive,Y,Y,Y,Y,(나무를)심고,(나무를)심어서,,(나무를)심을 수 있다,(나무를)심어라,(나무를)심습니다,(나무를)심었다
-verb,散る,"(꽃잎)지다, 흩어지다",ちる,godan,Y,none,Y,Y,Y,Y,(꽃잎)지고,(꽃잎)져서,,(꽃잎)질 수 있다,(꽃잎)져라,(꽃잎)집니다,(꽃잎)졌다
-verb,枯れる,"(식물) 시들다, 마르다",かれる,ichidan,Y,descriptive,Y,Y,Y,Y,(식물) 시들고,(식물) 시들어서,,(식물) 시들 수 있다,(식물) 시들어라,(식물) 시듭니다,(식물) 시들었다
-verb,望む,"원하다, 바라다",のぞむ,godan,Y,descriptive,Y,Y,Y,Y,원하고,원해서,,원할 수 있다,원해라,원합니다,원했다
-verb,貰う,받다,もらう,godan,Y,descriptive,Y,Y,Y,Y,받고,받아서,,받을 수 있다,받아라,받습니다,받았다
-verb,受け取る,"수취하다, 받다",うけとる,godan,Y,descriptive,Y,Y,Y,Y,수취하고,수취해서,,수취할 수 있다,수취해라,수취합니다,수취했다
-verb,甘える,응석부리다,あまえる,ichidan,Y,descriptive,Y,Y,Y,Y,응석부리고,응석부려서,,응석부릴 수 있다,응석부려라,응석부립니다,응석부렸다
-verb,騙す,속이다,だます,godan,Y,descriptive,Y,Y,Y,Y,속이고,속여서,,속일 수 있다,속여라,속입니다,속였다
-verb,むかつく,"화나다, 열이 받다",むかつく,godan,Y,none,N,N,N,N,화나고,화나서,,화날 수 있다,,화납니다,화났다
-verb,憎む,미워하다,にくむ,godan,Y,descriptive,Y,Y,Y,Y,미워하고,미워해서,,미워할 수 있다,미워해라,미워합니다,미워했다
-verb,指す,"가리키다, 지목하다",さす,godan,Y,descriptive,Y,Y,Y,Y,가리키고,가리켜서,,가리킬 수 있다,가리켜라,가리킵니다,가리켰다
-verb,述べる,"말하다, 진술하다",のべる,ichidan,Y,descriptive,Y,Y,Y,Y,말하고,말해서,,말할 수 있다,말해라,말합니다,말했다
-verb,叫ぶ,"외치다, 부르짖다",さけぶ,godan,Y,descriptive,Y,Y,Y,Y,외치고,외쳐서,,외칠 수 있다,외쳐라,외칩니다,외쳤다
-verb,囁く,속삭이다,ささやく,godan,Y,descriptive,Y,Y,Y,Y,속삭이고,속삭여서,,속삭일 수 있다,속삭여라,속삭입니다,속삭였다
-verb,嗅ぐ,"냄새 맡다, 탐지하다",かぐ,godan,Y,descriptive,Y,Y,Y,Y,냄새 맡고,냄새 맡아서,,냄새 맡을 수 있다,냄새 맡아라,냄새 맡습니다,냄새 맡았다
-verb,味わう,맛보다,あじわう,godan,Y,descriptive,Y,Y,Y,Y,맛보고,맛봐서,,맛볼 수 있다,맛봐라,맛봅니다,맛봤다
-verb,吐く,토하다,はく,godan,Y,descriptive,Y,Y,Y,Y,토하고,토해서,,토할 수 있다,토해라,토합니다,토했다
-verb,捨てる,버리다,すてる,ichidan,Y,descriptive,Y,Y,Y,Y,버리고,버려서,,버릴 수 있다,버려라,버립니다,버렸다
-verb,投げる,던지다,なげる,ichidan,Y,none,Y,Y,Y,Y,던지고,던져서,,던질 수 있다,던져라,던집니다,던졌다
-verb,拾う,"줍다, (택시)잡다",ひろう,godan,Y,descriptive,Y,Y,Y,Y,줍고,줍어서,,줍을 수 있다,줍어라,줍습니다,줍었다
-verb,吸う,"들이마시다, 흡입하다",すう,godan,Y,descriptive,Y,Y,Y,Y,들이마시고,들이마셔서,,들이마실 수 있다,들이마셔라,들이마십니다,들이마셨다
-verb,触れる,"닿다, 접촉하다",ふれる,ichidan,Y,descriptive,Y,Y,Y,Y,닿고,닿아서,,닿을 수 있다,닿아라,닿습니다,닿았다
-verb,比べる,비교하다,くらべる,ichidan,Y,descriptive,Y,Y,Y,Y,비교하고,비교해서,,비교할 수 있다,비교해라,비교합니다,비교했다
-verb,勝る,"우수하다, 낫다",まさる,godan,Y,descriptive,Y,Y,Y,Y,우수하고,우수해서,,우수할 수 있다,우수해라,우수합니다,우수했다
-verb,劣る,"뒤떨어지다, 못하다",おとる,godan,Y,none,Y,Y,Y,Y,뒤떨어지고,뒤떨어져서,,뒤떨어질 수 있다,뒤떨어져라,뒤떨어집니다,뒤떨어졌다
-verb,似合う,어울리다,にあう,godan,N,none,N,N,N,N,어울리고,어울려서,,,,어울립니다,어울렸다
-verb,覚める,"깨다, 정신이 들다",さめる,ichidan,Y,none,Y,Y,Y,N,깨고,깨서,,깰 수 있다,,깹니다,깼다
-verb,瞬く,"깜빡이다, 반짝이다",まばたく,godan,N,none,N,N,N,N,깜빡이고,깜빡여서,,,,깜빡입니다,깜빡였다
-verb,畳む,"접다, 개다",たたむ,godan,Y,descriptive,Y,Y,Y,Y,접고,접어서,,접을 수 있다,접어라,접습니다,접었다
-verb,横になる,"눕다, 자다",よこになる,godan,Y,descriptive,Y,Y,Y,Y,눕고,눕어서,,눕을 수 있다,눕어라,눕습니다,눕었다
-verb,眠る,잠들다,ねむる,godan,Y,descriptive,Y,Y,Y,Y,잠들고,잠들어서,,잠들 수 있다,잠들어라,잠듭니다,잠들었다
-verb,浴びる,"뒤집어쓰다, 흠뻑 쓰다",あびる,ichidan,Y,descriptive,Y,Y,Y,Y,뒤집어쓰고,뒤집어쓰어서,,뒤집어쓸 수 있다,뒤집어쓰어라,뒤집어씁니다,뒤집어쓰었다
-verb,磨く,"양치질하다, (문질러)닦다",みがく,godan,Y,descriptive,Y,Y,Y,Y,양치질하고,양치질해서,,양치질할 수 있다,양치질해라,양치질합니다,양치질했다
-verb,拭く,"닦다, 훔치다",ふく,godan,Y,descriptive,Y,Y,Y,Y,닦고,닦아서,,닦을 수 있다,닦아라,닦습니다,닦았다
-verb,塗る,"칠하다, 바르다",ぬる,godan,Y,descriptive,Y,Y,Y,Y,칠하고,칠해서,,칠할 수 있다,칠해라,칠합니다,칠했다
-verb,被る,"(머리에)쓰다, 뒤집어쓰다",かぶる,godan,Y,descriptive,Y,Y,Y,Y,(머리에)쓰고,(머리에)쓰어서,,(머리에)쓸 수 있다,(머리에)쓰어라,(머리에)씁니다,(머리에)쓰었다
-verb,住まう,"살다, 거주하다",すまう,godan,Y,descriptive,Y,Y,Y,Y,살고,살아서,,살 수 있다,살아라,삽니다,살았다
-verb,住む,살다(거주),すむ,godan,Y,descriptive,Y,Y,Y,Y,살다(거주)고,살다(거주)어서,,살다(거주)을 수 있다,살다(거주)어라,살다(거주)습니다,살다(거주)었다
-verb,暮らす,살다(생활),くらす,godan,Y,descriptive,Y,Y,Y,Y,살다(생활)고,살다(생활)어서,,살다(생활)을 수 있다,살다(생활)어라,살다(생활)습니다,살다(생활)었다
-verb,着替える,갈아입다,きがえる,ichidan,Y,descriptive,Y,Y,Y,Y,갈아입고,갈아입어서,,갈아입을 수 있다,갈아입어라,갈아입습니다,갈아입었다
-verb,はく,"입다, 신다",はく,godan,Y,descriptive,Y,Y,Y,Y,입고,입어서,,입을 수 있다,입어라,입습니다,입었다
-verb,酔う,취하다,よう,godan,Y,descriptive,Y,Y,Y,Y,취하고,취해서,,취할 수 있다,취해라,취합니다,취했다
-verb,迷う,"방황하다, 헤매다",まよう,godan,Y,descriptive,Y,Y,Y,Y,방황하고,방황해서,,방황할 수 있다,방황해라,방황합니다,방황했다
-verb,戸惑う,"당황하다, 망설이다",とまどう,godan,Y,descriptive,Y,Y,Y,Y,당황하고,당황해서,,당황할 수 있다,당황해라,당황합니다,당황했다
-verb,照れる,수줍어하다,てれる,ichidan,Y,none,N,N,N,N,수줍어하고,수줍어해서,,수줍어할 수 있다,,수줍어합니다,수줍어했다
-verb,恐れる,두려워하다,おそれる,ichidan,Y,none,N,N,N,N,두려워하고,두려워해서,,두려워할 수 있다,,두려워합니다,두려워했다
-verb,免れる,"면하다, 피하다, 벗어나다",まぬがれる,ichidan,Y,descriptive,Y,Y,Y,Y,면하고,면해서,,면할 수 있다,면해라,면합니다,면했다
-verb,サボる,땡땡이치다,さぼる,godan,Y,descriptive,Y,Y,Y,Y,땡땡이치고,땡땡이쳐서,,땡땡이칠 수 있다,땡땡이쳐라,땡땡이칩니다,땡땡이쳤다
-verb,謝る,사과(사죄)하다,あやまる,godan,Y,descriptive,Y,Y,Y,Y,사과(사죄)하고,사과(사죄)해서,,사과(사죄)할 수 있다,사과(사죄)해라,사과(사죄)합니다,사과(사죄)했다
-verb,詫びる,사과(사죄)하다,わびる,ichidan,Y,descriptive,Y,Y,Y,Y,사과(사죄)하고,사과(사죄)해서,,사과(사죄)할 수 있다,사과(사죄)해라,사과(사죄)합니다,사과(사죄)했다
-verb,尽くす,"진력하다, 애쓰다, 다하다",つくす,godan,Y,descriptive,Y,Y,Y,Y,진력하고,진력해서,,진력할 수 있다,진력해라,진력합니다,진력했다
-verb,許す,용서하다,ゆるす,godan,Y,descriptive,Y,Y,Y,Y,용서하고,용서해서,,용서할 수 있다,용서해라,용서합니다,용서했다
-verb,支払う,"지불(지급)하다, 치루다",しはらう,godan,Y,descriptive,Y,Y,Y,Y,지불(지급)하고,지불(지급)해서,,지불(지급)할 수 있다,지불(지급)해라,지불(지급)합니다,지불(지급)했다
-verb,黙る,"말을 안하다, 가만히 있다",だまる,godan,Y,descriptive,Y,Y,Y,Y,말을 안하고,말을 안해서,,말을 안할 수 있다,말을 안해라,말을 안합니다,말을 안했다
-verb,学ぶ,배우다,まなぶ,godan,Y,descriptive,Y,Y,Y,Y,배우고,배워서,,배울 수 있다,배워라,배웁니다,배웠다
-verb,見習う,"본받다, 견습하다",みならう,godan,Y,descriptive,Y,Y,Y,Y,본받고,본받아서,,본받을 수 있다,본받아라,본받습니다,본받았다
-verb,知らせる,"알리다, 통보하다",しらせる,ichidan,Y,descriptive,Y,Y,Y,Y,알리고,알려서,,알릴 수 있다,알려라,알립니다,알렸다
-verb,役立つ,도움이 되다,やくだつ,godan,N,none,N,N,N,N,도움이 되고,도움이 되어서,,,,도움이 됩니다,도움이 되었다
-verb,浮かぶ,"(머리) 떠오르다, 뜨다",うかぶ,godan,Y,none,Y,Y,Y,N,(머리) 떠오르고,(머리) 떠올라서,,(머리) 떠오를 수 있다,,(머리) 떠오릅니다,(머리) 떠올랐다
-verb,載せる,"싣다, 게재하다",のせる,ichidan,Y,natural,Y,Y,Y,Y,싣고,싣어서,,싣을 수 있다,싣어라,싣습니다,싣었다
-verb,招く,초대하다,まねく,godan,Y,natural,Y,Y,Y,Y,초대하고,초대해서,초대되다,초대할 수 있다,초대해라,초대합니다,초대했다
-verb,驚く,놀라다,おどろく,godan,Y,none,N,N,N,N,놀라고,놀라서,,놀랄 수 있다,,놀랍니다,놀랐다
-verb,踊る,춤추다,おどる,godan,Y,descriptive,Y,Y,Y,Y,춤추고,춤춰서,,춤출 수 있다,춤춰라,춤춥니다,춤췄다
-verb,慣れる,"적응하다, 익숙해지다",なれる,ichidan,Y,descriptive,Y,Y,Y,Y,적응하고,적응해서,,적응할 수 있다,적응해라,적응합니다,적응했다
-verb,馴れる,"따르다, 친숙해지다",なれる,ichidan,Y,descriptive,Y,Y,Y,Y,따르고,딸라서,,따를 수 있다,딸라라,따릅니다,딸랐다
-verb,癒す,치유하다,いやす,godan,Y,descriptive,Y,Y,Y,Y,치유하고,치유해서,,치유할 수 있다,치유해라,치유합니다,치유했다
-verb,捕らえる,"잡다, 포획하다",とらえる,ichidan,Y,natural,Y,Y,Y,Y,잡고,잡아서,붙잡히다,잡을 수 있다,잡아라,잡습니다,잡았다
-verb,貸す,빌려주다,かす,godan,Y,natural,Y,Y,Y,Y,빌려주고,빌려줘서,빌려지다,빌려줄 수 있다,빌려줘라,빌려줍니다,빌려줬다
-verb,借りる,빌리다,かりる,ichidan,Y,descriptive,Y,Y,Y,Y,빌리고,빌려서,,빌릴 수 있다,빌려라,빌립니다,빌렸다
-verb,生む,낳다,うむ,godan,Y,descriptive,Y,Y,Y,Y,낳고,낳아서,,낳을 수 있다,낳아라,낳습니다,낳았다
-verb,生まれる,"태어나다, 생기다",うまれる,ichidan,Y,none,Y,Y,Y,N,태어나고,태어나서,,태어날 수 있다,,태어납니다,태어났다
-verb,育つ,"자라다, 성장하다",そだつ,godan,Y,none,Y,Y,Y,N,자라고,자라서,,자랄 수 있다,,자랍니다,자랐다
-verb,育てる,"키우다, 길러지다",そだてる,ichidan,Y,descriptive,Y,Y,Y,Y,키우고,키워서,자라다,키울 수 있다,키워라,키웁니다,키웠다
-verb,逃げる,도망치다,にげる,ichidan,Y,descriptive,Y,Y,Y,Y,도망치고,도망쳐서,,도망칠 수 있다,도망쳐라,도망칩니다,도망쳤다
-verb,逃がす,"놓치다, 놓아주다",にがす,godan,Y,descriptive,Y,Y,Y,Y,놓치고,놓쳐서,도망치다,놓칠 수 있다,놓쳐라,놓칩니다,놓쳤다
-verb,掴む,손으로 움켜쥐다,つかむ,godan,Y,descriptive,Y,Y,Y,Y,손으로 움켜쥐고,손으로 움켜쥐어서,,손으로 움켜쥘 수 있다,손으로 움켜쥐어라,손으로 움켜쥡니다,손으로 움켜쥐었다
-verb,掴まる,"붙잡다, 꽉 잡다",つかまる,godan,Y,none,Y,Y,Y,N,붙잡고,붙잡아서,,붙잡을 수 있다,,붙잡습니다,붙잡았다
-verb,戻す,되돌리다,もどす,godan,Y,natural,Y,Y,Y,Y,되돌리고,되돌려서,되돌아가(오)다,되돌릴 수 있다,되돌려라,되돌립니다,되돌렸다
-verb,戻る,되돌아가(오)다,もどる,godan,Y,descriptive,Y,Y,Y,Y,되돌아가(오)고,되돌아가(오)어서,,되돌아가(오)을 수 있다,되돌아가(오)어라,되돌아가(오)습니다,되돌아가(오)었다
-verb,通す,"통과시키다, 통하게하다",とおす,godan,Y,natural,Y,Y,Y,Y,통과시키고,통과시켜서,통하다,통과시킬 수 있다,통과시켜라,통과시킵니다,통과시켰다
-verb,通る,"통하다, 지나가다",とおる,godan,Y,descriptive,Y,Y,Y,Y,통하고,통해서,,통할 수 있다,통해라,통합니다,통했다
-verb,移す,"옮기다, 자리를 바꾸다",うつす,godan,Y,natural,Y,Y,Y,Y,옮기고,옮겨서,옮겨지다,옮길 수 있다,옮겨라,옮깁니다,옮겼다
-verb,移る,"옮겨지다, 이동되다",うつる,godan,Y,none,Y,Y,Y,Y,옮겨지고,옮겨져서,,옮겨질 수 있다,옮겨져라,옮겨집니다,옮겨졌다
-verb,進む,나아가다,すすむ,godan,Y,descriptive,Y,Y,Y,Y,나아가고,나아가서,,나아갈 수 있다,나아가라,나아갑니다,나아갔다
-verb,進める,"나아가게 하다, 추진시키다",すすめる,ichidan,Y,natural,Y,Y,Y,Y,나아가게 하고,나아가게 해서,나아가다,나아가게 할 수 있다,나아가게 해라,나아가게 합니다,나아가게 했다
-verb,励む,힘쓰다,はげむ,godan,Y,descriptive,Y,Y,Y,Y,힘쓰고,힘쓰어서,,힘쓸 수 있다,힘쓰어라,힘씁니다,힘쓰었다
-verb,励ます,격려하다,はげます,godan,Y,descriptive,Y,Y,Y,Y,격려하고,격려해서,힘쓰다,격려할 수 있다,격려해라,격려합니다,격려했다
-verb,儲ける,"이익을 보다, (돈을)벌다",もうける,ichidan,Y,descriptive,Y,Y,Y,Y,이익을 보고,이익을 봐서,,이익을 볼 수 있다,이익을 봐라,이익을 봅니다,이익을 봤다
-verb,儲かる,"득이 되다, (돈벌이가)되다",もうかる,godan,Y,none,Y,Y,Y,N,득이 되고,득이 되어서,,득이 될 수 있다,,득이 됩니다,득이 되었다
-verb,焼く,"굽다, 볶다",やく,godan,Y,natural,Y,Y,Y,Y,굽고,굽어서,익다,굽을 수 있다,굽어라,굽습니다,굽었다
-verb,焼ける,"익다, 구워지다",やける,ichidan,Y,descriptive,Y,Y,Y,Y,익고,익어서,,익을 수 있다,익어라,익습니다,익었다
-verb,沸かす,끓이다,わかす,godan,Y,natural,Y,Y,Y,Y,끓이고,끓여서,끓다,끓일 수 있다,끓여라,끓입니다,끓였다
-verb,沸く,끓다,わく,godan,Y,none,Y,Y,Y,N,끓고,끓어서,,끓을 수 있다,,끓습니다,끓었다
-verb,集める,"모으다, 집중시키다",あつめる,ichidan,Y,natural,Y,Y,Y,Y,모으고,모으어서,모이다,모을 수 있다,모으어라,모읍니다,모으었다
-verb,集まる,"모이다, 집중하다",あつまる,godan,Y,none,Y,Y,Y,N,모이고,모여서,,모일 수 있다,,모입니다,모였다
-verb,纏める,"정리하다, 한데 모으다",まとめる,ichidan,Y,descriptive,Y,Y,Y,Y,정리하고,정리해서,정리되다,정리할 수 있다,정리해라,정리합니다,정리했다
-verb,纏まる,"정리되다, 한데 모여지다",まとまる,godan,Y,none,Y,Y,Y,N,정리되고,정리되어서,,정리될 수 있다,,정리됩니다,정리되었다
-verb,当てる,"맞히다, 적중시키다",あてる,ichidan,Y,natural,Y,Y,Y,Y,맞히고,맞혀서,맞다,맞힐 수 있다,맞혀라,맞힙니다,맞혔다
-verb,当たる,"맞다, 적중하다",あたる,godan,Y,none,Y,Y,Y,N,맞고,맞아서,,맞을 수 있다,,맞습니다,맞았다
-verb,積もる,"쌓이다, 견적하다",つもる,godan,Y,none,Y,Y,Y,N,쌓이고,쌓여서,,쌓일 수 있다,,쌓입니다,쌓였다
-verb,積む,"쌓다, 싣다",つむ,godan,Y,descriptive,Y,Y,Y,Y,쌓고,쌓아서,,쌓을 수 있다,쌓아라,쌓습니다,쌓았다
-verb,流す,"흘리다, 흐르게 하다",ながす,godan,Y,natural,Y,Y,Y,Y,흘리고,흘려서,흐르다,흘릴 수 있다,흘려라,흘립니다,흘렸다
-verb,流れる,"흐르다, 흘러내리다",ながれる,ichidan,Y,none,Y,Y,Y,N,흐르고,흘러서,,흐를 수 있다,,흐릅니다,흘렀다
-verb,回す,돌리다,まわす,godan,Y,natural,Y,Y,Y,Y,돌리고,돌려서,돌다,돌릴 수 있다,돌려라,돌립니다,돌렸다
-verb,回る,"돌다, 돌아다니다",まわる,godan,Y,none,Y,Y,Y,N,돌고,돌아서,,돌 수 있다,,돕니다,돌았다
-verb,曲げる,"굽히다, 구부리다",まげる,ichidan,Y,natural,Y,Y,Y,Y,굽히고,굽혀서,굽다,굽힐 수 있다,굽혀라,굽힙니다,굽혔다
-verb,曲がる,굽다,まがる,godan,Y,none,Y,Y,Y,N,굽고,굽어서,,굽을 수 있다,,굽습니다,굽었다
-verb,壊す,"부수다, 깨뜨리다",こわす,godan,Y,natural,Y,Y,Y,Y,부수고,부숴서,부서지다,부술 수 있다,부숴라,부숩니다,부쉈다
-verb,壊れる,"부서지다, 고장나다",こわれる,ichidan,Y,none,Y,Y,Y,N,부서지고,부서져서,,부서질 수 있다,,부서집니다,부서졌다
-verb,割る,"나누다, 쪼개다, 깨다",わる,godan,Y,natural,Y,Y,Y,Y,나누고,나눠서,깨지다,나눌 수 있다,나눠라,나눕니다,나눴다
-verb,割れる,"깨지다, 갈라지다",われる,ichidan,Y,none,Y,Y,Y,N,깨지고,깨져서,,깨질 수 있다,,깨집니다,깨졌다
-verb,間違う,"틀리다, 잘못되다",まちがう,godan,Y,descriptive,Y,Y,Y,Y,틀리고,틀려서,,틀릴 수 있다,틀려라,틀립니다,틀렸다
-verb,間違える,"실수하다, 잘못하다",まちがえる,ichidan,Y,descriptive,Y,Y,Y,Y,실수하고,실수해서,,실수할 수 있다,실수해라,실수합니다,실수했다
-verb,助ける,"돕다, (목숨을)구조하다",たすける,ichidan,Y,natural,Y,Y,Y,Y,돕고,도워서,도움이 되다,도울 수 있다,도워라,돕습니다,도웠다
-verb,助かる,"도움이 되다, 구조되다",たすかる,godan,Y,none,Y,Y,Y,N,도움이 되고,도움이 되어서,,도움이 될 수 있다,,도움이 됩니다,도움이 되었다
-verb,溜める,"쌓다, 모으다, 늘리다",ためる,ichidan,Y,descriptive,Y,Y,Y,Y,쌓고,쌓아서,괴다,쌓을 수 있다,쌓아라,쌓습니다,쌓았다
-verb,溜まる,"괴다, 모이다",たまる,godan,Y,none,Y,Y,Y,N,괴고,괴어서,,괼 수 있다,,굅니다,괴었다
-verb,伸ばす,"늘리다, 펴다, 평평하게 하다",のばす,godan,Y,natural,Y,Y,Y,Y,늘리고,늘려서,늘다,늘릴 수 있다,늘려라,늘립니다,늘렸다
-verb,伸びる,"늘다, 자라다",のびる,ichidan,Y,none,Y,Y,Y,N,늘고,늘어서,,늘 수 있다,,늡니다,늘었다
-verb,繋ぐ,"연결하다, 잇다, (손)잡다",つなぐ,godan,Y,natural,Y,Y,Y,Y,연결하고,연결해서,연결되다,연결할 수 있다,연결해라,연결합니다,연결했다
-verb,繋がる,"연결되다, 이어지다",つながる,godan,Y,none,Y,Y,Y,Y,연결되고,연결되어서,,연결될 수 있다,연결되어라,연결됩니다,연결되었다
-verb,混ぜる,"섞다, 혼합하다",まぜる,ichidan,Y,natural,Y,Y,Y,Y,섞고,섞어서,섞이다,섞을 수 있다,섞어라,섞습니다,섞었다
-verb,混ざる,"섞이다, 혼합되다",まざる,godan,Y,none,Y,Y,Y,N,섞이고,섞여서,,섞일 수 있다,,섞입니다,섞였다
-verb,乾かす,"말리다, 건조시키다",かわかす,godan,Y,descriptive,Y,Y,Y,Y,말리고,말려서,마르다,말릴 수 있다,말려라,말립니다,말렸다
-verb,乾く,"마르다, 건조되다",かわく,godan,Y,none,Y,Y,Y,N,마르고,말라서,,마를 수 있다,,마릅니다,말랐다
-verb,残す,남기다,のこす,godan,Y,natural,Y,Y,Y,Y,남기고,남겨서,남다,남길 수 있다,남겨라,남깁니다,남겼다
-verb,残る,남다,のこる,godan,Y,none,Y,Y,Y,N,남고,남아서,,남을 수 있다,,남습니다,남았다
-verb,燃やす,태우다,もやす,godan,Y,natural,Y,Y,Y,Y,태우고,태워서,타다,태울 수 있다,태워라,태웁니다,태웠다
-verb,燃える,타다,もえる,ichidan,Y,none,Y,Y,Y,N,타고,타서,,탈 수 있다,,탑니다,탔다
-verb,折る,"접다, 포개지도록하다",おる,godan,Y,natural,Y,Y,Y,Y,접고,접어서,접히다,접을 수 있다,접어라,접습니다,접었다
-verb,折れる,"접히다, 부러지다",おれる,ichidan,Y,none,Y,Y,Y,N,접히고,접혀서,,접힐 수 있다,,접힙니다,접혔다
-verb,気に入る,마음에 들다,きにいる,godan,N,none,N,N,N,N,마음에 들고,마음에 들어서,,,,마음에 듭니다,마음에 들었다
-verb,気になる,"마음에 걸리다, 걱정되다",きになる,godan,N,none,N,N,N,N,마음에 걸리고,마음에 걸려서,,,,마음에 걸립니다,마음에 걸렸다
-verb,受ける,"받다, 응하다",うける,ichidan,Y,descriptive,Y,Y,Y,Y,받고,받아서,,받을 수 있다,받아라,받습니다,받았다
-verb,受かる,합격되다,うかる,godan,Y,none,Y,Y,Y,N,합격되고,합격되어서,,합격될 수 있다,,합격됩니다,합격되었다
-verb,直す,"고치다, 바로잡다",なおす,godan,Y,natural,Y,Y,Y,Y,고치고,고쳐서,고쳐지다,고칠 수 있다,고쳐라,고칩니다,고쳤다
-verb,直る,"고쳐지다, 바로잡히다",なおる,godan,Y,none,Y,Y,Y,N,고쳐지고,고쳐져서,,고쳐질 수 있다,,고쳐집니다,고쳐졌다
-verb,治す,"치료하다, 고치다",なおす,godan,Y,natural,Y,Y,Y,Y,치료하고,치료해서,치료되다,치료할 수 있다,치료해라,치료합니다,치료했다
-verb,治る,"치료되다, 고쳐지다",なおる,godan,Y,none,Y,Y,Y,N,치료되고,치료되어서,,치료될 수 있다,,치료됩니다,치료되었다
-verb,預ける,맡기다,あずける,ichidan,Y,natural,Y,Y,Y,Y,맡기고,맡겨서,맡다,맡길 수 있다,맡겨라,맡깁니다,맡겼다
-verb,預かる,"맡다, 보관하다",あずかる,godan,Y,descriptive,Y,Y,Y,Y,맡고,맡아서,,맡을 수 있다,맡아라,맡습니다,맡았다
-verb,染める,"물들이다, 염색하다",そめる,ichidan,Y,natural,Y,Y,Y,Y,물들이고,물들여서,물들다,물들일 수 있다,물들여라,물들입니다,물들였다
-verb,染まる,물들다,そまる,godan,Y,none,Y,Y,Y,N,물들고,물들어서,,물들 수 있다,,물듭니다,물들었다
-verb,落とす,떨어뜨리다,おとす,godan,Y,natural,Y,Y,Y,Y,떨어뜨리고,떨어뜨려서,떨어지다,떨어뜨릴 수 있다,떨어뜨려라,떨어뜨립니다,떨어뜨렸다
-verb,落ちる,떨어지다,おちる,ichidan,Y,none,Y,Y,Y,N,떨어지고,떨어져서,,떨어질 수 있다,,떨어집니다,떨어졌다
-verb,盛り上げる,"(흥, 분위기)올리다",もりあげる,ichidan,Y,descriptive,Y,Y,Y,Y,(흥고,(흥어서,(흥,(흥을 수 있다,(흥어라,(흥습니다,(흥었다
-verb,盛り上がる,"(흥, 분위기)오르다",もりあがる,godan,Y,none,Y,Y,Y,N,(흥고,(흥어서,,(흥을 수 있다,,(흥습니다,(흥었다
-verb,改める,"개정하다, 새롭게 하다",あらためる,ichidan,Y,descriptive,Y,Y,Y,Y,개정하고,개정해서,개정되다,개정할 수 있다,개정해라,개정합니다,개정했다
-verb,改まる,"개정되다,격식을 차리다",あらたまる,godan,Y,none,Y,Y,Y,N,개정되고,개정되어서,,개정될 수 있다,,개정됩니다,개정되었다
-verb,隠す,숨기다,かくす,godan,Y,natural,Y,Y,Y,Y,숨기고,숨겨서,숨다,숨길 수 있다,숨겨라,숨깁니다,숨겼다
-verb,隠れる,숨다,かくれる,ichidan,Y,none,Y,Y,Y,N,숨고,숨어서,,숨을 수 있다,,숨습니다,숨었다
-verb,痛める,"아프게 하다, 다치다",いためる,ichidan,Y,descriptive,Y,Y,Y,Y,아프게 하고,아프게 해서,파손되다,아프게 할 수 있다,아프게 해라,아프게 합니다,아프게 했다
-verb,痛む,"파손되다, 상하다",いたむ,godan,Y,none,Y,Y,Y,N,파손되고,파손되어서,,파손될 수 있다,,파손됩니다,파손되었다
-verb,縮む,"줄다, 오그라들다",ちぢむ,godan,Y,none,Y,Y,Y,N,줄고,줄어서,,줄 수 있다,,줍니다,줄었다
-verb,縮まる,"줄다, (시간,거리)짧아지다",ちぢまる,godan,Y,none,Y,Y,Y,N,줄고,줄어서,,줄 수 있다,,줍니다,줄었다
-verb,濡らす,적시다,ぬらす,godan,Y,natural,Y,Y,Y,Y,적시고,적셔서,젖다,적실 수 있다,적셔라,적십니다,적셨다
-verb,濡れる,젖다,ぬれる,ichidan,Y,none,Y,Y,Y,N,젖고,젖어서,,젖을 수 있다,,젖습니다,젖었다
-verb,埋める,"묻다, 메우다",うめる,ichidan,Y,natural,Y,Y,Y,Y,묻고,물어서,묻히다,물을 수 있다,물어라,묻습니다,물었다
-verb,埋まる,"묻히다, 메워지다",うまる,godan,Y,none,Y,Y,Y,N,묻히고,묻혀서,,묻힐 수 있다,,묻힙니다,묻혔다
-verb,詰める,"(빈틈없이) 채우다, 좁히다",つめる,ichidan,Y,natural,Y,Y,Y,Y,(빈틈없이) 채우고,(빈틈없이) 채워서,꽉 차다,(빈틈없이) 채울 수 있다,(빈틈없이) 채워라,(빈틈없이) 채웁니다,(빈틈없이) 채웠다
-verb,詰まる,"꽉 차다, 좁혀지다",つまる,godan,Y,none,Y,Y,Y,N,꽉 차고,꽉 차서,,꽉 찰 수 있다,,꽉 찹니다,꽉 찼다
+﻿base_jp,base_kr,pos,reading,verb_group,can_potential,can_passive,can_volitional,can_imperative,kr_connective,kr_passive_override,kr_potential_override,kr_imperative_override,kr_polite_present_override,kr_past_override
+行く,가다,verb,いく,godan,Y,Y,Y,Y,가서,가게 되다,갈 수 있다,가라,갑니다,갔다
+来る,오다,verb,くる,irregular,Y,Y,Y,Y,와서,오게 되다,올 수 있다,오라,옵니다,왔다
+食べる,먹다,verb,たべる,ichidan,Y,Y,Y,Y,먹어서,,먹을 수 있다,먹어라,,먹었다
+飲む,마시다,verb,のむ,godan,Y,N,Y,Y,마셔서,,,마셔라,마십니다,마셨다
+見る,보다,verb,みる,ichidan,Y,Y,Y,Y,봐서,,볼 수 있다,봐라,,
+聞く,듣다,verb,きく,godan,Y,Y,Y,Y,듣고,듣다(수동형),,,,
+話す,말하다,verb,はなす,godan,Y,Y,Y,Y,말하고,말하다(수동형),,,,
+読む,읽다,verb,よむ,godan,Y,Y,Y,Y,읽고,,,,,
+書く,쓰다,verb,かく,godan,Y,Y,Y,Y,써서,쓰이다,,써라,씁니다,썼다
+買う,사다,verb,かう,godan,N,Y,Y,Y,사서,사다(수동형),,,삽니다,
+会う,만나다,verb,あう,godan,N,N,Y,Y,만나서,,,,만납니다,만났다
+起きる,일어나다,verb,おきる,ichidan,N,Y,Y,Y,일어나서,일어나지다,,,일어납니다,일어났다
+入る,들어가다,verb,はいる,godan,N,Y,Y,Y,들어가서,들어가게 되다,,,,들어갔다
+帰る,돌아가다,verb,かえる,godan,N,Y,Y,Y,돌아가서,돌아가다(수동형),,,,
+急ぐ,서두르다,verb,いそぐ,godan,N,Y,Y,Y,서둘러서,서두르다(수동형),서두를 수 있다,,,서둘렀다
+借りる,빌리다,verb,かりる,ichidan,N,Y,Y,Y,빌려서,빌리다(수동형),,,빌립니다,빌렸다
+待つ,기다리다,verb,まつ,godan,Y,Y,Y,Y,기다려서,,기다릴 수 있다,,,기다렸다
+教える,가르치다,verb,おしえる,ichidan,Y,Y,Y,Y,가르쳐서,,가르칠 수 있다,가르쳐라,,
+作る,만들다,verb,つくる,godan,Y,Y,Y,Y,만들어서,,만들 수 있다,,,
+開ける,열다,verb,あける,ichidan,Y,Y,Y,Y,열어서,열리다,,열어라,엽니다,
+閉める,닫다,verb,しめる,ichidan,Y,Y,Y,Y,닫고,,,닫아라,,
+切る,자르다,verb,きる,godan,Y,Y,Y,Y,잘라서,잘리다,자를 수 있다,,자릅니다,
+泳ぐ,헤엄치다,verb,およぐ,godan,Y,Y,Y,Y,헤엄쳐서,헤엄치다(수동형),헤엄칠 수 있다,헤엄쳐라,,
+遊ぶ,놀다,verb,あそぶ,godan,Y,Y,Y,Y,놀아서,,놀 수 있다,놀아라,놉니다,
+走る,달리다,verb,はしる,godan,Y,Y,Y,Y,달려서,달리다(수동형),달릴 수 있다,달려라,,달렸다
+信じる,믿다,verb,しんじる,ichidan,N,Y,Y,Y,믿어서,믿어지다,,,,
+死ぬ,죽다,verb,しぬ,godan,N,Y,N,N,죽고,죽다(수동형),,,,
+立つ,서다,verb,たつ,godan,N,Y,Y,Y,서서,,,,,섰다
+下りる,내리다,verb,おりる,ichidan,N,Y,Y,Y,내려서,,,내려라,,내렸다
+持つ,가지다,verb,もつ,godan,N,Y,Y,Y,가지고,가지다(수동형),,가져라,,
+要る,필요하다,verb,いる,godan,N,N,N,N,필요하고,,,,필요합니다,필요했다
+調べる,조사하다,verb,しらべる,ichidan,N,Y,Y,Y,조사하고,조사되다,,,,
+勉強する,공부하다,verb,べんきょうする,irregular,N,N,Y,Y,공부하고,,,,,
+シャワーする,샤워하다,verb,しゃわーする,irregular,Y,Y,Y,Y,샤워하고,샤워하다(수동형),,,,
+答える,대답하다,verb,こたえる,ichidan,N,Y,Y,Y,대답하고,대답하다(수동형),,,,
+歌う,노래하다,verb,うたう,godan,N,Y,Y,Y,노래하고,노래하다(수동형),,,,
+入れる,넣다,verb,いれる,ichidan,Y,Y,Y,Y,넣어서,,넣을 수 있다,넣어라,,
+出す,꺼내다,verb,だす,godan,Y,Y,Y,Y,꺼내서,,꺼낼 수 있다,,,
+乗る,타다,verb,のる,godan,Y,Y,Y,Y,타서,,탈 수 있다,,,
+降りる,내리다,verb,おりる,ichidan,N,Y,Y,Y,내려서,,,내려라,,내렸다
+渡る,건너다,verb,わたる,godan,Y,Y,Y,Y,건너서,,건널 수 있다,,건넙니다,
+捨てる,버리다,verb,すてる,ichidan,N,Y,Y,Y,버려서,버려지다,,,,버렸다
+知る,알다,verb,しる,godan,N,Y,Y,Y,알아서,알려지다,,,,알았다
+持ち込む,들다,verb,はいる,godan,N,Y,Y,Y,들고,들다(수동형),,,,
+起こす,깨우다,verb,おこす,godan,Y,Y,Y,Y,깨워서,,깨울 수 있다,,,
+座る,앉다,verb,すわる,godan,N,Y,Y,Y,앉아서,,앉을 수 있다,,,
+立てる,세우다,verb,たてる,ichidan,Y,Y,Y,Y,세워서,,세울 수 있다,,,
+返す,돌려주다,verb,かえす,godan,Y,Y,Y,Y,돌려줘서,,돌려줄 수 있다,,,
+助ける,돕다,verb,たすける,ichidan,Y,Y,Y,Y,도와서,,도울 수 있다,,,
+選ぶ,고르다,verb,えらぶ,godan,Y,Y,Y,Y,골라서,,고를 수 있다,,,
+止める,멈추다,verb,とめる,ichidan,Y,Y,Y,Y,멈춰서,,멈출 수 있다,,,
