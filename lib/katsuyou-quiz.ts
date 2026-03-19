@@ -73,6 +73,7 @@ function euForms(root: string) {
     슬프: { past: "슬펐다", polite: "슬픕니다", te: "슬퍼" },
     바쁘: { past: "바빴다", polite: "바쁩니다", te: "바빠" },
     기쁘: { past: "기뻤다", polite: "기쁩니다", te: "기뻐" },
+    크: { past: "컸다", polite: "큽니다", te: "커" },
   };
 
   return map[root] ?? {
@@ -151,6 +152,8 @@ function woForms(root: string) {
     시끄럽: { past: "시끄러웠다", polite: "시끄럽습니다", te: "시끄러워" },
     뻔뻔스럽: { past: "뻔뻔스러웠다", polite: "뻔뻔스럽습니다", te: "뻔뻔스러워" },
     희: { past: "희었다", polite: "흽니다", te: "희어" },
+    쉽: { past: "쉬웠다", polite: "쉽습니다", te: "쉬워" },
+    괴롭: { past: "괴로웠다", polite: "괴롭습니다", te: "괴로워" },
   };
 
   if (map[root]) return map[root];
@@ -158,6 +161,8 @@ function woForms(root: string) {
   if (
     root.endsWith("스럽") ||
     root.endsWith("럽") ||
+    root.endsWith("롭") ||
+    root.endsWith("쉽") ||
     root.endsWith("갑") ||
     root.endsWith("겁") ||
     root.endsWith("깝") ||
@@ -250,7 +255,14 @@ function normalizeKrFormText(text: string): string {
     .replace(/빨갛았습니다/g, "빨갰습니다")
     .replace(/빨갛았다/g, "빨갰다")
     .replace(/까맣았습니다/g, "까맸습니다")
-    .replace(/까맣았다/g, "까맸다");
+    .replace(/까맣았다/g, "까맸다")
+    .replace(/쉽었다/g, "쉬웠다")
+    .replace(/쉽었습니다/g, "쉬웠습니다")
+    .replace(/크었다/g, "컸다")
+    .replace(/크었습니다/g, "컸습니다")
+    .replace(/괴롭어서/g, "괴로워서")
+    .replace(/괴롭었다/g, "괴로웠다")
+    .replace(/괴롭었습니다/g, "괴로웠습니다");
 }
 
 const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
