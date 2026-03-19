@@ -57,6 +57,76 @@ type MenuSettings = {
   admin_min_plan: PlanCode;
 };
 
+type TrainingCardProps = {
+  title: string;
+  icon: string;
+  desc: string;
+  count: number;
+  avg: number;
+  href: string;
+  buttonLabel: string;
+  borderClass: string;
+  bgClass: string;
+  buttonBorderClass: string;
+};
+
+function TrainingCard({
+  title,
+  icon,
+  desc,
+  count,
+  avg,
+  href,
+  buttonLabel,
+  borderClass,
+  bgClass,
+  buttonBorderClass,
+}: TrainingCardProps) {
+  return (
+    <div
+      className={`flex min-h-[280px] h-full flex-col rounded-3xl border p-6 transition hover:shadow-md ${borderClass} ${bgClass}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-[34px] font-bold leading-none text-gray-900 sm:text-[40px]">
+            <span className="mr-2">{icon}</span>
+            {title}
+          </p>
+
+          <p className="mt-5 min-h-[64px] break-keep text-[15px] leading-8 text-gray-600">
+            {desc}
+          </p>
+        </div>
+
+        <div className="w-[84px] shrink-0 text-right">
+          <p className="text-[36px] font-bold leading-none text-gray-900 sm:text-[42px]">
+            {count}
+          </p>
+          <p className="mt-3 text-[14px] leading-5 text-gray-500">
+            학습 횟수
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-auto flex items-end justify-between gap-4 pt-8">
+        <div>
+          <p className="text-[15px] text-gray-500">평균 정답률</p>
+          <p className="mt-2 text-[40px] font-bold leading-none text-gray-900 sm:text-[50px]">
+            {avg}%
+          </p>
+        </div>
+
+        <a
+          href={href}
+          className={`inline-flex h-[56px] shrink-0 items-center justify-center rounded-full border bg-white px-8 text-[18px] font-semibold text-gray-800 ${buttonBorderClass}`}
+        >
+          {buttonLabel}
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function canAccess(
   userPlan: string | null | undefined,
   minPlan: PlanCode,
@@ -853,127 +923,65 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="mt-10 grid grid-cols-1 gap-6 xl:grid-cols-2">
           {canWord ? (
-            <div className="flex h-full flex-col rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-6 transition hover:shadow-md">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-2xl font-bold">📝 단어</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
-                    기본 어휘를 문제와 패턴 카드로 익혀보세요.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold">{stats.wordCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
-                </div>
-              </div>
-
-              <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-                <div>
-                  <p className="text-sm text-gray-500">평균 정답률</p>
-                  <p className="mt-1 text-2xl font-bold">{stats.wordAvg}%</p>
-                </div>
-                <a
-                  href="/word"
-                  className="shrink-0 rounded-2xl border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-gray-800"
-                >
-                  단어 시작
-                </a>
-              </div>
-            </div>
+            <TrainingCard
+              title="단어"
+              icon="📝"
+              desc="기본 어휘를 문제와 패턴 카드로 익혀보세요."
+              count={stats.wordCount}
+              avg={stats.wordAvg}
+              href="/word"
+              buttonLabel="단어 시작"
+              borderClass="border-blue-200"
+              bgClass="bg-gradient-to-r from-blue-50 to-white"
+              buttonBorderClass="border-blue-200"
+            />
           ) : null}
 
           {canKanji ? (
-            <div className="flex h-full flex-col rounded-3xl border border-green-200 bg-gradient-to-r from-green-50 to-white p-6 transition hover:shadow-md">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-2xl font-bold">🈯 한자</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
-                    레벨별 한자 문제를 풀며 읽기와 뜻을 익혀보세요.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold">{stats.kanjiCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
-                </div>
-              </div>
-
-              <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-                <div>
-                  <p className="text-sm text-gray-500">평균 정답률</p>
-                  <p className="mt-1 text-2xl font-bold">{stats.kanjiAvg}%</p>
-                </div>
-                <a
-                  href="/kanji"
-                  className="shrink-0 rounded-2xl border border-green-200 bg-white px-4 py-2 text-sm font-medium text-gray-800"
-                >
-                  한자 시작
-                </a>
-              </div>
-            </div>
+            <TrainingCard
+              title="한자"
+              icon="🈯"
+              desc="레벨별 한자 문제를 풀며 읽기와 뜻을 익혀보세요."
+              count={stats.kanjiCount}
+              avg={stats.kanjiAvg}
+              href="/kanji"
+              buttonLabel="한자 시작"
+              borderClass="border-green-200"
+              bgClass="bg-gradient-to-r from-green-50 to-white"
+              buttonBorderClass="border-green-200"
+            />
           ) : null}
 
           {canKatsuyou ? (
-            <div className="flex h-full flex-col rounded-3xl border border-rose-200 bg-gradient-to-r from-rose-50 to-white p-6 transition hover:shadow-md">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-2xl font-bold">🔄 활용</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
-                    い형용사·な형용사·동사의 기본형을 문제로 익혀보세요.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold">{stats.katsuyouCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
-                </div>
-              </div>
-
-              <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-                <div>
-                  <p className="text-sm text-gray-500">평균 정답률</p>
-                  <p className="mt-1 text-2xl font-bold">
-                    {stats.katsuyouAvg}%
-                  </p>
-                </div>
-                <a
-                  href="/katsuyou"
-                  className="shrink-0 rounded-2xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-gray-800"
-                >
-                  활용 시작
-                </a>
-              </div>
-            </div>
+            <TrainingCard
+              title="활용"
+              icon="🔄"
+              desc="い형용사·な형용사·동사의 기본형을 문제로 익혀보세요."
+              count={stats.katsuyouCount}
+              avg={stats.katsuyouAvg}
+              href="/katsuyou"
+              buttonLabel="활용 시작"
+              borderClass="border-rose-200"
+              bgClass="bg-gradient-to-r from-rose-50 to-white"
+              buttonBorderClass="border-rose-200"
+            />
           ) : null}
 
           {canTalk ? (
-            <div className="flex h-full flex-col rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-50 to-white p-6 transition hover:shadow-md">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-2xl font-bold">🗣️ 회화</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
-                    실제 대화형 문제로 말문을 자연스럽게 열어보세요.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold">{stats.talkCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
-                </div>
-              </div>
-
-              <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-                <div>
-                  <p className="text-sm text-gray-500">평균 정답률</p>
-                  <p className="mt-1 text-2xl font-bold">{stats.talkAvg}%</p>
-                </div>
-                <a
-                  href="/talk"
-                  className="shrink-0 rounded-2xl border border-purple-200 bg-white px-4 py-2 text-sm font-medium text-gray-800"
-                >
-                  회화 시작
-                </a>
-              </div>
-            </div>
+            <TrainingCard
+              title="회화"
+              icon="🗣️"
+              desc="실제 대화형 문제로 말문을 자연스럽게 열어보세요."
+              count={stats.talkCount}
+              avg={stats.talkAvg}
+              href="/talk"
+              buttonLabel="회화 시작"
+              borderClass="border-purple-200"
+              bgClass="bg-gradient-to-r from-purple-50 to-white"
+              buttonBorderClass="border-purple-200"
+            />
           ) : null}
         </div>
 
