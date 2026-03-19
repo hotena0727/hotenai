@@ -1262,8 +1262,8 @@ function buildVerbJpForms(row: KatsuyouRow): VerbJpFormSet | null {
     す: { i: "し", a: "さ", e: "せ", o: "そ", te: "して", ta: "した" },
     つ: { i: "ち", a: "た", e: "て", o: "と", te: "って", ta: "った" },
     ぬ: { i: "に", a: "な", e: "ね", o: "の", te: "んで", ta: "んだ" },
-    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "ん다" },
-    ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "ん다" },
+    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "んだ" },
+    ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "んだ" },
     る: { i: "り", a: "ら", e: "れ", o: "ろ", te: "って", ta: "った" },
   } as const;
 
@@ -1385,12 +1385,10 @@ function shouldExcludeChoiceForJpAnswer(correct: GeneratedForm, candidate: Gener
 function shouldExcludeChoiceForKrAnswer(correct: GeneratedForm, candidate: GeneratedForm): boolean {
   if (candidate.promptKr === correct.promptKr) return true;
 
-  // 핵심:
-  // 같은 일본어 표면형(예: 止められる)의 다른 의미(가능/수동)가
-  // 보기에서 동시에 나오지 않게 막음
+  // 같은 일본어 표면형의 다른 의미(가능/수동 등) 중복 방지
   if (isSameJapaneseSurfaceConflict(correct, candidate)) return true;
 
-  // 연결형도 한 문제에서는 하나만 보이게
+  // 연결형은 한 문제에서 하나만 노출
   if (isConnectiveConflict(correct, candidate)) return true;
 
   return false;

@@ -396,9 +396,10 @@ function makePassive(baseKr: string): string {
     노래하다: "노래하다(수동형)",
     샤워하다: "샤워하다(수동형)",
     서두르다: "서두르다(수동형)",
-    들어가다: "들어가게 되다",
+    들어가다: "들어가지다",
     일어나다: "일어나지다",
     돕다: "돕다(수동형)",
+    건너다: "건너다(수동형)",
   };
   if (descriptive[baseKr]) return descriptive[baseKr];
 
