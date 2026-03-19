@@ -78,6 +78,7 @@ function normalizeKrPredicateText(text: string): string {
 
 function normalizeKrFormText(text: string): string {
   return text
+    .replace(/어리습니다/g, "어립니다")
     .replace(/어리었습니다/g, "어렸습니다")
     .replace(/어리었다/g, "어렸다")
     .replace(/이르습니다/g, "이릅니다")
@@ -131,6 +132,9 @@ function normalizeKrFormText(text: string): string {
     .replace(/괴롭어서/g, "괴로워서")
     .replace(/괴롭었다/g, "괴로웠다")
     .replace(/괴롭었습니다/g, "괴로웠습니다")
+    .replace(/고통러웠다/g, "고통스러웠다")
+    .replace(/고통러웠습니다/g, "고통스러웠습니다")
+    .replace(/고통러워서/g, "고통스러워서")
     .replace(/두껍어서/g, "두꺼워서")
     .replace(/두껍었다/g, "두꺼웠다")
     .replace(/두껍었습니다/g, "두꺼웠습니다")
@@ -253,6 +257,8 @@ function woForms(root: string) {
     즐겁: { past: "즐거웠다", polite: "즐겁습니다", te: "즐거워" },
     새롭: { past: "새로웠다", polite: "새롭습니다", te: "새로워" },
     외롭: { past: "외로웠다", polite: "외롭습니다", te: "외로워" },
+    부럽: { past: "부러웠다", polite: "부럽습니다", te: "부러워" },
+    고통스럽: { past: "고통스러웠다", polite: "고통스럽습니다", te: "고통스러워" },
     드물: { past: "드물었다", polite: "드뭅니다", te: "드물어" },
     맵: { past: "매웠다", polite: "맵습니다", te: "매워" },
     차갑: { past: "차가웠다", polite: "차갑습니다", te: "차가워" },
@@ -508,6 +514,18 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     polite_past: "같았습니다",
     te_form_a: "같고",
     te_form_b: "같아서",
+  },
+  부럽: {
+    plain_past: "부러웠다",
+    polite_past: "부러웠습니다",
+    te_form_a: "부럽고",
+    te_form_b: "부러워서",
+  },
+  고통스럽: {
+    plain_past: "고통스러웠다",
+    polite_past: "고통스러웠습니다",
+    te_form_a: "고통스럽고",
+    te_form_b: "고통스러워서",
   },
 };
 
