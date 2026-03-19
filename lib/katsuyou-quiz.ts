@@ -299,7 +299,17 @@ function normalizeKrFormText(text: string): string {
     .replace(/제멋대로이 아니다/g, "제멋대로가 아니다")
     .replace(/폐가 되였다/g, "폐가 되었다")
     .replace(/쓸데없였다/g, "쓸데없었다")
-    .replace(/품위 있였다/g, "품위 있었다");
+    .replace(/품위 있였다/g, "품위 있었다")
+    .replace(/괜찮었습니다/g, "괜찮았습니다")
+    .replace(/괜찮었다/g, "괜찮았다")
+    .replace(/야무지었습니다/g, "야무졌습니다")
+    .replace(/야무지었다/g, "야무졌다")
+    .replace(/성가시습니다/g, "성가십니다")
+    .replace(/성가시었다/g, "성가셨다")
+    .replace(/성가시었습니다/g, "성가셨습니다")
+    .replace(/사치스럽었다/g, "사치스러웠다")
+    .replace(/사치스럽었습니다/g, "사치스러웠습니다")
+    .replace(/사치스럽어서/g, "사치스러워서");
 }
 
 const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
@@ -456,6 +466,32 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     polite_past: "까맸습니다",
     te_form_a: "까맣고",
     te_form_b: "까매서",
+  },
+  괜찮: {
+    plain_past: "괜찮았다",
+    polite_past: "괜찮았습니다",
+    te_form_a: "괜찮고",
+    te_form_b: "괜찮아서",
+  },
+  야무지: {
+    polite_present: "야무집니다",
+    plain_past: "야무졌다",
+    polite_past: "야무졌습니다",
+    te_form_a: "야무지고",
+    te_form_b: "야무져서",
+  },
+  성가시: {
+    polite_present: "성가십니다",
+    plain_past: "성가셨다",
+    polite_past: "성가셨습니다",
+    te_form_a: "성가시고",
+    te_form_b: "성가셔서",
+  },
+  사치스럽: {
+    plain_past: "사치스러웠다",
+    polite_past: "사치스러웠습니다",
+    te_form_a: "사치스럽고",
+    te_form_b: "사치스러워서",
   },
 };
 
