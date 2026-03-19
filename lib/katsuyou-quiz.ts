@@ -932,18 +932,6 @@ export function buildKatsuyouQuiz({
   excludedWords?: string[];
   size?: number;
 }): KatsuyouQuestion[] {
-  console.log("[katsuyou] total rows:", rows.length);
-  console.log(
-    "[katsuyou] rows sample:",
-    rows.slice(0, 20).map((r) => ({
-      jp: r.jp,
-      kr: r.kr,
-      pos: r.pos,
-      reading: r.reading,
-      kr_root: r.kr_root,
-      kr_pattern: r.kr_pattern,
-    }))
-  );
   const excludedSet = new Set(excludedWords);
   const filteredRows = rows.filter((row) => row.pos === pos && !excludedSet.has(row.jp));
   const fallbackRows = rows.filter((row) => row.pos === pos);
