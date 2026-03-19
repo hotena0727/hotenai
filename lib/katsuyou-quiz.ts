@@ -92,6 +92,35 @@ function buildBieupTeForm(root: string): string {
   return `${root.slice(0, -1)}워`;
 }
 
+function haForms(root: string) {
+  const stem = root.slice(0, -1);
+  return {
+    past: `${stem}했다`,
+    polite: `${stem}합니다`,
+    te: `${stem}해`,
+  };
+}
+
+function reuForms(root: string) {
+  const map: Record<string, { past: string; polite: string; te: string }> = {
+    빠르: { past: "빨랐다", polite: "빠릅니다", te: "빨라" },
+    이르: { past: "일렀다", polite: "이릅니다", te: "일러" },
+    다르: { past: "달랐다", polite: "다릅니다", te: "달라" },
+    고르: { past: "골랐다", polite: "고릅니다", te: "골라" },
+    누르: { past: "눌렀다", polite: "누릅니다", te: "눌러" },
+    부르: { past: "불렀다", polite: "부릅니다", te: "불러" },
+    모르: { past: "몰랐다", polite: "모릅니다", te: "몰라" },
+    어리: { past: "어렸다", polite: "어립니다", te: "어려" },
+    가늘: { past: "가늘었다", polite: "가늘습니다", te: "가늘어" },
+  };
+
+  return map[root] ?? {
+    past: `${root}었다`,
+    polite: `${root}습니다`,
+    te: `${root}어`,
+  };
+}
+
 function woForms(root: string) {
   const map: Record<string, { past: string; polite: string; te: string }> = {
     어렵: { past: "어려웠다", polite: "어렵습니다", te: "어려워" },
