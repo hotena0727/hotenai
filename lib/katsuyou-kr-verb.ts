@@ -200,6 +200,8 @@ function makePast(baseKr: string): string {
     넣: "넣었다",
     꺼내: "꺼냈다",
     가지: "가졌다",
+
+    // 추가
     돕: "도왔다",
     타: "탔다",
   };
