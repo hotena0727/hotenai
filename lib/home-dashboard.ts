@@ -106,8 +106,8 @@ export function getConsistencyCaption(
   activeDays7: number,
   todayCount: number
 ) {
-  const todayText = todayCount > 0 ? "오늘 학습 완료" : "오늘은 아직 학습 전";
-  return `연속 ${streak}일 · 최근 7일 중 ${activeDays7}일 학습 · ${todayText}`;
+  const todayLabel = todayCount > 0 ? "오늘 학습 완료" : "오늘 미학습";
+  return `연속 ${streak}일 / 최근 7일 중 ${activeDays7}일 학습 / ${todayLabel}`;
 }
 
 export function buildBalanceData(stats: {
@@ -309,42 +309,42 @@ export function buildSuggestedRoutines(params: {
       topWrongKind === "talk" && canTalk
         ? "/mypage/wrong-talk"
         : topWrongKind === "word" && canWord
-        ? "/mypage/wrong-word"
-        : topWrongKind === "kanji" && canKanji
-        ? "/mypage/wrong-kanji"
-        : topWrongKind === "katsuyou" && canKatsuyou
-        ? "/mypage/wrong-katsuyou"
-        : canTalk
-        ? "/mypage/wrong-talk"
-        : canWord
-        ? "/mypage/wrong-word"
-        : canKanji
-        ? "/mypage/wrong-kanji"
-        : canKatsuyou
-        ? "/mypage/wrong-katsuyou"
-        : null;
+          ? "/mypage/wrong-word"
+          : topWrongKind === "kanji" && canKanji
+            ? "/mypage/wrong-kanji"
+            : topWrongKind === "katsuyou" && canKatsuyou
+              ? "/mypage/wrong-katsuyou"
+              : canTalk
+                ? "/mypage/wrong-talk"
+                : canWord
+                  ? "/mypage/wrong-word"
+                  : canKanji
+                    ? "/mypage/wrong-kanji"
+                    : canKatsuyou
+                      ? "/mypage/wrong-katsuyou"
+                      : null;
 
     const reviewTitle =
       topWrongKind === "talk"
         ? "↪️ 회화 오답 복습"
         : topWrongKind === "word"
-        ? "↪️ 단어 오답 복습"
-        : topWrongKind === "kanji"
-        ? "↪️ 한자 오답 복습"
-        : topWrongKind === "katsuyou"
-        ? "↪️ 활용 오답 복습"
-        : "↪️ 오늘의 오답 복습";
+          ? "↪️ 단어 오답 복습"
+          : topWrongKind === "kanji"
+            ? "↪️ 한자 오답 복습"
+            : topWrongKind === "katsuyou"
+              ? "↪️ 활용 오답 복습"
+              : "↪️ 오늘의 오답 복습";
 
     const reviewDesc =
       topWrongKind === "talk"
         ? "최근에는 회화 오답이 많아요. 회화 복습부터 해보세요."
         : topWrongKind === "word"
-        ? "최근에는 단어 오답이 많아요. 단어 복습부터 해보세요."
-        : topWrongKind === "kanji"
-        ? "최근에는 한자 오답이 많아요. 한자 복습부터 해보세요."
-        : topWrongKind === "katsuyou"
-        ? "최근에는 활용 오답이 많아요. 활용 복습부터 해보세요."
-        : "새 문제보다 오답 복습이 더 효과적인 날이에요.";
+          ? "최근에는 단어 오답이 많아요. 단어 복습부터 해보세요."
+          : topWrongKind === "kanji"
+            ? "최근에는 한자 오답이 많아요. 한자 복습부터 해보세요."
+            : topWrongKind === "katsuyou"
+              ? "최근에는 활용 오답이 많아요. 활용 복습부터 해보세요."
+              : "새 문제보다 오답 복습이 더 효과적인 날이에요.";
 
     pushRoutine({
       title: reviewTitle,
@@ -427,31 +427,31 @@ export function buildSuggestedRoutines(params: {
       topWrongKind === "talk" && canTalk
         ? "/mypage/wrong-talk"
         : topWrongKind === "word" && canWord
-        ? "/mypage/wrong-word"
-        : topWrongKind === "kanji" && canKanji
-        ? "/mypage/wrong-kanji"
-        : topWrongKind === "katsuyou" && canKatsuyou
-        ? "/mypage/wrong-katsuyou"
-        : canTalk
-        ? "/mypage/wrong-talk"
-        : canWord
-        ? "/mypage/wrong-word"
-        : canKanji
-        ? "/mypage/wrong-kanji"
-        : canKatsuyou
-        ? "/mypage/wrong-katsuyou"
-        : null;
+          ? "/mypage/wrong-word"
+          : topWrongKind === "kanji" && canKanji
+            ? "/mypage/wrong-kanji"
+            : topWrongKind === "katsuyou" && canKatsuyou
+              ? "/mypage/wrong-katsuyou"
+              : canTalk
+                ? "/mypage/wrong-talk"
+                : canWord
+                  ? "/mypage/wrong-word"
+                  : canKanji
+                    ? "/mypage/wrong-kanji"
+                    : canKatsuyou
+                      ? "/mypage/wrong-katsuyou"
+                      : null;
 
     const fallbackWrongTitle =
       topWrongKind === "talk"
         ? "↪️ 회화 반복오답"
         : topWrongKind === "word"
-        ? "↪️ 단어 반복오답"
-        : topWrongKind === "kanji"
-        ? "↪️ 한자 반복오답"
-        : topWrongKind === "katsuyou"
-        ? "↪️ 활용 반복오답"
-        : "↪️ 반복오답 루틴";
+          ? "↪️ 단어 반복오답"
+          : topWrongKind === "kanji"
+            ? "↪️ 한자 반복오답"
+            : topWrongKind === "katsuyou"
+              ? "↪️ 활용 반복오답"
+              : "↪️ 반복오답 루틴";
 
     pushRoutine({
       title: fallbackWrongTitle,
