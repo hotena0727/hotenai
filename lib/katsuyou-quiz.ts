@@ -877,11 +877,11 @@ function buildNaKrPredicateForms(baseKrRaw: string) {
       polite_present: `${stem}ㅂ니다`.replace(/되ㅂ니다/g, "됩니다"),
       plain_negative: `${stem}지 않다`,
       polite_negative: `${stem}지 않습니다`,
-      plain_past: `${stem}었다`.replace(/되었다/g, "되었다"),
-      polite_past: `${stem}었습니다`.replace(/되었습니다/g, "되었습니다"),
+      plain_past: `${stem}었다`,
+      polite_past: `${stem}었습니다`,
       plain_negative_past: `${stem}지 않았다`,
       polite_negative_past: `${stem}지 않았습니다`,
-      te_form_a: `${stem}고`.replace(/되고/g, "되고"),
+      te_form_a: `${stem}고`,
       te_form_b: `${stem}어서`.replace(/되어서/g, "돼서"),
     };
   }
@@ -956,7 +956,6 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
   const reading = row.reading;
 
   const override = NA_KR_OVERRIDE[baseJp];
-
   const built = buildNaKrPredicateForms(baseKr);
 
   const plain_present = override?.plain_present ?? built.plain_present;
@@ -969,7 +968,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
   const polite_negative_past = override?.polite_negative_past ?? built.polite_negative_past;
   const te_form_a = override?.te_form_a ?? built.te_form_a;
   const te_form_b = override?.te_form_b ?? built.te_form_b;
-  const te_form = pickOne([te_form_a, te_form_b] as const);
+  const tePromptKr = pickOne([te_form_a, te_form_b] as const);
 
   return [
     {
@@ -1056,7 +1055,7 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
       pos: "na_adj",
       qtype: "kr2jp",
       formKey: "te_form",
-      promptKr: te_form,
+      promptKr: tePromptKr,
       answerJp: `${baseJp}で`,
       baseJp,
       baseKr,
