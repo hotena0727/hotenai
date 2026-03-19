@@ -14,7 +14,12 @@ import type {
 import { loadKatsuyouRows } from "@/lib/katsuyou-loader";
 import { buildKatsuyouQuiz } from "@/lib/katsuyou-quiz";
 import { buildKatsuyouAttemptPayload } from "@/lib/katsuyou-payload";
-import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
+import {
+  hasPlan,
+  isPaidPlan,
+  normalizePlan,
+  type PlanCode,
+} from "@/lib/plans";
 import {
   clearDailyState,
   loadAppProgress,
@@ -156,7 +161,9 @@ export default function KatsuyouPage() {
   const isDailyLimitReached =
     !isPaidPlan(userPlan) && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
   const remainingSets = Math.max(DAILY_FREE_SET_LIMIT - todayWordKanjiSets, 0);
-  const isVipPlan = normalizePlan(userPlan) === "vip";
+
+  // FREE는 숨김, LIGHT 이상부터 노출
+  const canUseTts = hasPlan(userPlan, "light");
 
   const playResultSfx = (kind: "perfect" | "correct" | "wrong") => {
     try {
@@ -1178,7 +1185,7 @@ export default function KatsuyouPage() {
                   <div key={`${q.item_key || q.jp_word}-${idx}`}>
                     <div
                       className={
-                        q.qtype === "jp2kr" && isVipPlan
+                        q.qtype === "jp2kr" && canUseTts
                           ? "flex items-start justify-between gap-3"
                           : ""
                       }
@@ -1190,7 +1197,7 @@ export default function KatsuyouPage() {
                         </span>
                       </p>
 
-                      {q.qtype === "jp2kr" && isVipPlan ? (
+                      {q.qtype === "jp2kr" && canUseTts ? (
                         <button
                           type="button"
                           onClick={() => speakJapanese(q.prompt, `q-${idx}`)}
@@ -1281,7 +1288,7 @@ export default function KatsuyouPage() {
                           품사: {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)}
                         </p>
 
-                        {q.qtype === "jp2kr" && isVipPlan ? (
+                        {q.qtype === "jp2kr" && canUseTts ? (
                           <div className="mt-3">
                             <button
                               type="button"
