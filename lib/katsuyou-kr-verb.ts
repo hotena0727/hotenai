@@ -109,6 +109,8 @@ function makeEoAStem(root: string): string {
     넣: "넣어",
     돌아가: "돌아가",
     가지: "가져",
+    돕: "도와",
+    듣: "들어",
   };
   if (direct[root]) return direct[root];
 
@@ -200,8 +202,7 @@ function makePast(baseKr: string): string {
     넣: "넣었다",
     꺼내: "꺼냈다",
     가지: "가졌다",
-
-    // 추가
+    듣: "들었다",
     돕: "도왔다",
     타: "탔다",
   };
@@ -268,6 +269,7 @@ function makePotential(baseKr: string): string {
     꺼내: "꺼낼 수 있다",
     돌려주: "돌려줄 수 있다",
     도우: "도울 수 있다",
+    돕: "도울 수 있다",
     멈추: "멈출 수 있다",
     타: "탈 수 있다",
     오: "올 수 있다",
@@ -327,6 +329,7 @@ function makeImperative(baseKr: string): string {
     돌려주: "돌려줘라",
     꺼내: "꺼내라",
     넣: "넣어라",
+    돕: "도와라",
   };
   if (special[root]) return special[root];
 
@@ -368,6 +371,7 @@ function makePassive(baseKr: string): string {
     알다: "알려지다",
     믿다: "믿어지다",
     보다: "보여지다",
+    만들다: "만들어지다",
     열다: "열리다",
     세우다: "세워지다",
     조사하다: "조사되다",
@@ -398,6 +402,7 @@ function makePassive(baseKr: string): string {
     노래하다: "노래하다(수동형)",
     샤워하다: "샤워하다(수동형)",
     서두르다: "서두르다(수동형)",
+    기다리다: "기다리다(수동형)",
     들어가다: "들어가지다",
     일어나다: "일어나지다",
     돕다: "돕다(수동형)",
@@ -484,6 +489,7 @@ function makeConnectiveB(baseKr: string): string {
     넣: "넣어서",
     돌아가: "돌아가서",
     가지: "가져서",
+    돕: "도와서",
   };
   if (special[root]) return special[root];
 
