@@ -736,35 +736,139 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
   },
 };
 
+function normalizeKrPredicateText(text: string): string {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/,\s*/g, "")
+    .trim();
+}
+
+function buildNaKrPredicateForms(baseKrRaw: string) {
+  const baseKr = normalizeKrPredicateText(baseKrRaw);
+
+  if (baseKr.endsWith("하다")) {
+    const stem = baseKr.slice(0, -2);
+    return {
+      plain_present: baseKr,
+      polite_present: `${stem}합니다`,
+      plain_negative: `${stem}하지 않다`,
+      polite_negative: `${stem}하지 않습니다`,
+      plain_past: `${stem}했다`,
+      polite_past: `${stem}했습니다`,
+      plain_negative_past: `${stem}하지 않았다`,
+      polite_negative_past: `${stem}하지 않았습니다`,
+      te_form: `${stem}하고`,
+    };
+  }
+
+  if (baseKr.endsWith("이다")) {
+    const stem = baseKr.slice(0, -2);
+    return {
+      plain_present: baseKr,
+      polite_present: `${stem}입니다`,
+      plain_negative: `${stem}이 아니다`,
+      polite_negative: `${stem}이 아닙니다`,
+      plain_past: `${stem}였다`,
+      polite_past: `${stem}였습니다`,
+      plain_negative_past: `${stem}이 아니었다`,
+      polite_negative_past: `${stem}이 아니었습니다`,
+      te_form: `${stem}이고`,
+    };
+  }
+
+  if (baseKr.endsWith("되다")) {
+    const stem = baseKr.slice(0, -1); // 되
+    return {
+      plain_present: baseKr,
+      polite_present: `${stem}ㅂ니다`.replace(/되ㅂ니다/g, "됩니다"),
+      plain_negative: `${stem}지 않다`,
+      polite_negative: `${stem}지 않습니다`,
+      plain_past: `${stem}었다`.replace(/되었다/g, "되었다"),
+      polite_past: `${stem}었습니다`.replace(/되었습니다/g, "되었습니다"),
+      plain_negative_past: `${stem}지 않았다`,
+      polite_negative_past: `${stem}지 않았습니다`,
+      te_form: `${stem}어서`.replace(/되어서/g, "되어서"),
+    };
+  }
+
+  if (baseKr.endsWith("있다")) {
+    const stem = baseKr.slice(0, -2);
+    return {
+      plain_present: baseKr,
+      polite_present: `${stem}있습니다`,
+      plain_negative: `${stem}있지 않다`,
+      polite_negative: `${stem}있지 않습니다`,
+      plain_past: `${stem}있었다`,
+      polite_past: `${stem}있었습니다`,
+      plain_negative_past: `${stem}있지 않았다`,
+      polite_negative_past: `${stem}있지 않았습니다`,
+      te_form: `${stem}있고`,
+    };
+  }
+
+  if (baseKr.endsWith("없다")) {
+    const stem = baseKr.slice(0, -2);
+    return {
+      plain_present: baseKr,
+      polite_present: `${stem}없습니다`,
+      plain_negative: `${stem}없지 않다`,
+      polite_negative: `${stem}없지 않습니다`,
+      plain_past: `${stem}없었다`,
+      polite_past: `${stem}없었습니다`,
+      plain_negative_past: `${stem}없지 않았다`,
+      polite_negative_past: `${stem}없지 않았습니다`,
+      te_form: `${stem}없고`,
+    };
+  }
+
+  if (baseKr.endsWith("다")) {
+    const stem = baseKr.slice(0, -1);
+    return {
+      plain_present: baseKr,
+      polite_present: `${stem}습니다`,
+      plain_negative: `${stem}지 않다`,
+      polite_negative: `${stem}지 않습니다`,
+      plain_past: `${stem}었다`,
+      polite_past: `${stem}었습니다`,
+      plain_negative_past: `${stem}지 않았다`,
+      polite_negative_past: `${stem}지 않았습니다`,
+      te_form: `${stem}고`,
+    };
+  }
+
+  return {
+    plain_present: baseKr,
+    polite_present: `${baseKr}입니다`,
+    plain_negative: `${baseKr}이 아니다`,
+    polite_negative: `${baseKr}이 아닙니다`,
+    plain_past: `${baseKr}였다`,
+    polite_past: `${baseKr}였습니다`,
+    plain_negative_past: `${baseKr}이 아니었다`,
+    polite_negative_past: `${baseKr}이 아니었습니다`,
+    te_form: `${baseKr}이고`,
+  };
+}
+
 function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
   if (row.pos !== "na_adj") return [];
 
   const baseJp = row.jp;
-  const baseKr = row.kr;
+  const baseKr = normalizeKrPredicateText(row.kr);
   const reading = row.reading;
 
   const override = NA_KR_OVERRIDE[baseJp];
 
-  const isHada = baseKr.endsWith("하다");
-  const stem = isHada
-    ? baseKr.slice(0, -2)
-    : baseKr.endsWith("다")
-      ? baseKr.slice(0, -1)
-      : baseKr;
+  const built = buildNaKrPredicateForms(baseKr);
 
-  const plain_present = override?.plain_present ?? baseKr;
-  const polite_present = override?.polite_present ?? (isHada ? `${stem}합니다` : `${stem}습니다`);
-  const plain_negative = override?.plain_negative ?? (isHada ? `${stem}하지 않다` : `${stem}지 않다`);
-  const polite_negative =
-    override?.polite_negative ?? (isHada ? `${stem}하지 않습니다` : `${stem}지 않습니다`);
-  const plain_past = override?.plain_past ?? (isHada ? `${stem}했다` : `${stem}였다`);
-  const polite_past = override?.polite_past ?? (isHada ? `${stem}했습니다` : `${stem}였습니다`);
-  const plain_negative_past =
-    override?.plain_negative_past ?? (isHada ? `${stem}하지 않았다` : `${stem}지 않았다`);
-  const polite_negative_past =
-    override?.polite_negative_past ?? (isHada ? `${stem}하지 않았습니다` : `${stem}지 않았습니다`);
-  const te_form = override?.te_form ?? (isHada ? `${stem}하고` : `${stem}고`);
-
+  const plain_present = override?.plain_present ?? built.plain_present;
+  const polite_present = override?.polite_present ?? built.polite_present;
+  const plain_negative = override?.plain_negative ?? built.plain_negative;
+  const polite_negative = override?.polite_negative ?? built.polite_negative;
+  const plain_past = override?.plain_past ?? built.plain_past;
+  const polite_past = override?.polite_past ?? built.polite_past;
+  const plain_negative_past = override?.plain_negative_past ?? built.plain_negative_past;
+  const polite_negative_past = override?.polite_negative_past ?? built.polite_negative_past;
+  const te_form = override?.te_form ?? built.te_form;
   return [
     {
       pos: "na_adj",
