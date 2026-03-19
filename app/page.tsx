@@ -861,9 +861,9 @@ export default function HomePage() {
                     기본 어휘를 문제와 패턴 카드로 익혀보세요.
                   </p>
                 </div>
-                <div className="w-[72px] shrink-0 text-right">
+                <div className="w-[88px] shrink-0 text-right">
                   <p className="text-xl font-bold">{stats.wordCount}</p>
-                  <p className="mt-1 text-xs leading-4 text-gray-500">학습 횟수</p>
+                  <p className="mt-1 whitespace-nowrap text-xs text-gray-500">학습 횟수</p>
                 </div>
               </div>
 
