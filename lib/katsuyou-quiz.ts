@@ -368,26 +368,12 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     te_form_a: "눈부시고",
     te_form_b: "눈부셔서",
   },
-  성가시: {
-    polite_present: "성가십니다",
-    plain_past: "성가셨다",
-    polite_past: "성가셨습니다",
-    te_form_a: "성가시고",
-    te_form_b: "성가셔서",
-  },
   건방지: {
     polite_present: "건방집니다",
     plain_past: "건방졌다",
     polite_past: "건방졌습니다",
     te_form_a: "건방지고",
     te_form_b: "건방져서",
-  },
-  야무지: {
-    polite_present: "야무집니다",
-    plain_past: "야무졌다",
-    polite_past: "야무졌습니다",
-    te_form_a: "야무지고",
-    te_form_b: "야무져서",
   },
   새롭: {
     plain_past: "새로웠다",
