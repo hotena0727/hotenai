@@ -861,7 +861,7 @@ export default function HomePage() {
                     기본 어휘를 문제와 패턴 카드로 익혀보세요.
                   </p>
                 </div>
-                <div className="w-[88px] shrink-0 text-right">
+                <div className="w-[92px] shrink-0 text-right">
                   <p className="text-xl font-bold">{stats.wordCount}</p>
                   <p className="mt-1 whitespace-nowrap text-xs text-gray-500">학습 횟수</p>
                 </div>
@@ -884,16 +884,16 @@ export default function HomePage() {
 
           {canKanji ? (
             <div className="flex h-full flex-col rounded-3xl border border-green-200 bg-gradient-to-r from-green-50 to-white p-6 transition hover:shadow-md">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
                   <p className="text-2xl font-bold">🈯 한자</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                  <p className="mt-2 min-h-[48px] break-keep text-sm leading-6 text-gray-600">
                     레벨별 한자 문제를 풀며 읽기와 뜻을 익혀보세요.
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="w-[92px] shrink-0 text-right">
                   <p className="text-xl font-bold">{stats.kanjiCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
+                  <p className="mt-1 whitespace-nowrap text-xs text-gray-500">학습 횟수</p>
                 </div>
               </div>
 
@@ -914,25 +914,23 @@ export default function HomePage() {
 
           {canKatsuyou ? (
             <div className="flex h-full flex-col rounded-3xl border border-rose-200 bg-gradient-to-r from-rose-50 to-white p-6 transition hover:shadow-md">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
                   <p className="text-2xl font-bold">🔄 활용</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                  <p className="mt-2 min-h-[48px] break-keep text-sm leading-6 text-gray-600">
                     い형용사·な형용사·동사의 기본형을 문제로 익혀보세요.
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="w-[92px] shrink-0 text-right">
                   <p className="text-xl font-bold">{stats.katsuyouCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
+                  <p className="mt-1 whitespace-nowrap text-xs text-gray-500">학습 횟수</p>
                 </div>
               </div>
 
               <div className="mt-auto flex items-end justify-between gap-3 pt-5">
                 <div>
                   <p className="text-sm text-gray-500">평균 정답률</p>
-                  <p className="mt-1 text-2xl font-bold">
-                    {stats.katsuyouAvg}%
-                  </p>
+                  <p className="mt-1 text-2xl font-bold">{stats.katsuyouAvg}%</p>
                 </div>
                 <a
                   href="/katsuyou"
@@ -946,16 +944,16 @@ export default function HomePage() {
 
           {canTalk ? (
             <div className="flex h-full flex-col rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-50 to-white p-6 transition hover:shadow-md">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
                   <p className="text-2xl font-bold">🗣️ 회화</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                  <p className="mt-2 min-h-[48px] break-keep text-sm leading-6 text-gray-600">
                     실제 대화형 문제로 말문을 자연스럽게 열어보세요.
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="w-[92px] shrink-0 text-right">
                   <p className="text-xl font-bold">{stats.talkCount}</p>
-                  <p className="text-xs text-gray-500">학습 횟수</p>
+                  <p className="mt-1 whitespace-nowrap text-xs text-gray-500">학습 횟수</p>
                 </div>
               </div>
 
