@@ -351,7 +351,7 @@ function makePassive(baseKr: string): string {
   if (blocked.has(baseKr)) return "";
 
   const semantic: Record<string, string> = {
-    "돌려주다": "돌려받다",
+    돌려주다: "돌려받다",
   };
   if (semantic[baseKr]) return semantic[baseKr];
 
@@ -367,6 +367,9 @@ function makePassive(baseKr: string): string {
     넣다: "넣어지다",
     꺼내다: "꺼내지다",
     읽다: "읽히다",
+    타다: "타지다",
+    가르치다: "가르쳐지다",
+    먹다: "먹히다",
   };
   if (natural[baseKr]) return natural[baseKr];
 
