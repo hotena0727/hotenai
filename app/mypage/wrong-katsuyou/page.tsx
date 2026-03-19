@@ -5,7 +5,8 @@ import { fetchAttemptsByPrefix, type QuizAttemptRow } from "@/lib/attempts";
 import { supabase } from "@/lib/supabase";
 
 const JA_FONT_STYLE = {
-  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
+  fontFamily:
+    '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
 } as const;
 
 type KatsuyouWrongItem = {
@@ -154,6 +155,17 @@ function WrongPageTabs({
   );
 }
 
+function makeSelectionKey(item: FlattenedWrongItem): string {
+  return [
+    "katsuyou",
+    item.item_key || "",
+    item.qtype || "",
+    item.form_key || "",
+    item.correct || "",
+    item.prompt || "",
+  ].join("|");
+}
+
 export default function WrongKatsuyouPage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
@@ -220,7 +232,9 @@ export default function WrongKatsuyouPage() {
 
   const posOptions = useMemo(() => {
     const values = Array.from(
-      new Set(flattened.map((item) => String(item.pos || "").trim()).filter(Boolean))
+      new Set(
+        flattened.map((item) => String(item.pos || "").trim()).filter(Boolean)
+      )
     );
     return ["전체", ...values];
   }, [flattened]);
@@ -232,7 +246,11 @@ export default function WrongKatsuyouPage() {
         : flattened.filter((item) => (item.pos || "") === selectedPos);
 
     const values = Array.from(
-      new Set(filteredByPos.map((item) => String(item.qtype || "").trim()).filter(Boolean))
+      new Set(
+        filteredByPos
+          .map((item) => String(item.qtype || "").trim())
+          .filter(Boolean)
+      )
     );
     return ["전체", ...values];
   }, [flattened, selectedPos]);
@@ -242,7 +260,8 @@ export default function WrongKatsuyouPage() {
 
     return flattened.filter((item) => {
       const posOk = selectedPos === "전체" || (item.pos || "") === selectedPos;
-      const qtypeOk = selectedQType === "전체" || (item.qtype || "") === selectedQType;
+      const qtypeOk =
+        selectedQType === "전체" || (item.qtype || "") === selectedQType;
 
       const haystack = [
         item.jp_word || "",
@@ -263,8 +282,16 @@ export default function WrongKatsuyouPage() {
     });
   }, [flattened, selectedPos, selectedQType, searchText]);
 
-  const makeSelectionKey = (item: FlattenedWrongItem) =>
-    `katsuyou|${item.qtype}|${item.item_key}`;
+  const visibleSelectionKeys = useMemo(() => {
+    return Array.from(
+      new Set(filteredItems.map((item) => makeSelectionKey(item)).filter(Boolean))
+    );
+  }, [filteredItems]);
+
+  const selectedVisibleCount = useMemo(() => {
+    const visibleSet = new Set(visibleSelectionKeys);
+    return selectedKeys.filter((key) => visibleSet.has(key)).length;
+  }, [selectedKeys, visibleSelectionKeys]);
 
   const toggleKey = (key: string) => {
     setSelectedKeys((prev) =>
@@ -273,10 +300,7 @@ export default function WrongKatsuyouPage() {
   };
 
   const selectAllVisible = () => {
-    const keys = Array.from(
-      new Set(filteredItems.map((item) => makeSelectionKey(item)).filter(Boolean))
-    );
-    setSelectedKeys(keys);
+    setSelectedKeys(visibleSelectionKeys);
   };
 
   const clearAllVisible = () => {
@@ -289,18 +313,33 @@ export default function WrongKatsuyouPage() {
       return;
     }
 
-    const itemKeys = filteredItems
-      .filter((item) => selectedKeys.includes(makeSelectionKey(item)))
-      .map((item) => item.item_key);
+    const selectedItemKeys = Array.from(
+      new Set(
+        filteredItems
+          .filter((item) => selectedKeys.includes(makeSelectionKey(item)))
+          .map((item) => String(item.item_key || "").trim())
+          .filter(Boolean)
+      )
+    );
 
-    if (itemKeys.length === 0) {
+    if (selectedItemKeys.length === 0) {
       alert("복습할 문제를 찾지 못했습니다.");
       return;
     }
 
-    const qids = encodeURIComponent(itemKeys.join(","));
-    const pos = encodeURIComponent(selectedPos === "전체" ? "" : selectedPos);
-    const qtype = encodeURIComponent(selectedQType === "전체" ? "" : selectedQType);
+    const targetPos =
+      selectedPos === "전체"
+        ? ""
+        : String(selectedPos || "").trim();
+
+    const targetQType =
+      selectedQType === "전체"
+        ? ""
+        : String(selectedQType || "").trim();
+
+    const qids = encodeURIComponent(selectedItemKeys.join(","));
+    const pos = encodeURIComponent(targetPos);
+    const qtype = encodeURIComponent(targetQType);
 
     window.location.href = `/katsuyou?review=1&qids=${qids}&pos=${pos}&qtype=${qtype}`;
   };
@@ -351,6 +390,9 @@ export default function WrongKatsuyouPage() {
             </span>
             <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 font-semibold text-gray-700">
               선택 {selectedCount}개
+            </span>
+            <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 font-semibold text-gray-700">
+              현재 화면 선택 {selectedVisibleCount}개
             </span>
           </div>
 
@@ -464,7 +506,9 @@ export default function WrongKatsuyouPage() {
           </div>
 
           <div className="mt-5 border-t border-gray-100 pt-5">
-            <label className="block text-sm font-semibold text-gray-700">검색</label>
+            <label className="block text-sm font-semibold text-gray-700">
+              검색
+            </label>
             <input
               type="text"
               value={searchText}
@@ -480,7 +524,9 @@ export default function WrongKatsuyouPage() {
 
         {flattened.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <p className="text-lg font-semibold text-gray-900">좋아요. 저장된 활용 오답이 아직 없습니다.</p>
+            <p className="text-lg font-semibold text-gray-900">
+              좋아요. 저장된 활용 오답이 아직 없습니다.
+            </p>
             <p className="mt-2 text-sm text-gray-600">
               활용 문제를 풀고 다시 오면, 헷갈린 문제들이 여기에 정리됩니다.
             </p>
@@ -493,7 +539,9 @@ export default function WrongKatsuyouPage() {
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <p className="text-lg font-semibold text-gray-900">현재 필터 조건에 맞는 오답이 없습니다.</p>
+            <p className="text-lg font-semibold text-gray-900">
+              현재 필터 조건에 맞는 오답이 없습니다.
+            </p>
             <p className="mt-2 text-sm text-gray-600">
               품사나 유형을 넓혀 다시 확인해보세요.
             </p>
@@ -505,7 +553,7 @@ export default function WrongKatsuyouPage() {
 
               return (
                 <div
-                  key={`${item.attempt_id}-${item.item_key}-${idx}`}
+                  key={`${item.attempt_id}-${selectionKey}-${idx}`}
                   className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
@@ -553,27 +601,39 @@ export default function WrongKatsuyouPage() {
                       </span>
                     </p>
                     <p className="mt-2 text-sm text-gray-600">
-                      기본형: <span lang="ja" style={JA_FONT_STYLE}>{item.jp_word || "-"}</span>
+                      기본형:{" "}
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.jp_word || "-"}
+                      </span>
                       {" / "}뜻: {item.kr_word || "-"}
                     </p>
                     {item.reading ? (
                       <p className="mt-1 text-sm text-gray-600">
-                        읽기: <span lang="ja" style={JA_FONT_STYLE}>{item.reading}</span>
+                        읽기:{" "}
+                        <span lang="ja" style={JA_FONT_STYLE}>
+                          {item.reading}
+                        </span>
                       </p>
                     ) : null}
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-                    <p className="text-sm font-medium text-red-700">내가 고른 답</p>
+                    <p className="text-sm font-medium text-red-700">
+                      내가 고른 답
+                    </p>
                     <p className="mt-1 text-sm text-gray-800">
-                      <span lang="ja" style={JA_FONT_STYLE}>{item.selected || "-"}</span>
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.selected || "-"}
+                      </span>
                     </p>
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
                     <p className="text-sm font-medium text-green-700">정답</p>
                     <p className="mt-1 text-sm text-gray-800">
-                      <span lang="ja" style={JA_FONT_STYLE}>{item.correct || "-"}</span>
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.correct || "-"}
+                      </span>
                     </p>
                   </div>
                 </div>
