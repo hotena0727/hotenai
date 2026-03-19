@@ -139,6 +139,7 @@ function makePolitePresent(baseKr: string): string {
     쓰: "씁니다",
     사: "삽니다",
     놀: "놉니다",
+    만들: "만듭니다",
     나가: "나갑니다",
     일어나: "일어납니다",
     열: "엽니다",
@@ -160,7 +161,7 @@ function makePolitePresent(baseKr: string): string {
 
   const last = lastChar(root);
   if (hasBatchim(last)) return `${root}습니다`;
-  
+
   return `${addBieupBatchim(root)}니다`;
 }
 
@@ -175,6 +176,7 @@ function makePast(baseKr: string): string {
     내리: "내렸다",
     만나: "만났다",
     알: "알았다",
+    만들: "만들었다",
     들어가: "들어갔다",
     돌아가: "돌아갔다",
     일어나: "일어났다",
@@ -307,6 +309,7 @@ function makeImperative(baseKr: string): string {
     놀: "놀아라",
     내리: "내려라",
     빌리: "빌려라",
+    버리: "버려라",
     세우: "세워라",
     고르: "골라라",
     사: "사라",
@@ -375,6 +378,7 @@ function makePassive(baseKr: string): string {
     내리다: "내리다(수동형)",
     헤엄치다: "헤엄치다(수동형)",
     달리다: "달리다(수동형)",
+    놀다: "놀다(수동형)",
     듣다: "듣다(수동형)",
     죽다: "죽다(수동형)",
     돌아가다: "돌아가다(수동형)",
