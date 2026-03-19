@@ -513,11 +513,11 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     te_form_b: "사치스러워서",
   },
   태평스럽: {
-  plain_past: "태평스러웠다",
-  polite_past: "태평스러웠습니다",
-  te_form_a: "태평스럽고",
-  te_form_b: "태평스러워서",
-},
+    plain_past: "태평스러웠다",
+    polite_past: "태평스러웠습니다",
+    te_form_a: "태평스럽고",
+    te_form_b: "태평스러워서",
+  },
   같: {
     plain_past: "같았다",
     polite_past: "같았습니다",
@@ -1262,8 +1262,8 @@ function buildVerbJpForms(row: KatsuyouRow): VerbJpFormSet | null {
     す: { i: "し", a: "さ", e: "せ", o: "そ", te: "して", ta: "した" },
     つ: { i: "ち", a: "た", e: "て", o: "と", te: "って", ta: "った" },
     ぬ: { i: "に", a: "な", e: "ね", o: "の", te: "んで", ta: "んだ" },
-    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "んだ" },
-    ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "んだ" },
+    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "ん다" },
+    ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "ん다" },
     る: { i: "り", a: "ら", e: "れ", o: "ろ", te: "って", ta: "った" },
   } as const;
 
@@ -1340,6 +1340,10 @@ function buildVerbForms(row: KatsuyouRow): GeneratedForm[] {
  * 공통 선택지 생성
  * ========================= */
 
+function isConnectiveFormKey(formKey: KatsuyouFormKey): boolean {
+  return formKey === "connective_a" || formKey === "connective_b" || formKey === "te_form";
+}
+
 function getAltEquivalentAnswers(form: GeneratedForm): string[] {
   if (form.pos === "i_adj") {
     const base = getIAdjStem(form.baseJp);
@@ -1360,13 +1364,42 @@ function getAltEquivalentAnswers(form: GeneratedForm): string[] {
   return [];
 }
 
-function buildChoicesForJpAnswer(form: GeneratedForm, siblings: GeneratedForm[]): string[] {
-  const excludedEquivalent = new Set(getAltEquivalentAnswers(form));
+function isSameJapaneseSurfaceConflict(a: GeneratedForm, b: GeneratedForm): boolean {
+  return a.answerJp === b.answerJp;
+}
 
+function isConnectiveConflict(a: GeneratedForm, b: GeneratedForm): boolean {
+  return isConnectiveFormKey(a.formKey) && isConnectiveFormKey(b.formKey);
+}
+
+function shouldExcludeChoiceForJpAnswer(correct: GeneratedForm, candidate: GeneratedForm): boolean {
+  if (candidate.answerJp === correct.answerJp) return true;
+  if (isConnectiveConflict(correct, candidate)) return true;
+
+  const excludedEquivalent = new Set(getAltEquivalentAnswers(correct));
+  if (excludedEquivalent.has(candidate.answerJp)) return true;
+
+  return false;
+}
+
+function shouldExcludeChoiceForKrAnswer(correct: GeneratedForm, candidate: GeneratedForm): boolean {
+  if (candidate.promptKr === correct.promptKr) return true;
+
+  // 핵심:
+  // 같은 일본어 표면형(예: 止められる)의 다른 의미(가능/수동)가
+  // 보기에서 동시에 나오지 않게 막음
+  if (isSameJapaneseSurfaceConflict(correct, candidate)) return true;
+
+  // 연결형도 한 문제에서는 하나만 보이게
+  if (isConnectiveConflict(correct, candidate)) return true;
+
+  return false;
+}
+
+function buildChoicesForJpAnswer(form: GeneratedForm, siblings: GeneratedForm[]): string[] {
   const pool = siblings
-    .map((item) => item.answerJp)
-    .filter((v) => v !== form.answerJp)
-    .filter((v) => !excludedEquivalent.has(v));
+    .filter((item) => !shouldExcludeChoiceForJpAnswer(form, item))
+    .map((item) => item.answerJp);
 
   const wrongs = shuffleArray(uniqueStrings(pool)).slice(0, 3);
   const merged = uniqueStrings([form.answerJp, ...wrongs]);
@@ -1376,8 +1409,8 @@ function buildChoicesForJpAnswer(form: GeneratedForm, siblings: GeneratedForm[])
 
 function buildChoicesForKrAnswer(form: GeneratedForm, siblings: GeneratedForm[]): string[] {
   const pool = siblings
-    .map((item) => item.promptKr)
-    .filter((v) => v !== form.promptKr);
+    .filter((item) => !shouldExcludeChoiceForKrAnswer(form, item))
+    .map((item) => item.promptKr);
 
   const wrongs = shuffleArray(uniqueStrings(pool)).slice(0, 3);
   const merged = uniqueStrings([form.promptKr, ...wrongs]);

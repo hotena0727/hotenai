@@ -453,6 +453,7 @@ function makeConnectiveB(baseKr: string): string {
     자: "자서",
     빌리: "빌려서",
     닫: "닫아서",
+    듣: "들어서",
     죽: "죽어서",
     마시: "마셔서",
     내리: "내려서",
