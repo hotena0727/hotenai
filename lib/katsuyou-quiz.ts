@@ -1416,6 +1416,32 @@ function buildChoicesForKrAnswer(form: GeneratedForm, siblings: GeneratedForm[])
   return shuffleArray(merged).slice(0, 4);
 }
 
+function buildChoicesForForm(
+  form: GeneratedForm,
+  siblings: GeneratedForm[],
+  qtype: KatsuyouQType
+): string[] {
+  return qtype === "kr2jp"
+    ? buildChoicesForJpAnswer(form, siblings)
+    : buildChoicesForKrAnswer(form, siblings);
+}
+
+function pickValidFormForQuestion(
+  forms: GeneratedForm[],
+  qtype: KatsuyouQType
+): { form: GeneratedForm; choices: string[] } | null {
+  const shuffledForms = shuffleArray(forms);
+
+  for (const form of shuffledForms) {
+    const choices = buildChoicesForForm(form, forms, qtype);
+    if (choices.length >= 4) {
+      return { form, choices };
+    }
+  }
+
+  return null;
+}
+
 /* =========================
  * 최종 퀴즈 생성
  * ========================= */
@@ -1454,41 +1480,23 @@ export function buildKatsuyouQuiz({
     const forms = buildFormsForRow(row);
     if (!forms.length) continue;
 
-    const pickedForm = shuffleArray(forms)[0];
+    const picked = pickValidFormForQuestion(forms, qtype);
+    if (!picked) continue;
 
-    if (qtype === "kr2jp") {
-      const choices = buildChoicesForJpAnswer(pickedForm, forms);
-      if (choices.length < 4) continue;
+    const { form: pickedForm, choices } = picked;
 
-      questions.push({
-        item_key: String(row.id ?? ""),
-        pos: row.pos,
-        qtype: "kr2jp",
-        formKey: pickedForm.formKey,
-        prompt: pickedForm.promptKr,
-        choices,
-        correct_text: pickedForm.answerJp,
-        jp_word: pickedForm.baseJp,
-        kr_word: pickedForm.baseKr,
-        reading: pickedForm.reading,
-      });
-    } else {
-      const choices = buildChoicesForKrAnswer(pickedForm, forms);
-      if (choices.length < 4) continue;
-
-      questions.push({
-        item_key: String(row.id ?? ""),
-        pos: row.pos,
-        qtype: "jp2kr",
-        formKey: pickedForm.formKey,
-        prompt: pickedForm.answerJp,
-        choices,
-        correct_text: pickedForm.promptKr,
-        jp_word: pickedForm.baseJp,
-        kr_word: pickedForm.baseKr,
-        reading: pickedForm.reading,
-      });
-    }
+    questions.push({
+      item_key: String(row.id ?? ""),
+      pos: row.pos,
+      qtype,
+      formKey: pickedForm.formKey,
+      prompt: qtype === "kr2jp" ? pickedForm.promptKr : pickedForm.answerJp,
+      choices,
+      correct_text: qtype === "kr2jp" ? pickedForm.answerJp : pickedForm.promptKr,
+      jp_word: pickedForm.baseJp,
+      kr_word: pickedForm.baseKr,
+      reading: pickedForm.reading,
+    });
   }
 
   return questions;
