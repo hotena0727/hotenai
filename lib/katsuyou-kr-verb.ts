@@ -352,11 +352,22 @@ function makeVolitional(baseKr: string): string {
 }
 
 function makePassive(baseKr: string): string {
+  // 최근 협의 반영:
+  // 1) 동작명사/행위명사 기반 하다동사는 수동형 생성 금지
+  // 2) 한국어에서 매우 어색하거나 설명형으로밖에 못 가는 동사는 수동형 제외
   const blocked = new Set([
     "만나다",
     "마시다",
     "필요하다",
     "공부하다",
+    "샤워하다",
+    "노래하다",
+    "대답하다",
+    "가르치다",
+    "기다리다",
+    "앉다",
+    "건너다",
+    "깨우다",
   ]);
   if (blocked.has(baseKr)) return "";
 
@@ -375,13 +386,11 @@ function makePassive(baseKr: string): string {
     만들다: "만들어지다",
     열다: "열리다",
     세우다: "세워지다",
-    깨우다: "일으켜지다",
     조사하다: "조사되다",
     넣다: "넣어지다",
     꺼내다: "꺼내지다",
     읽다: "읽히다",
     타다: "타지다",
-    가르치다: "가르쳐지다",
     먹다: "먹히다",
     멈추다: "멈춰지다",
   };
@@ -397,19 +406,12 @@ function makePassive(baseKr: string): string {
     달리다: "달리다(수동형)",
     놀다: "놀다(수동형)",
     서다: "서다(수동형)",
-    앉다: "앉다(수동형)",
     듣다: "듣다(수동형)",
     죽다: "죽다(수동형)",
     돌아가다: "돌아가다(수동형)",
-    대답하다: "대답하다(수동형)",
-    노래하다: "노래하다(수동형)",
-    샤워하다: "샤워하다(수동형)",
-    서두르다: "서두르다(수동형)",
-    기다리다: "기다리다(수동형)",
     들어가다: "들어가지다",
     일어나다: "일어나지다",
     돕다: "돕다(수동형)",
-    건너다: "건너다(수동형)",
   };
   if (descriptive[baseKr]) return descriptive[baseKr];
 
@@ -564,20 +566,14 @@ export function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
     row.can_imperative
   );
 
-  const volitional = gate(
-    makeVolitional(baseKr),
-    row.can_volitional
-  );
+  const volitional = gate(makeVolitional(baseKr), row.can_volitional);
 
   const passive = passiveGate(
     row.kr_passive_override || makePassive(baseKr),
     row.passive_type
   );
 
-  const causative = gate(
-    makeCausative(baseKr),
-    row.can_causative
-  );
+  const causative = gate(makeCausative(baseKr), row.can_causative);
 
   const causative_passive = gate(
     makeCausativePassive(baseKr),
