@@ -123,6 +123,7 @@ function reuForms(root: string) {
     모르: { past: "몰랐다", polite: "모릅니다", te: "몰라" },
     어리: { past: "어렸다", polite: "어립니다", te: "어려" },
     가늘: { past: "가늘었다", polite: "가늘습니다", te: "가늘어" },
+    느리: { past: "느렸다", polite: "느립니다", te: "느려" },
   };
 
   return map[root] ?? {
@@ -154,6 +155,7 @@ function woForms(root: string) {
     희: { past: "희었다", polite: "흽니다", te: "희어" },
     쉽: { past: "쉬웠다", polite: "쉽습니다", te: "쉬워" },
     괴롭: { past: "괴로웠다", polite: "괴롭습니다", te: "괴로워" },
+    두껍: { past: "두꺼웠다", polite: "두껍습니다", te: "두꺼워" },
   };
 
   if (map[root]) return map[root];
@@ -262,7 +264,12 @@ function normalizeKrFormText(text: string): string {
     .replace(/크었습니다/g, "컸습니다")
     .replace(/괴롭어서/g, "괴로워서")
     .replace(/괴롭었다/g, "괴로웠다")
-    .replace(/괴롭었습니다/g, "괴로웠습니다");
+    .replace(/괴롭었습니다/g, "괴로웠습니다")
+    .replace(/느리었습니다/g, "느렸습니다")
+    .replace(/느리었다/g, "느렸다")
+    .replace(/두껍어서/g, "두꺼워서")
+    .replace(/두껍었다/g, "두꺼웠다")
+    .replace(/두껍었습니다/g, "두꺼웠습니다");
 }
 
 const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
@@ -272,6 +279,19 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     polite_past: "졸렸습니다",
     te_form_a: "졸리고",
     te_form_b: "졸려서",
+  },
+  느리: {
+    polite_present: "느립니다",
+    plain_past: "느렸다",
+    polite_past: "느렸습니다",
+    te_form_a: "느리고",
+    te_form_b: "느려서",
+  },
+  두껍: {
+    plain_past: "두꺼웠다",
+    polite_past: "두꺼웠습니다",
+    te_form_a: "두껍고",
+    te_form_b: "두꺼워서",
   },
   싸: {
     polite_present: "쌉니다",
@@ -941,7 +961,7 @@ function buildVerbJpForms(row: KatsuyouRow): VerbJpFormSet | null {
     す: { i: "し", a: "さ", e: "せ", o: "そ", te: "して", ta: "した" },
     つ: { i: "ち", a: "た", e: "て", o: "と", te: "って", ta: "った" },
     ぬ: { i: "に", a: "な", e: "ね", o: "の", te: "んで", ta: "んだ" },
-    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "ん다" },
+    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "んだ" },
     ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "んだ" },
     る: { i: "り", a: "ら", e: "れ", o: "ろ", te: "って", ta: "った" },
   } as const;
