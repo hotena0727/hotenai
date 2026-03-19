@@ -175,10 +175,13 @@ function normalizeKrFormText(text: string): string {
     .replace(/품위 있였다/g, "품위 있었다")
     .replace(/소극적였습니다/g, "소극적이었습니다")
     .replace(/적극적였다/g, "적극적이었다")
-    .replace(/엉터리었습니다/g, "엉터리였습니다")
 
     .replace(/서투르어서/g, "서툴러서")
-    .replace(/서투렀습니다/g, "서툴렀습니다");
+    .replace(/서투렀습니다/g, "서툴렀습니다")
+
+    .replace(/엉터리습니다/g, "엉터리입니다")
+    .replace(/엉터리었다/g, "엉터리였다")
+    .replace(/엉터리었습니다/g, "엉터리였습니다");
 }
 
 /* =========================
@@ -910,6 +913,18 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_negative_past: "멋지지 않았습니다",
     te_form_a: "멋지고",
     te_form_b: "멋져서",
+  },
+  でたらめ: {
+    plain_present: "엉터리다",
+    polite_present: "엉터리입니다",
+    plain_negative: "엉터리가 아니다",
+    polite_negative: "엉터리가 아닙니다",
+    plain_past: "엉터리였다",
+    polite_past: "엉터리였습니다",
+    plain_negative_past: "엉터리가 아니었다",
+    polite_negative_past: "엉터리가 아니었습니다",
+    te_form_a: "엉터리고",
+    te_form_b: "엉터리라서",
   },
 };
 
