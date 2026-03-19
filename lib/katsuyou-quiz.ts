@@ -946,20 +946,36 @@ function buildNaKrPredicateForms(baseKrRaw: string) {
   }
 
   if (baseKr.endsWith("다")) {
-    const stem = baseKr.slice(0, -1);
+  const stem = baseKr.slice(0, -1);
+
+  if (stem === "같") {
     return {
       plain_present: baseKr,
-      polite_present: `${stem}습니다`,
-      plain_negative: `${stem}지 않다`,
-      polite_negative: `${stem}지 않습니다`,
-      plain_past: `${stem}었다`,
-      polite_past: `${stem}었습니다`,
-      plain_negative_past: `${stem}지 않았다`,
-      polite_negative_past: `${stem}지 않았습니다`,
-      te_form_a: `${stem}고`,
-      te_form_b: `${stem}어서`,
+      polite_present: "같습니다",
+      plain_negative: "같지 않다",
+      polite_negative: "같지 않습니다",
+      plain_past: "같았다",
+      polite_past: "같았습니다",
+      plain_negative_past: "같지 않았다",
+      polite_negative_past: "같지 않았습니다",
+      te_form_a: "같고",
+      te_form_b: "같아서",
     };
   }
+
+  return {
+    plain_present: baseKr,
+    polite_present: `${stem}습니다`,
+    plain_negative: `${stem}지 않다`,
+    polite_negative: `${stem}지 않습니다`,
+    plain_past: `${stem}었다`,
+    polite_past: `${stem}었습니다`,
+    plain_negative_past: `${stem}지 않았다`,
+    polite_negative_past: `${stem}지 않았습니다`,
+    te_form_a: `${stem}고`,
+    te_form_b: `${stem}어서`,
+  };
+}
 
   return {
     plain_present: baseKr,
