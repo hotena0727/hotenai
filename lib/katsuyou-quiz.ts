@@ -51,6 +51,19 @@ function getLastHangulVowelIndex(text: string): number | null {
   return jung;
 }
 
+function endsWithBatchim(text: string): boolean {
+  const last = text[text.length - 1];
+  if (!last) return false;
+
+  const code = last.charCodeAt(0);
+  const HANGUL_BASE = 0xac00;
+  const HANGUL_END = 0xd7a3;
+
+  if (code < HANGUL_BASE || code > HANGUL_END) return false;
+
+  return (code - HANGUL_BASE) % 28 !== 0;
+}
+
 function usesAhSeries(root: string): boolean {
   const jung = getLastHangulVowelIndex(root);
   return jung === 0 || jung === 2 || jung === 8; // ㅏ, ㅑ, ㅗ
@@ -156,6 +169,9 @@ function woForms(root: string) {
     쉽: { past: "쉬웠다", polite: "쉽습니다", te: "쉬워" },
     괴롭: { past: "괴로웠다", polite: "괴롭습니다", te: "괴로워" },
     두껍: { past: "두꺼웠다", polite: "두껍습니다", te: "두꺼워" },
+    성가시: { past: "성가셨다", polite: "성가십니다", te: "성가셔" },
+    건방지: { past: "건방졌다", polite: "건방집니다", te: "건방져" },
+    야무지: { past: "야무졌다", polite: "야무집니다", te: "야무져" },
   };
 
   if (map[root]) return map[root];
@@ -238,6 +254,14 @@ function normalizeKrFormText(text: string): string {
     .replace(/모르었습니다/g, "몰랐습니다")
     .replace(/모르었다/g, "몰랐다")
     .replace(/눈부시습니다/g, "눈부십니다")
+    .replace(/성가시습니다/g, "성가십니다")
+    .replace(/건방지습니다/g, "건방집니다")
+    .replace(/야무지었습니다/g, "야무졌습니다")
+    .replace(/야무지었다/g, "야무졌다")
+    .replace(/건방지었습니다/g, "건방졌습니다")
+    .replace(/건방지었다/g, "건방졌다")
+    .replace(/새롭웠습니다/g, "새로웠습니다")
+    .replace(/새롭웠다/g, "새로웠다")
     .replace(/달었습니다/g, "달았습니다")
     .replace(/달었다/g, "달았다")
     .replace(/짧었습니다/g, "짧았습니다")
@@ -269,7 +293,13 @@ function normalizeKrFormText(text: string): string {
     .replace(/느리었다/g, "느렸다")
     .replace(/두껍어서/g, "두꺼워서")
     .replace(/두껍었다/g, "두꺼웠다")
-    .replace(/두껍었습니다/g, "두꺼웠습니다");
+    .replace(/두껍었습니다/g, "두꺼웠습니다")
+    .replace(/소극적였습니다/g, "소극적이었습니다")
+    .replace(/적극적였다/g, "적극적이었다")
+    .replace(/제멋대로이 아니다/g, "제멋대로가 아니다")
+    .replace(/폐가 되였다/g, "폐가 되었다")
+    .replace(/쓸데없였다/g, "쓸데없었다")
+    .replace(/품위 있였다/g, "품위 있었다");
 }
 
 const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
@@ -328,6 +358,33 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     te_form_a: "눈부시고",
     te_form_b: "눈부셔서",
   },
+  성가시: {
+    polite_present: "성가십니다",
+    plain_past: "성가셨다",
+    polite_past: "성가셨습니다",
+    te_form_a: "성가시고",
+    te_form_b: "성가셔서",
+  },
+  건방지: {
+    polite_present: "건방집니다",
+    plain_past: "건방졌다",
+    polite_past: "건방졌습니다",
+    te_form_a: "건방지고",
+    te_form_b: "건방져서",
+  },
+  야무지: {
+    polite_present: "야무집니다",
+    plain_past: "야무졌다",
+    polite_past: "야무졌습니다",
+    te_form_a: "야무지고",
+    te_form_b: "야무져서",
+  },
+  새롭: {
+    plain_past: "새로웠다",
+    polite_past: "새로웠습니다",
+    te_form_a: "새롭고",
+    te_form_b: "새로워서",
+  },
   달: {
     plain_past: "달았다",
     polite_past: "달았습니다",
@@ -345,6 +402,25 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     polite_past: "뻔뻔스러웠습니다",
     te_form_a: "뻔뻔스럽고",
     te_form_b: "뻔뻔스러워서",
+  },
+  괴롭: {
+    plain_past: "괴로웠다",
+    polite_past: "괴로웠습니다",
+    te_form_a: "괴롭고",
+    te_form_b: "괴로워서",
+  },
+  쉽: {
+    plain_past: "쉬웠다",
+    polite_past: "쉬웠습니다",
+    te_form_a: "쉽고",
+    te_form_b: "쉬워서",
+  },
+  크: {
+    polite_present: "큽니다",
+    plain_past: "컸다",
+    polite_past: "컸습니다",
+    te_form_a: "크고",
+    te_form_b: "커서",
   },
   노랗: {
     polite_present: "노랗습니다",
@@ -631,7 +707,8 @@ type NaKrOverride = {
   polite_past: string;
   plain_negative_past: string;
   polite_negative_past: string;
-  te_form: string;
+  te_form_a: string;
+  te_form_b: string;
 };
 
 const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
@@ -644,7 +721,8 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_past: "서툴렀습니다",
     plain_negative_past: "서툴지 않았다",
     polite_negative_past: "서툴지 않았습니다",
-    te_form: "서툴고",
+    te_form_a: "서툴고",
+    te_form_b: "서툴어서",
   },
   下手: {
     plain_present: "서투르다",
@@ -655,7 +733,8 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_past: "서투렀습니다",
     plain_negative_past: "서투르지 않았다",
     polite_negative_past: "서투르지 않았습니다",
-    te_form: "서투르고",
+    te_form_a: "서투르고",
+    te_form_b: "서투르어서",
   },
   得意: {
     plain_present: "능숙하다",
@@ -666,7 +745,8 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_past: "능숙했습니다",
     plain_negative_past: "능숙하지 않았다",
     polite_negative_past: "능숙하지 않았습니다",
-    te_form: "능숙하고",
+    te_form_a: "능숙하고",
+    te_form_b: "능숙해서",
   },
   快適: {
     plain_present: "쾌적하다",
@@ -677,18 +757,20 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_past: "쾌적했습니다",
     plain_negative_past: "쾌적하지 않았다",
     polite_negative_past: "쾌적하지 않았습니다",
-    te_form: "쾌적하고",
+    te_form_a: "쾌적하고",
+    te_form_b: "쾌적해서",
   },
   最高: {
     plain_present: "최고다",
     polite_present: "최고입니다",
-    plain_negative: "최고이지 않다",
-    polite_negative: "최고이지 않습니다",
+    plain_negative: "최고가 아니다",
+    polite_negative: "최고가 아닙니다",
     plain_past: "최고였다",
     polite_past: "최고였습니다",
-    plain_negative_past: "최고이지 않았다",
-    polite_negative_past: "최고이지 않았습니다",
-    te_form: "최고이고",
+    plain_negative_past: "최고가 아니었다",
+    polite_negative_past: "최고가 아니었습니다",
+    te_form_a: "최고이고",
+    te_form_b: "최고라서",
   },
   最低: {
     plain_present: "최악이다",
@@ -699,7 +781,8 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_past: "최악이었습니다",
     plain_negative_past: "최악이 아니었다",
     polite_negative_past: "최악이 아니었습니다",
-    te_form: "최악이고",
+    te_form_a: "최악이고",
+    te_form_b: "최악이라서",
   },
   残念: {
     plain_present: "유감이다",
@@ -710,7 +793,8 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_past: "유감이었습니다",
     plain_negative_past: "유감이 아니었다",
     polite_negative_past: "유감이 아니었습니다",
-    te_form: "유감이고",
+    te_form_a: "유감이고",
+    te_form_b: "유감이라서",
   },
   不満: {
     plain_present: "불만이다",
@@ -721,7 +805,8 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_past: "불만이었습니다",
     plain_negative_past: "불만이 아니었다",
     polite_negative_past: "불만이 아니었습니다",
-    te_form: "불만이고",
+    te_form_a: "불만이고",
+    te_form_b: "불만이라서",
   },
   素敵: {
     plain_present: "멋지다",
@@ -732,7 +817,8 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_past: "멋졌습니다",
     plain_negative_past: "멋지지 않았다",
     polite_negative_past: "멋지지 않았습니다",
-    te_form: "멋지고",
+    te_form_a: "멋지고",
+    te_form_b: "멋져서",
   },
 };
 
@@ -757,22 +843,30 @@ function buildNaKrPredicateForms(baseKrRaw: string) {
       polite_past: `${stem}했습니다`,
       plain_negative_past: `${stem}하지 않았다`,
       polite_negative_past: `${stem}하지 않았습니다`,
-      te_form: `${stem}하고`,
+      te_form_a: `${stem}하고`,
+      te_form_b: `${stem}해서`,
     };
   }
 
   if (baseKr.endsWith("이다")) {
     const stem = baseKr.slice(0, -2);
+    const subjectParticle = endsWithBatchim(stem) ? "이" : "가";
+    const pastCopula = endsWithBatchim(stem) ? "이었다" : "였다";
+    const politePastCopula = endsWithBatchim(stem) ? "이었습니다" : "였습니다";
+    const teCopulaA = endsWithBatchim(stem) ? "이고" : "고";
+    const teCopulaB = endsWithBatchim(stem) ? "이라서" : "라서";
+
     return {
       plain_present: baseKr,
       polite_present: `${stem}입니다`,
-      plain_negative: `${stem}이 아니다`,
-      polite_negative: `${stem}이 아닙니다`,
-      plain_past: `${stem}였다`,
-      polite_past: `${stem}였습니다`,
-      plain_negative_past: `${stem}이 아니었다`,
-      polite_negative_past: `${stem}이 아니었습니다`,
-      te_form: `${stem}이고`,
+      plain_negative: `${stem}${subjectParticle} 아니다`,
+      polite_negative: `${stem}${subjectParticle} 아닙니다`,
+      plain_past: `${stem}${pastCopula}`,
+      polite_past: `${stem}${politePastCopula}`,
+      plain_negative_past: `${stem}${subjectParticle} 아니었다`,
+      polite_negative_past: `${stem}${subjectParticle} 아니었습니다`,
+      te_form_a: `${stem}${teCopulaA}`,
+      te_form_b: `${stem}${teCopulaB}`,
     };
   }
 
@@ -787,7 +881,8 @@ function buildNaKrPredicateForms(baseKrRaw: string) {
       polite_past: `${stem}었습니다`.replace(/되었습니다/g, "되었습니다"),
       plain_negative_past: `${stem}지 않았다`,
       polite_negative_past: `${stem}지 않았습니다`,
-      te_form: `${stem}어서`.replace(/되어서/g, "되어서"),
+      te_form_a: `${stem}고`.replace(/되고/g, "되고"),
+      te_form_b: `${stem}어서`.replace(/되어서/g, "돼서"),
     };
   }
 
@@ -802,7 +897,8 @@ function buildNaKrPredicateForms(baseKrRaw: string) {
       polite_past: `${stem}있었습니다`,
       plain_negative_past: `${stem}있지 않았다`,
       polite_negative_past: `${stem}있지 않았습니다`,
-      te_form: `${stem}있고`,
+      te_form_a: `${stem}있고`,
+      te_form_b: `${stem}있어서`,
     };
   }
 
@@ -817,7 +913,8 @@ function buildNaKrPredicateForms(baseKrRaw: string) {
       polite_past: `${stem}없었습니다`,
       plain_negative_past: `${stem}없지 않았다`,
       polite_negative_past: `${stem}없지 않았습니다`,
-      te_form: `${stem}없고`,
+      te_form_a: `${stem}없고`,
+      te_form_b: `${stem}없어서`,
     };
   }
 
@@ -832,7 +929,8 @@ function buildNaKrPredicateForms(baseKrRaw: string) {
       polite_past: `${stem}었습니다`,
       plain_negative_past: `${stem}지 않았다`,
       polite_negative_past: `${stem}지 않았습니다`,
-      te_form: `${stem}고`,
+      te_form_a: `${stem}고`,
+      te_form_b: `${stem}어서`,
     };
   }
 
@@ -845,7 +943,8 @@ function buildNaKrPredicateForms(baseKrRaw: string) {
     polite_past: `${baseKr}였습니다`,
     plain_negative_past: `${baseKr}이 아니었다`,
     polite_negative_past: `${baseKr}이 아니었습니다`,
-    te_form: `${baseKr}이고`,
+    te_form_a: `${baseKr}이고`,
+    te_form_b: `${baseKr}이라서`,
   };
 }
 
@@ -868,7 +967,10 @@ function buildNaAdjForms(row: KatsuyouRow): GeneratedForm[] {
   const polite_past = override?.polite_past ?? built.polite_past;
   const plain_negative_past = override?.plain_negative_past ?? built.plain_negative_past;
   const polite_negative_past = override?.polite_negative_past ?? built.polite_negative_past;
-  const te_form = override?.te_form ?? built.te_form;
+  const te_form_a = override?.te_form_a ?? built.te_form_a;
+  const te_form_b = override?.te_form_b ?? built.te_form_b;
+  const te_form = pickOne([te_form_a, te_form_b] as const);
+
   return [
     {
       pos: "na_adj",
