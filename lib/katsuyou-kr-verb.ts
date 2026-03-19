@@ -108,6 +108,7 @@ function makeEoAStem(root: string): string {
     꺼내: "꺼내",
     넣: "넣어",
     돌아가: "돌아가",
+    가지: "가져",
   };
   if (direct[root]) return direct[root];
 
@@ -159,7 +160,7 @@ function makePolitePresent(baseKr: string): string {
 
   const last = lastChar(root);
   if (hasBatchim(last)) return `${root}습니다`;
-
+  
   return `${addBieupBatchim(root)}니다`;
 }
 
@@ -195,6 +196,7 @@ function makePast(baseKr: string): string {
     돌려주: "돌려줬다",
     넣: "넣었다",
     꺼내: "꺼냈다",
+    가지: "가졌다",
   };
   if (special[root]) return special[root];
 
@@ -351,36 +353,38 @@ function makePassive(baseKr: string): string {
   if (semantic[baseKr]) return semantic[baseKr];
 
   const natural: Record<string, string> = {
-    "쓰다": "쓰이다",
-    "버리다": "버려지다",
-    "자르다": "잘리다",
-    "알다": "알려지다",
-    "믿다": "믿어지다",
-    "열다": "열리다",
-    "세우다": "세워지다",
-    "조사하다": "조사되다",
-    "넣다": "넣어지다",
-    "꺼내다": "꺼내지다",
+    쓰다: "쓰이다",
+    버리다: "버려지다",
+    자르다: "잘리다",
+    알다: "알려지다",
+    믿다: "믿어지다",
+    열다: "열리다",
+    세우다: "세워지다",
+    조사하다: "조사되다",
+    넣다: "넣어지다",
+    꺼내다: "꺼내지다",
+    읽다: "읽히다",
   };
   if (natural[baseKr]) return natural[baseKr];
 
   const descriptive: Record<string, string> = {
-    "사다": "사다(수동형)",
-    "빌리다": "빌리다(수동형)",
-    "가지다": "가지다(수동형)",
-    "고르다": "고르다(수동형)",
-    "내리다": "내리다(수동형)",
-    "헤엄치다": "헤엄치다(수동형)",
-    "달리다": "달리다(수동형)",
-    "듣다": "듣다(수동형)",
-    "죽다": "죽다(수동형)",
-    "돌아가다": "돌아가다(수동형)",
-    "대답하다": "대답하다(수동형)",
-    "노래하다": "노래하다(수동형)",
-    "샤워하다": "샤워하다(수동형)",
-    "서두르다": "서두르다(수동형)",
-    "들어가다": "들어가게 되다",
-    "일어나다": "일어나지다",
+    사다: "사다(수동형)",
+    빌리다: "빌리다(수동형)",
+    가지다: "가지다(수동형)",
+    고르다: "고르다(수동형)",
+    내리다: "내리다(수동형)",
+    헤엄치다: "헤엄치다(수동형)",
+    달리다: "달리다(수동형)",
+    듣다: "듣다(수동형)",
+    죽다: "죽다(수동형)",
+    돌아가다: "돌아가다(수동형)",
+    대답하다: "대답하다(수동형)",
+    노래하다: "노래하다(수동형)",
+    샤워하다: "샤워하다(수동형)",
+    서두르다: "서두르다(수동형)",
+    들어가다: "들어가게 되다",
+    일어나다: "일어나지다",
+    돕다: "돕다(수동형)",
   };
   if (descriptive[baseKr]) return descriptive[baseKr];
 
@@ -461,28 +465,11 @@ function makeConnectiveB(baseKr: string): string {
     꺼내: "꺼내서",
     넣: "넣어서",
     돌아가: "돌아가서",
+    가지: "가져서",
   };
   if (special[root]) return special[root];
 
   return `${makeEoAStem(root)}서`;
-}
-
-function buildRestrictedNeedForms(): VerbKrFormSet {
-  return {
-    plain_present: "필요하다",
-    polite_present: "필요합니다",
-    plain_negative: "필요하지 않다",
-    plain_past: "필요했다",
-    plain_negative_past: "필요하지 않았다",
-    connective_a: "필요하고",
-    connective_b: "필요해서",
-    potential: "",
-    imperative: "",
-    volitional: "",
-    passive: "",
-    causative: "",
-    causative_passive: "",
-  };
 }
 
 function gate(value: string, allowed?: boolean): string {
@@ -498,8 +485,40 @@ function passiveGate(value: string, passiveType?: KatsuyouRow["passive_type"]): 
 export function buildVerbKrForms(row: KatsuyouRow): VerbKrFormSet {
   const baseKr = row.kr;
 
-  if (baseKr === "필요하다") {
-    return buildRestrictedNeedForms();
+  if (baseKr === "필요하다" || row.kr_root === "필요하") {
+    return {
+      plain_present: "필요하다",
+      polite_present: "필요합니다",
+      plain_negative: "필요하지 않다",
+      plain_past: "필요했다",
+      plain_negative_past: "필요하지 않았다",
+      connective_a: "필요하고",
+      connective_b: "필요해서",
+      potential: "",
+      imperative: "",
+      volitional: "",
+      passive: "",
+      causative: "",
+      causative_passive: "",
+    };
+  }
+
+  if (baseKr === "가지다" || row.kr_root === "가지") {
+    return {
+      plain_present: "가지다",
+      polite_present: "가집니다",
+      plain_negative: "가지지 않다",
+      plain_past: "가졌다",
+      plain_negative_past: "가지지 않았다",
+      connective_a: "갖고",
+      connective_b: "가져서",
+      potential: "",
+      imperative: "",
+      volitional: "",
+      passive: "가지다(수동형)",
+      causative: "",
+      causative_passive: "",
+    };
   }
 
   const polite_present = row.kr_polite_present_override || makePolitePresent(baseKr);

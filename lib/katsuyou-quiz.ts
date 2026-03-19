@@ -509,18 +509,6 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     te_form_a: "같고",
     te_form_b: "같아서",
   },
-  下手: {
-    plain_present: "서툴다",
-    polite_present: "서툽니다",
-    plain_negative: "서툴지 않다",
-    polite_negative: "서툴지 않습니다",
-    plain_past: "서툴렀다",
-    polite_past: "서툴렀습니다",
-    plain_negative_past: "서툴지 않았다",
-    polite_negative_past: "서툴지 않았습니다",
-    te_form_a: "서툴고",
-    te_form_b: "서툴러서",
-  },
 };
 
 function buildKrFormsByPattern(
@@ -1248,7 +1236,7 @@ function buildVerbJpForms(row: KatsuyouRow): VerbJpFormSet | null {
     つ: { i: "ち", a: "た", e: "て", o: "と", te: "って", ta: "った" },
     ぬ: { i: "に", a: "な", e: "ね", o: "の", te: "んで", ta: "んだ" },
     む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "んだ" },
-    ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "ん다" },
+    ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "んだ" },
     る: { i: "り", a: "ら", e: "れ", o: "ろ", te: "って", ta: "った" },
   } as const;
 
