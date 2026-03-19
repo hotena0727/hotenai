@@ -82,6 +82,16 @@ function euForms(root: string) {
   };
 }
 
+function buildBieupTeForm(root: string): string {
+  if (root.endsWith("스럽")) {
+    return `${root.slice(0, -2)}러워`;
+  }
+  if (root.endsWith("럽")) {
+    return `${root.slice(0, -2)}러워`;
+  }
+  return `${root.slice(0, -1)}워`;
+}
+
 function woForms(root: string) {
   const map: Record<string, { past: string; polite: string; te: string }> = {
     어렵: { past: "어려웠다", polite: "어렵습니다", te: "어려워" },
@@ -98,38 +108,40 @@ function woForms(root: string) {
     무겁: { past: "무거웠다", polite: "무겁습니다", te: "무거워" },
     가볍: { past: "가벼웠다", polite: "가볍습니다", te: "가벼워" },
     가깝: { past: "가까웠다", polite: "가깝습니다", te: "가까워" },
+    더럽: { past: "더러웠다", polite: "더럽습니다", te: "더러워" },
+    시끄럽: { past: "시끄러웠다", polite: "시끄럽습니다", te: "시끄러워" },
+    뻔뻔스럽: { past: "뻔뻔스러웠다", polite: "뻔뻔스럽습니다", te: "뻔뻔스러워" },
+    희: { past: "희었다", polite: "흽니다", te: "희어" },
   };
 
-  return map[root] ?? {
-    past: `${root}었다`,
-    polite: `${root}습니다`,
-    te: `${root}어`,
-  };
-}
+  if (map[root]) return map[root];
 
-function haForms(root: string) {
-  const stem = root.slice(0, -1);
+  if (root.endsWith("스럽")) {
+    return {
+      past: `${root.slice(0, -2)}러웠다`,
+      polite: `${root}습니다`,
+      te: `${root.slice(0, -2)}러워`,
+    };
+  }
+
+  if (root.endsWith("럽")) {
+    return {
+      past: `${root.slice(0, -2)}러웠다`,
+      polite: `${root}습니다`,
+      te: `${root.slice(0, -2)}러워`,
+    };
+  }
+
+  if (root.endsWith("갑") || root.endsWith("겁") || root.endsWith("깝") || root.endsWith("둡") || root.endsWith("섭") || root.endsWith("춥") || root.endsWith("맵") || root.endsWith("럽")) {
+    const te = buildBieupTeForm(root);
+    return {
+      past: `${te}ㅆ다`.replace(/워ㅆ다/g, "웠다"),
+      polite: `${root}습니다`,
+      te,
+    };
+  }
+
   return {
-    past: `${stem}했다`,
-    polite: `${stem}합니다`,
-    te: `${stem}해`,
-  };
-}
-
-function reuForms(root: string) {
-  const map: Record<string, { past: string; polite: string; te: string }> = {
-    빠르: { past: "빨랐다", polite: "빠릅니다", te: "빨라" },
-    이르: { past: "일렀다", polite: "이릅니다", te: "일러" },
-    다르: { past: "달랐다", polite: "다릅니다", te: "달라" },
-    고르: { past: "골랐다", polite: "고릅니다", te: "골라" },
-    누르: { past: "눌렀다", polite: "누릅니다", te: "눌러" },
-    부르: { past: "불렀다", polite: "부릅니다", te: "불러" },
-    모르: { past: "몰랐다", polite: "모릅니다", te: "몰라" },
-    어리: { past: "어렸다", polite: "어립니다", te: "어려" },
-    가늘: { past: "가늘었다", polite: "가늘습니다", te: "가늘어" },
-  };
-
-  return map[root] ?? {
     past: `${root}었다`,
     polite: `${root}습니다`,
     te: `${root}어`,
@@ -158,7 +170,11 @@ function normalizeKrFormText(text: string): string {
     .replace(/달었습니다/g, "달았습니다")
     .replace(/달었다/g, "달았다")
     .replace(/짧었습니다/g, "짧았습니다")
-    .replace(/짧었다/g, "짧았다");
+    .replace(/짧었다/g, "짧았다")
+    .replace(/희습니다/g, "흽니다")
+    .replace(/뻔뻔스럽어서/g, "뻔뻔스러워서")
+    .replace(/더럽어서/g, "더러워서")
+    .replace(/시끄럽어서/g, "시끄러워서");
 }
 
 const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
