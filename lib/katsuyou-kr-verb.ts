@@ -205,6 +205,7 @@ function makePast(baseKr: string): string {
     듣: "들었다",
     돕: "도왔다",
     타: "탔다",
+    건너: "건넜다",
   };
   if (special[root]) return special[root];
 
@@ -374,6 +375,7 @@ function makePassive(baseKr: string): string {
     만들다: "만들어지다",
     열다: "열리다",
     세우다: "세워지다",
+    깨우다: "일으켜지다",
     조사하다: "조사되다",
     넣다: "넣어지다",
     꺼내다: "꺼내지다",
@@ -395,6 +397,7 @@ function makePassive(baseKr: string): string {
     달리다: "달리다(수동형)",
     놀다: "놀다(수동형)",
     서다: "서다(수동형)",
+    앉다: "앉다(수동형)",
     듣다: "듣다(수동형)",
     죽다: "죽다(수동형)",
     돌아가다: "돌아가다(수동형)",
