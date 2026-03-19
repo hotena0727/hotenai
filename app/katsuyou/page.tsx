@@ -156,6 +156,7 @@ export default function KatsuyouPage() {
   const isDailyLimitReached =
     !isPaidPlan(userPlan) && todayWordKanjiSets >= DAILY_FREE_SET_LIMIT;
   const remainingSets = Math.max(DAILY_FREE_SET_LIMIT - todayWordKanjiSets, 0);
+  const isVipPlan = normalizePlan(userPlan) === "vip";
 
   const playResultSfx = (kind: "perfect" | "correct" | "wrong") => {
     try {
@@ -1175,7 +1176,13 @@ export default function KatsuyouPage() {
 
                 return (
                   <div key={`${q.item_key || q.jp_word}-${idx}`}>
-                    <div className="flex items-start justify-between gap-3">
+                    <div
+                      className={
+                        q.qtype === "jp2kr" && isVipPlan
+                          ? "flex items-start justify-between gap-3"
+                          : ""
+                      }
+                    >
                       <p className="text-xl font-semibold sm:text-2xl">
                         {circleNumber(idx)}{" "}
                         <span lang="ja" style={JA_FONT_STYLE}>
@@ -1183,7 +1190,7 @@ export default function KatsuyouPage() {
                         </span>
                       </p>
 
-                      {q.qtype === "jp2kr" ? (
+                      {q.qtype === "jp2kr" && isVipPlan ? (
                         <button
                           type="button"
                           onClick={() => speakJapanese(q.prompt, `q-${idx}`)}
@@ -1274,7 +1281,7 @@ export default function KatsuyouPage() {
                           품사: {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)}
                         </p>
 
-                        {q.qtype === "jp2kr" ? (
+                        {q.qtype === "jp2kr" && isVipPlan ? (
                           <div className="mt-3">
                             <button
                               type="button"
