@@ -92,6 +92,16 @@ function buildBieupTeForm(root: string): string {
   return `${root.slice(0, -1)}워`;
 }
 
+function buildBieupPastForm(root: string): string {
+  if (root.endsWith("스럽")) {
+    return `${root.slice(0, -2)}러웠다`;
+  }
+  if (root.endsWith("럽")) {
+    return `${root.slice(0, -2)}러웠다`;
+  }
+  return `${root.slice(0, -1)}웠다`;
+}
+
 function haForms(root: string) {
   const stem = root.slice(0, -1);
   return {
@@ -145,26 +155,21 @@ function woForms(root: string) {
 
   if (map[root]) return map[root];
 
-  if (root.endsWith("스럽")) {
-    return {
-      past: `${root.slice(0, -2)}러웠다`,
-      polite: `${root}습니다`,
-      te: `${root.slice(0, -2)}러워`,
-    };
-  }
-
-  if (root.endsWith("럽")) {
-    return {
-      past: `${root.slice(0, -2)}러웠다`,
-      polite: `${root}습니다`,
-      te: `${root.slice(0, -2)}러워`,
-    };
-  }
-
-  if (root.endsWith("갑") || root.endsWith("겁") || root.endsWith("깝") || root.endsWith("둡") || root.endsWith("섭") || root.endsWith("춥") || root.endsWith("맵") || root.endsWith("럽")) {
+  if (
+    root.endsWith("스럽") ||
+    root.endsWith("럽") ||
+    root.endsWith("갑") ||
+    root.endsWith("겁") ||
+    root.endsWith("깝") ||
+    root.endsWith("둡") ||
+    root.endsWith("섭") ||
+    root.endsWith("춥") ||
+    root.endsWith("맵")
+  ) {
     const te = buildBieupTeForm(root);
+    const past = buildBieupPastForm(root);
     return {
-      past: `${te}ㅆ다`.replace(/워ㅆ다/g, "웠다"),
+      past,
       polite: `${root}습니다`,
       te,
     };
@@ -176,6 +181,36 @@ function woForms(root: string) {
     te: `${root}어`,
   };
 }
+
+function hIrregularForms(root: string) {
+  const map: Record<string, { past: string; polite: string; te: string }> = {
+    노랗: { past: "노랬다", polite: "노랗습니다", te: "노래" },
+    파랗: { past: "파랬다", polite: "파랗습니다", te: "파래" },
+    하얗: { past: "하얬다", polite: "하얗습니다", te: "하얘" },
+    빨갛: { past: "빨갰다", polite: "빨갛습니다", te: "빨개" },
+    까맣: { past: "까맸다", polite: "까맣습니다", te: "까매" },
+    누렇: { past: "누렜다", polite: "누렇습니다", te: "누래" },
+    허옇: { past: "허옜다", polite: "허옇습니다", te: "허예" },
+    뿌옇: { past: "뿌옜다", polite: "뿌옇습니다", te: "뿌예" },
+  };
+
+  return map[root] ?? {
+    past: `${root}었다`,
+    polite: `${root}습니다`,
+    te: `${root}어`,
+  };
+}
+
+const H_IRREGULAR_ROOTS = new Set([
+  "노랗",
+  "파랗",
+  "하얗",
+  "빨갛",
+  "까맣",
+  "누렇",
+  "허옇",
+  "뿌옇",
+]);
 
 function normalizeKrFormText(text: string): string {
   return text
@@ -203,7 +238,19 @@ function normalizeKrFormText(text: string): string {
     .replace(/희습니다/g, "흽니다")
     .replace(/뻔뻔스럽어서/g, "뻔뻔스러워서")
     .replace(/더럽어서/g, "더러워서")
-    .replace(/시끄럽어서/g, "시끄러워서");
+    .replace(/시끄럽어서/g, "시끄러워서")
+    .replace(/뻔뻔스럽었다/g, "뻔뻔스러웠다")
+    .replace(/뻔뻔스럽었습니다/g, "뻔뻔스러웠습니다")
+    .replace(/노랗았습니다/g, "노랬습니다")
+    .replace(/노랗았다/g, "노랬다")
+    .replace(/파랗았습니다/g, "파랬습니다")
+    .replace(/파랗았다/g, "파랬다")
+    .replace(/하얗았습니다/g, "하얬습니다")
+    .replace(/하얗았다/g, "하얬다")
+    .replace(/빨갛았습니다/g, "빨갰습니다")
+    .replace(/빨갛았다/g, "빨갰다")
+    .replace(/까맣았습니다/g, "까맸습니다")
+    .replace(/까맣았다/g, "까맸다");
 }
 
 const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
@@ -261,6 +308,47 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     te_form_a: "짧고",
     te_form_b: "짧아서",
   },
+  뻔뻔스럽: {
+    plain_past: "뻔뻔스러웠다",
+    polite_past: "뻔뻔스러웠습니다",
+    te_form_a: "뻔뻔스럽고",
+    te_form_b: "뻔뻔스러워서",
+  },
+  노랗: {
+    polite_present: "노랗습니다",
+    plain_past: "노랬다",
+    polite_past: "노랬습니다",
+    te_form_a: "노랗고",
+    te_form_b: "노래서",
+  },
+  파랗: {
+    polite_present: "파랗습니다",
+    plain_past: "파랬다",
+    polite_past: "파랬습니다",
+    te_form_a: "파랗고",
+    te_form_b: "파래서",
+  },
+  하얗: {
+    polite_present: "하얗습니다",
+    plain_past: "하얬다",
+    polite_past: "하얬습니다",
+    te_form_a: "하얗고",
+    te_form_b: "하얘서",
+  },
+  빨갛: {
+    polite_present: "빨갛습니다",
+    plain_past: "빨갰다",
+    polite_past: "빨갰습니다",
+    te_form_a: "빨갛고",
+    te_form_b: "빨개서",
+  },
+  까맣: {
+    polite_present: "까맣습니다",
+    plain_past: "까맸다",
+    polite_past: "까맸습니다",
+    te_form_a: "까맣고",
+    te_form_b: "까매서",
+  },
 };
 
 function buildKrFormsByPattern(
@@ -279,7 +367,18 @@ function buildKrFormsByPattern(
 
   let forms: KrForms;
 
-  if (pattern === "it") {
+  if (H_IRREGULAR_ROOTS.has(root)) {
+    const f = hIrregularForms(root);
+
+    forms = {
+      ...common,
+      polite_present: f.polite,
+      plain_past: f.past,
+      polite_past: f.past.replace(/다$/, "습니다"),
+      te_form_a: `${root}고`,
+      te_form_b: `${f.te}서`,
+    };
+  } else if (pattern === "it") {
     const f = buildItPatternForms(root);
 
     forms = {
@@ -830,7 +929,7 @@ function buildVerbJpForms(row: KatsuyouRow): VerbJpFormSet | null {
     す: { i: "し", a: "さ", e: "せ", o: "そ", te: "して", ta: "した" },
     つ: { i: "ち", a: "た", e: "て", o: "と", te: "って", ta: "った" },
     ぬ: { i: "に", a: "な", e: "ね", o: "の", te: "んで", ta: "んだ" },
-    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "んだ" },
+    む: { i: "み", a: "ま", e: "め", o: "も", te: "んで", ta: "ん다" },
     ぶ: { i: "び", a: "ば", e: "べ", o: "ぼ", te: "んで", ta: "んだ" },
     る: { i: "り", a: "ら", e: "れ", o: "ろ", te: "って", ta: "った" },
   } as const;
