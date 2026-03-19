@@ -144,6 +144,14 @@ function normalizeKrFormText(text: string): string {
     .replace(/쉽었다/g, "쉬웠다")
     .replace(/쉽었습니다/g, "쉬웠습니다")
 
+    .replace(/귀엽었다/g, "귀여웠다")
+    .replace(/귀엽었습니다/g, "귀여웠습니다")
+    .replace(/귀엽어서/g, "귀여워서")
+
+    .replace(/쓰었다/g, "썼다")
+    .replace(/쓰었습니다/g, "썼습니다")
+    .replace(/쓰어서/g, "써서")
+
     .replace(/느리었다/g, "느렸다")
     .replace(/느리었습니다/g, "느렸습니다")
 
