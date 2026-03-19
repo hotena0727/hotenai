@@ -23,6 +23,7 @@ import {
   calcGoalPercent,
   getBalanceValue,
   getTodayMessage,
+  getConsistencyCaption,
   pickStrengthWeakness,
   type DayBucket,
   type HomeDashboardSummary,
@@ -93,11 +94,6 @@ function normalizeLevelValue(level?: string | null): string {
   const raw = String(level || "").trim().toUpperCase();
   if (["N5", "N4", "N3", "N2", "N1"].includes(raw)) return raw;
   return String(level || "").trim();
-}
-
-function levelLabel(level?: string | null): string {
-  const raw = normalizeLevelValue(level);
-  return raw || "-";
 }
 
 export default function HomePage() {
@@ -396,6 +392,11 @@ export default function HomePage() {
     [balanceData]
   );
 
+  const consistencyCaption = useMemo(
+    () => getConsistencyCaption(stats.streak, stats.activeDays7, stats.todayCount),
+    [stats.streak, stats.activeDays7, stats.todayCount]
+  );
+
   const wrongSummary = useMemo<WrongSummary>(() => {
     const safeDashboard = dashboard ?? {
       weightedWordWrong: 0,
@@ -429,7 +430,6 @@ export default function HomePage() {
 
   const userPlan = profile?.plan || "free";
   const planTheme = getPlanTheme(userPlan);
-  const progressColors = getPlanProgressColors(userPlan);
   const goalRingColors = getGoalRingColors();
 
   const canWord = canAccess(
@@ -751,12 +751,17 @@ export default function HomePage() {
                       {balanceScores.wrongCare}
                     </span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800">
-                    <span className="text-gray-500">꾸준함</span>
-                    <span className="font-bold text-gray-900">
-                      {balanceScores.streak}
-                    </span>
-                  </span>
+                  <div className="rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800">
+                    <div className="inline-flex items-center gap-1">
+                      <span className="text-gray-500">꾸준함</span>
+                      <span className="font-bold text-gray-900">
+                        {balanceScores.streak}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-gray-500">
+                      {consistencyCaption}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

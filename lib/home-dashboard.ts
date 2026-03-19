@@ -101,6 +101,15 @@ export function calcConsistencyScore(
   return clampScore(streakPart + activePart + todayPart);
 }
 
+export function getConsistencyCaption(
+  streak: number,
+  activeDays7: number,
+  todayCount: number
+) {
+  const todayText = todayCount > 0 ? "오늘 학습 완료" : "오늘은 아직 학습 전";
+  return `연속 ${streak}일 · 최근 7일 중 ${activeDays7}일 학습 · ${todayText}`;
+}
+
 export function buildBalanceData(stats: {
   wordAvg: number;
   kanjiAvg: number;
@@ -181,8 +190,9 @@ export function buildSuggestedRoutines(params: {
       routines.some(
         (item) => item.href === routine.href && item.title === routine.title
       )
-    )
+    ) {
       return;
+    }
     routines.push(routine);
   };
 
