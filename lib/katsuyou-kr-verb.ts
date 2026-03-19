@@ -140,6 +140,7 @@ function makePolitePresent(baseKr: string): string {
     사: "삽니다",
     놀: "놉니다",
     만들: "만듭니다",
+    알: "압니다"
     나가: "나갑니다",
     일어나: "일어납니다",
     열: "엽니다",
@@ -299,6 +300,7 @@ function makeImperative(baseKr: string): string {
     쓰: "써라",
     보: "봐라",
     먹: "먹어라",
+    듣: "들어라",
     닫: "닫아라",
     열: "열어라",
     입: "입어라",
@@ -370,6 +372,7 @@ function makePassive(baseKr: string): string {
     타다: "타지다",
     가르치다: "가르쳐지다",
     먹다: "먹히다",
+    멈추다: "멈춰지다",
   };
   if (natural[baseKr]) return natural[baseKr];
 
@@ -382,6 +385,7 @@ function makePassive(baseKr: string): string {
     헤엄치다: "헤엄치다(수동형)",
     달리다: "달리다(수동형)",
     놀다: "놀다(수동형)",
+    서다: "서다(수동형)",
     듣다: "듣다(수동형)",
     죽다: "죽다(수동형)",
     돌아가다: "돌아가다(수동형)",
