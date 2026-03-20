@@ -341,14 +341,12 @@ function estimateSlowSpeechPenalty(
 
   let penalty = 0;
 
-  if (cps < 1.8) {
-    penalty = 18;
-  } else if (cps < 2.2) {
-    penalty = 12;
-  } else if (cps < 2.6) {
-    penalty = 8;
-  } else if (cps < 3.0) {
-    penalty = 4;
+  if (cps < 2.0) {
+    penalty = 15;
+  } else if (cps < 2.4) {
+    penalty = 10;
+  } else if (cps < 2.8) {
+    penalty = 5;
   }
 
   return {
@@ -360,79 +358,42 @@ function estimateSlowSpeechPenalty(
 
 function makeDetailedFeedback(
   score: number,
-  answer: string,
+  _answer: string,
   transcript: string,
   expectedReading: string,
   actualReading: string,
-  adoptedExpectedYomi = false
+  _adoptedExpectedYomi = false
 ) {
   const diff = getFirstDiffInfo(expectedReading, actualReading);
   const flow = analyzeSpeechFlow(transcript, actualReading);
 
-  const yomiGuideComment =
-    adoptedExpectedYomi && score < 98
-      ? `\n📝 한자 표기로 인식됐지만, 발음은 맞게 판단했어요.`
-      : "";
+  let verdict = "";
+  if (score >= 98) verdict = "아주 좋습니다";
+  else if (score >= 90) verdict = "좋습니다";
+  else if (score >= 80) verdict = "괜찮아요";
+  else if (score >= 65) verdict = "조금만 더";
+  else verdict = "다시 해봐요";
 
-  const flowComment = flow.hasFlowIssue
-    ? `\n💡 이번에는 조금 더 끊지 않고 자연스럽게 이어서 말해 보세요.`
-    : "";
-
+  let suggestion = "";
   if (score >= 98) {
-    return `🎯 아주 좋습니다\n🗣️ ${answer} 를 정확하고 자연스럽게 말했어요.${yomiGuideComment}`;
-  }
-
-  if (score >= 90) {
-    return [
-      `🎯 좋습니다`,
-      `🗣️ 거의 정확합니다.`,
-      `지금처럼 말해도 충분히 좋아요.`,
-      `한 번만 더 또렷하고 자연스럽게 이어서 말해 보세요.${yomiGuideComment}${flowComment}`,
-    ].join("\n");
-  }
-
-  if (score >= 80) {
-    if (diff) {
-      return [
-        `🎯 좋습니다`,
-        `🗣️ 큰 흐름은 잘 맞아요.`,
-        `${diff.index + 1}번째 글자 근처를 한 번만 더 확인해 보세요.`,
-        `정답 기준: ${diff.expectedTail}`,
-        `인식 결과: ${diff.actualTail}`,
-        `전체적으로는 잘 따라오고 있습니다.${yomiGuideComment}${flowComment}`,
-      ].join("\n");
-    }
-
-    return [
-      `🎯 좋습니다`,
-      `🗣️ 큰 흐름은 맞아요.`,
-      `정답을 보며 한 번 더 자연스럽게 이어서 말해 보세요.${yomiGuideComment}${flowComment}`,
-    ].join("\n");
-  }
-
-  if (score >= 65) {
-    if (diff) {
-      return [
-        `🎯 조금만 더`,
-        `🗣️ 잘 말하고 있어요.`,
-        `${diff.index + 1}번째 글자 근처가 조금 달라 보입니다.`,
-        `정답 기준: ${diff.expectedTail}`,
-        `인식 결과: ${diff.actualTail}`,
-        `천천히 한 번 더 따라 말해 보세요.${flowComment}`,
-      ].join("\n");
-    }
-
-    return [
-      `🎯 조금만 더`,
-      `🗣️ 전체 흐름은 따라가고 있어요.`,
-      `정답을 보면서 한 번 더 천천히 말해 보세요.${flowComment}`,
-    ].join("\n");
+    suggestion = "정확하고 자연스럽게 말했어요.";
+  } else if (flow.hasFlowIssue) {
+    suggestion = "문장을 조금 더 끊지 않고 이어서 말해 보세요.";
+  } else if (diff) {
+    suggestion = `${diff.index + 1}번째 글자 근처를 한 번 더 확인해 보세요.`;
+  } else {
+    suggestion = "한 번 더 또렷하게 말해 보세요.";
   }
 
   return [
-    `🎯 천천히 다시`,
-    `🗣️ 괜찮아요. 지금은 말해보는 것 자체가 중요합니다.`,
-    `정답을 보며 짧게 한 번 더 따라 말해 보세요.${flowComment}`,
+    `${score}점`,
+    "",
+    verdict,
+    suggestion,
+    "",
+    `정답 기준: ${expectedReading || "-"}`,
+    `인식 결과: ${actualReading || "-"}`,
+    `전사 원문: ${transcript || "-"}`
   ].join("\n");
 }
 
