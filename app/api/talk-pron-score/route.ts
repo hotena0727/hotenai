@@ -203,6 +203,12 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
     : Math.max(0, Math.min(100, weighted));
 }
 
+/**
+ * 점수 계산용 transcript만 보정
+ * - answer_jp 안에 실제로 등장하는 한자만
+ * - answer_yomi 기준 히라가나로 치환
+ * - 피드백용 transcript/actualReading은 건드리지 않음
+ */
 function isKanaChar(ch: string) {
   return /[ぁ-んァ-ンー]/.test(ch);
 }
@@ -546,21 +552,23 @@ export async function POST(req: Request) {
       );
     }
 
+    // 점수 계산용만 보정
     const scoringTranscript = buildScoringTranscript(
       transcript,
       answerJp,
       answerYomi
     );
 
+    // 점수는 보정된 transcript 기준
     const scoreAgainstYomi = answerYomi
       ? similarityScore(scoringTranscript, answerYomi)
       : 0;
     const scoreAgainstJp = similarityScore(scoringTranscript, answerJp);
-
     const score = answerYomi ? scoreAgainstYomi : scoreAgainstJp;
 
+    // 피드백은 원본 방식 유지
     const expectedReading = toReadingLike(answerYomi || answerJp);
-    const actualReading = scoringTranscript;
+    const actualReading = toReadingLike(transcript);
 
     const feedback = makeDetailedFeedback(
       score,
