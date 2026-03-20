@@ -19,7 +19,6 @@ function normJp(text: string) {
 
 function normJpLoose(text: string) {
   return normJp(text)
-    .replace(/っ/g, "")
     .replace(/[ゃゅょぁぃぅぇぉゎ]/g, (ch) =>
       (
         {
@@ -55,9 +54,13 @@ function removeJapaneseSpaces(text: string) {
 
 function normalizeForSurfaceMatch(text: string) {
   return removeJapaneseSpaces(text).replace(
-    /[、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g,
+    /[、。．，,！？!？「」『』（）()$begin:math:display$$end:math:display${}…~"'`´]/g,
     ""
   );
+}
+
+function hasKanji(text: string) {
+  return /[\u4E00-\u9FFF々〆ヵヶ]/.test(String(text || ""));
 }
 
 function bigrams(s: string) {
@@ -129,7 +132,6 @@ function analyzeSpeechFlow(rawTranscript: string, _normalizedReading: string) {
   }
 
   const penalty = fillerCount * 4 + repeatedTokenCount * 6;
-
   const hasFlowIssue = fillerCount > 0 || repeatedTokenCount > 0;
 
   return {
@@ -151,7 +153,7 @@ function buildActualReadingWithYomiPriority(
   answerJp: string,
   answerYomi: string
 ) {
-  const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
+  const expectedReading = buildExpectedReading(answerJp, answerYomi);
 
   if (!transcript) {
     return {
@@ -161,10 +163,60 @@ function buildActualReadingWithYomiPriority(
     };
   }
 
+  const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
+
+  if (answerYomi && rawSurfaceScore >= 90) {
+    return {
+      actualReading: expectedReading,
+      adoptedExpectedYomi: true,
+      surfaceScore: rawSurfaceScore,
+    };
+  }
+
   return {
     actualReading: toReadingLike(transcript),
     adoptedExpectedYomi: false,
     surfaceScore: rawSurfaceScore,
+  };
+}
+
+function estimateSlowSpeechPenalty(
+  durationMs: number,
+  expectedReading: string
+) {
+  if (!durationMs || !expectedReading) {
+    return {
+      penalty: 0,
+      cps: 0,
+      isSlow: false,
+    };
+  }
+
+  const seconds = durationMs / 1000;
+  if (seconds <= 0) {
+    return {
+      penalty: 0,
+      cps: 0,
+      isSlow: false,
+    };
+  }
+
+  const readingLen = Array.from(expectedReading).length;
+  const cps = readingLen / seconds;
+
+  let penalty = 0;
+
+  // 너무 빡빡하지 않게 완화
+  if (cps < 1.6) {
+    penalty = 8;
+  } else if (cps < 1.9) {
+    penalty = 4;
+  }
+
+  return {
+    penalty,
+    cps,
+    isSlow: penalty > 0,
   };
 }
 
@@ -188,12 +240,35 @@ function similarityScoreWithYomiPriority(
       actualReading,
       adoptedExpectedYomi,
       surfaceScore,
+      compareMode: "reading" as const,
     };
   }
 
   const flow = analyzeSpeechFlow(transcript, actualReading);
   const slow = estimateSlowSpeechPenalty(durationMs, expectedReading);
+  const transcriptHasKanji = hasKanji(transcript);
 
+  // 한자 전사는 표면 비교 우선
+  if (transcriptHasKanji) {
+    let weighted = Math.round(surfaceScore);
+
+    weighted -= flow.penalty + slow.penalty;
+
+    if (flow.hasFlowIssue && weighted >= 100) {
+      weighted = 97;
+    }
+
+    return {
+      score: Math.max(35, Math.min(100, weighted)),
+      expectedReading,
+      actualReading,
+      adoptedExpectedYomi,
+      surfaceScore,
+      compareMode: "surface" as const,
+    };
+  }
+
+  // 히라가나 전사인 경우 장단음 포함 reading 비교
   if (expectedReading === actualReading) {
     const totalPenalty = flow.penalty + slow.penalty;
     const score =
@@ -207,6 +282,7 @@ function similarityScoreWithYomiPriority(
       actualReading,
       adoptedExpectedYomi,
       surfaceScore,
+      compareMode: "reading" as const,
     };
   }
 
@@ -223,6 +299,7 @@ function similarityScoreWithYomiPriority(
         actualReading,
         adoptedExpectedYomi,
         surfaceScore,
+        compareMode: "reading" as const,
       };
     }
   }
@@ -252,6 +329,7 @@ function similarityScoreWithYomiPriority(
     actualReading,
     adoptedExpectedYomi,
     surfaceScore,
+    compareMode: "reading" as const,
   };
 }
 
@@ -282,54 +360,22 @@ function getFirstDiffInfo(expected: string, actual: string) {
   return null;
 }
 
-function estimateSlowSpeechPenalty(
-  durationMs: number,
-  expectedReading: string
-) {
-  if (!durationMs || !expectedReading) {
-    return {
-      penalty: 0,
-      cps: 0,
-      isSlow: false,
-    };
-  }
-
-  const seconds = durationMs / 1000;
-  if (seconds <= 0) {
-    return {
-      penalty: 0,
-      cps: 0,
-      isSlow: false,
-    };
-  }
-
-  const readingLen = Array.from(expectedReading).length;
-  const cps = readingLen / seconds;
-
-  let penalty = 0;
-
-  if (cps < 1.8) {
-    penalty = 12;
-  } else if (cps < 2.2) {
-    penalty = 6;
-  }
-
-  return {
-    penalty,
-    cps,
-    isSlow: penalty > 0,
-  };
-}
-
 function makeDetailedFeedback(
   score: number,
-  _answer: string,
+  answer: string,
   transcript: string,
   expectedReading: string,
   actualReading: string,
-  _adoptedExpectedYomi = false
+  compareMode: "reading" | "surface" = "reading"
 ) {
-  const diff = getFirstDiffInfo(expectedReading, actualReading);
+  const diff =
+    compareMode === "surface"
+      ? getFirstDiffInfo(
+          normalizeForSurfaceMatch(answer),
+          normalizeForSurfaceMatch(transcript)
+        )
+      : getFirstDiffInfo(expectedReading, actualReading);
+
   const flow = analyzeSpeechFlow(transcript, actualReading);
 
   let verdict = "";
@@ -345,7 +391,7 @@ function makeDetailedFeedback(
   } else if (flow.hasFlowIssue) {
     suggestion = "💡 문장을 조금 더 끊지 않고 이어서 말해 보세요.";
   } else if (diff) {
-    suggestion = `💡 ${diff.index + 1}번째 글자 근처를 한 번 더 확인해 보세요.`;
+    suggestion = `💡 ${diff.index + 1}번째 부분을 한 번 더 확인해 보세요.`;
   } else {
     suggestion = "💡 한 번 더 또렷하게 말해 보세요.";
   }
@@ -364,10 +410,20 @@ function makeDetailedFeedback(
     suggestion,
     expectedSnippet: diff
       ? clipShort(diff.expectedTail, 6)
-      : clipShort(expectedReading, 6) || "-",
+      : clipShort(
+          compareMode === "surface"
+            ? normalizeForSurfaceMatch(answer)
+            : expectedReading,
+          6
+        ) || "-",
     actualSnippet: diff
       ? clipShort(diff.actualTail, 6)
-      : clipShort(actualReading, 6) || "-",
+      : clipShort(
+          compareMode === "surface"
+            ? normalizeForSurfaceMatch(transcript)
+            : actualReading,
+          6
+        ) || "-",
   };
 }
 
@@ -415,7 +471,6 @@ export async function POST(req: Request) {
       "가능하면 히라가나 중심으로 전사하세요.",
       "동음이의어 한자가 가능하면 정답 문장에 가까운 표기를 우선하세요.",
       "정답과 같은 발음이면 정답 문장에 가까운 표기를 우선해 주세요.",
-      "장음, 촉음, 요음은 실제 들린 발음대로 유지하세요.",
       "이 평가는 사용자가 실제로 말해보는 경험을 돕는 목적입니다.",
       "정답 읽기와 일치하는 경우, 가능한 한 정답에 가까운 표기를 우선하세요.",
       `정답 문장: ${answerJp}`,
@@ -495,7 +550,7 @@ export async function POST(req: Request) {
       transcript,
       judged.expectedReading,
       judged.actualReading,
-      judged.adoptedExpectedYomi
+      judged.compareMode
     );
 
     return Response.json({
@@ -510,8 +565,9 @@ export async function POST(req: Request) {
 
     return Response.json(
       {
-        error: `[서버 내부 오류] ${message || "말하기 점수를 계산하지 못했습니다."
-          }`,
+        error: `[서버 내부 오류] ${
+          message || "말하기 점수를 계산하지 못했습니다."
+        }`,
       },
       { status: 500 }
     );
