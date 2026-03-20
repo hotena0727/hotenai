@@ -24,8 +24,6 @@ import {
   getPrettyPosModeLabel,
 } from "@/lib/labels";
 import {
-  getPlanBadge,
-  getPlanLabel,
   getPlanTheme,
   normalizePlan,
   type PlanCode,
@@ -626,9 +624,9 @@ export default function MyPage() {
       setProfile((prev) =>
         prev
           ? {
-              ...prev,
-              daily_goal_sets: nextGoal,
-            }
+            ...prev,
+            daily_goal_sets: nextGoal,
+          }
           : prev
       );
 
@@ -951,26 +949,11 @@ export default function MyPage() {
               <p className="mt-2 text-lg font-bold text-gray-900">
                 {profile ? getPlanGuideText(profile.plan) : "-"}
                 {profile &&
-                profile.plan !== "free" &&
-                profile.plan_expires_at
+                  profile.plan !== "free" &&
+                  profile.plan_expires_at
                   ? ` · ${formatDateOnly(profile.plan_expires_at)}까지`
                   : ""}
               </p>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span
-                  className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}
-                >
-                  {profile ? getPlanBadge(profile.plan) : "-"}
-                </span>
-                {profile ? (
-                  <span
-                    className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}
-                  >
-                    {getPlanLabel(profile.plan)}
-                  </span>
-                ) : null}
-              </div>
 
               <p className="mt-3 text-sm text-gray-600">
                 {profile?.plan && profile.plan !== "free"
@@ -990,7 +973,6 @@ export default function MyPage() {
               style={{ width: `${stats.progressPercent}%` }}
             />
           </div>
-
           <div className="mt-4 flex flex-wrap gap-3">
             <div className="rounded-full border border-gray-200 bg-white/80 px-4 py-2 text-sm font-semibold text-gray-700">
               이번 달 {stats.thisMonthCount}/20회
@@ -998,13 +980,6 @@ export default function MyPage() {
             <div className="rounded-full border border-gray-200 bg-white/80 px-4 py-2 text-sm font-semibold text-gray-700">
               {stats.progressPercent}% 진행
             </div>
-            {profile ? (
-              <div
-                className={`rounded-full border px-4 py-2 text-sm font-semibold ${planTheme.badge}`}
-              >
-                {getPlanLabel(profile.plan)}
-              </div>
-            ) : null}
           </div>
         </div>
 
@@ -1156,10 +1131,10 @@ export default function MyPage() {
               {stats.totalAttempts === 0
                 ? "0%"
                 : `${Math.round(
-                    ((stats.totalAttempts * 10 - stats.totalWrong) /
-                      Math.max(stats.totalAttempts * 10, 1)) *
-                      100
-                  )}%`}
+                  ((stats.totalAttempts * 10 - stats.totalWrong) /
+                    Math.max(stats.totalAttempts * 10, 1)) *
+                  100
+                )}%`}
             </p>
             <p className="mt-2 text-sm font-semibold text-gray-700 sm:text-lg">
               평균 정답률
@@ -1225,23 +1200,6 @@ export default function MyPage() {
           </div>
         </div>
 
-        <div className="mt-6 rounded-3xl bg-blue-50 p-5">
-          <p className="text-lg font-semibold text-blue-900">
-            🔥 반복 오답이 쌓였어요. 오늘은 TOP10 복습부터 가볍게 정리해볼까요?
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setMainTab("wrong");
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          className="mt-4 w-full rounded-2xl border border-gray-300 bg-white px-5 py-4 text-lg font-semibold text-gray-800"
-        >
-          🔥 TOP10 복습 시작
-        </button>
-
         <div className="mt-8 border-b border-gray-200">
           <div className="flex flex-wrap gap-6">
             <button
@@ -1301,7 +1259,7 @@ export default function MyPage() {
                 </p>
               </div>
               <div className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600">
-                최근 오답 {filteredRecent.length}개
+                최근 오답 {filteredRecent.length}개 · 미리보기 3개
               </div>
             </div>
 
@@ -1410,55 +1368,73 @@ export default function MyPage() {
               </div>
             </div>
 
-            <div className="mt-6 space-y-3">
+            <div className="mt-6">
               {filteredRecent.length === 0 ? (
                 <div className="rounded-2xl border border-gray-200 p-5 text-sm text-gray-500">
                   표시할 기록이 없습니다.
                 </div>
               ) : (
-                filteredRecent.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                          {getAppLabelFromPosMode(item.pos_mode)}
-                        </div>
-                        <p className="mt-3 text-lg font-bold text-gray-900">
-                          {prettyAttemptLabel(withFullIfMissing(item.pos_mode))}
-                        </p>
-                        <p className="mt-2 text-sm text-gray-600">
-                          {getAttemptDisplayLevel(item)} · {Number(item.score || 0)}/
-                          {Number(item.quiz_len || 0)} · 오답{" "}
-                          {Number(item.wrong_count || 0)}
-                        </p>
-                      </div>
+                <>
+                  <div className="space-y-3">
+                    {filteredRecent.slice(0, 3).map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                              {getAppLabelFromPosMode(item.pos_mode)}
+                            </div>
 
-                      <div className="text-right text-sm text-gray-500">
-                        <p>
-                          {item.created_at
-                            ? new Date(item.created_at).toLocaleDateString(
-                                "ko-KR"
-                              )
-                            : "-"}
-                        </p>
-                        <p className="mt-1">
-                          {item.created_at
-                            ? new Date(item.created_at).toLocaleTimeString(
-                                "ko-KR",
-                                {
+                            <p className="mt-3 text-lg font-bold text-gray-900">
+                              {prettyAttemptLabel(withFullIfMissing(item.pos_mode))}
+                            </p>
+
+                            <p className="mt-2 text-sm text-gray-600">
+                              {getAttemptDisplayLevel(item)} · {Number(item.score || 0)}/
+                              {Number(item.quiz_len || 0)} · 오답{" "}
+                              {Number(item.wrong_count || 0)}
+                            </p>
+                          </div>
+
+                          <div className="text-right text-sm text-gray-500">
+                            <p>
+                              {item.created_at
+                                ? new Date(item.created_at).toLocaleDateString("ko-KR")
+                                : "-"}
+                            </p>
+                            <p className="mt-1">
+                              {item.created_at
+                                ? new Date(item.created_at).toLocaleTimeString("ko-KR", {
                                   hour: "2-digit",
                                   minute: "2-digit",
-                                }
-                              )
-                            : "-"}
-                        </p>
+                                })
+                                : "-"}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))
+
+                  <div className="mt-4">
+                    <a
+                      href={
+                        wrongApp === "word"
+                          ? `/mypage/wrong-word?count=${encodeURIComponent(wrongCount)}`
+                          : wrongApp === "kanji"
+                            ? `/mypage/wrong-kanji?count=${encodeURIComponent(wrongCount)}`
+                            : wrongApp === "katsuyou"
+                              ? `/mypage/wrong-katsuyou?count=${encodeURIComponent(wrongCount)}`
+                              : `/mypage/wrong-talk?count=${encodeURIComponent(wrongCount)}`
+                      }
+                      className="inline-flex rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
+                    >
+                      자세히 보기
+                    </a>
+                  </div>
+                </>
               )}
             </div>
           </div>
