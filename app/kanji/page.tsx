@@ -112,6 +112,7 @@ export default function KanjiPage() {
   const [audioError, setAudioError] = useState("");
 
   const [userPlan, setUserPlan] = useState<PlanCode>("free");
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
   const [limitMessage, setLimitMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
@@ -287,6 +288,7 @@ export default function KanjiPage() {
         const user = session?.user;
         if (!user) {
           setUserPlan("free");
+          setIsAdminUser(false);
           setTodayWordKanjiSets(0);
           setLimitMessage("");
           return;
@@ -294,7 +296,7 @@ export default function KanjiPage() {
 
         const { data: profileRow, error: profileError } = await supabase
           .from("profiles")
-          .select("plan")
+          .select("plan, is_admin")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -304,6 +306,7 @@ export default function KanjiPage() {
 
         const plan = normalizePlan(profileRow?.plan);
         setUserPlan(plan);
+        setIsAdminUser(Boolean(profileRow?.is_admin));
 
         const used = await fetchTodayBasicQuizSetCount(user.id);
         setTodayWordKanjiSets(used);
@@ -407,9 +410,9 @@ export default function KanjiPage() {
     const pool =
       reviewLevel && reviewLevel.length > 0
         ? allRows.filter(
-          (row) =>
-            String(row.level || "").trim().toUpperCase() === reviewLevel
-        )
+            (row) =>
+              String(row.level || "").trim().toUpperCase() === reviewLevel
+          )
         : allRows;
 
     return targetRows
@@ -1042,34 +1045,38 @@ export default function KanjiPage() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-gray-300 bg-white">
-          <button
-            type="button"
-            onClick={() => setDebugOpen((prev) => !prev)}
-            className="flex w-full items-center gap-3 px-4 py-4 text-left"
-          >
-            <span className="text-lg">{debugOpen ? "⌄" : "›"}</span>
-            <span className="text-lg font-semibold">🔎 디버그: 레벨별 단어 수</span>
-          </button>
+        {isAdminUser ? (
+          <div className="mt-4 rounded-2xl border border-gray-300 bg-white">
+            <button
+              type="button"
+              onClick={() => setDebugOpen((prev) => !prev)}
+              className="flex w-full items-center gap-3 px-4 py-4 text-left"
+            >
+              <span className="text-lg">{debugOpen ? "⌄" : "›"}</span>
+              <span className="text-lg font-semibold">
+                🔎 디버그: 레벨별 한자 수
+              </span>
+            </button>
 
-          {debugOpen ? (
-            <div className="border-t border-gray-200 px-4 py-4">
-              <div className="grid grid-cols-5 gap-3 text-center">
-                {LEVEL_OPTIONS.map((lv) => (
-                  <div
-                    key={lv}
-                    className="rounded-2xl border border-gray-200 p-4"
-                  >
-                    <p className="text-lg font-bold">{lv}</p>
-                    <p className="mt-2 text-sm text-gray-600">
-                      {levelCounts[lv]}개
-                    </p>
-                  </div>
-                ))}
+            {debugOpen ? (
+              <div className="border-t border-gray-200 px-4 py-4">
+                <div className="grid grid-cols-5 gap-3 text-center">
+                  {LEVEL_OPTIONS.map((lv) => (
+                    <div
+                      key={lv}
+                      className="rounded-2xl border border-gray-200 p-4"
+                    >
+                      <p className="text-lg font-bold">{lv}</p>
+                      <p className="mt-2 text-sm text-gray-600">
+                        {levelCounts[lv]}개
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {questions.length > 0 ? (
           <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
@@ -1345,16 +1352,18 @@ export default function KanjiPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
+            className={`mt-6 rounded-2xl border p-5 ${
+              !isReviewMode && isDailyLimitReached
                 ? "border-red-200 bg-red-50"
                 : "border-gray-300 bg-white"
-              }`}
+            }`}
           >
             <p
-              className={`text-sm ${!isReviewMode && isDailyLimitReached
+              className={`text-sm ${
+                !isReviewMode && isDailyLimitReached
                   ? "text-red-700"
                   : "text-gray-500"
-                }`}
+              }`}
             >
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 유료 플랜으로 계속 이용해 보세요."

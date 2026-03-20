@@ -176,6 +176,8 @@ export default function WordPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const [debugOpen, setDebugOpen] = useState(false);
+
   const didAutoCreateRef = useRef(false);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
   const activeSfxAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -185,6 +187,7 @@ export default function WordPage() {
   const [audioError, setAudioError] = useState("");
 
   const [userPlan, setUserPlan] = useState<PlanCode>("free");
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
   const [limitMessage, setLimitMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
@@ -240,6 +243,26 @@ export default function WordPage() {
     return map;
   }, [rows]);
 
+  const posCounts = useMemo(() => {
+    const map: Record<string, number> = {
+      noun: 0,
+      adj_i: 0,
+      adj_na: 0,
+      verb: 0,
+      adverb: 0,
+      particle: 0,
+      conjunction: 0,
+      interjection: 0,
+    };
+
+    rows.forEach((row) => {
+      const pos = String(row.pos || "").trim().toLowerCase();
+      if (map[pos] !== undefined) map[pos] += 1;
+    });
+
+    return map;
+  }, [rows]);
+
   const visibleLevelOptions = useMemo(
     () => WORD_LEVEL_OPTIONS.filter((lv) => (levelCounts[lv] || 0) > 0),
     [levelCounts]
@@ -247,7 +270,11 @@ export default function WordPage() {
 
   useEffect(() => {
     if (visibleLevelOptions.length === 0) return;
-    if (!visibleLevelOptions.includes(selectedLevel as (typeof WORD_LEVEL_OPTIONS)[number])) {
+    if (
+      !visibleLevelOptions.includes(
+        selectedLevel as (typeof WORD_LEVEL_OPTIONS)[number]
+      )
+    ) {
       setSelectedLevel(visibleLevelOptions[0]);
     }
   }, [visibleLevelOptions, selectedLevel]);
@@ -293,8 +320,8 @@ export default function WordPage() {
   const visibleQtypes =
     selectedPosGroup === "other"
       ? QTYPE_OPTIONS.filter(
-        (item) => item.value === "meaning" || item.value === "kr2jp"
-      )
+          (item) => item.value === "meaning" || item.value === "kr2jp"
+        )
       : QTYPE_OPTIONS;
 
   const wrongItems = questions
@@ -443,6 +470,7 @@ export default function WordPage() {
         const user = session?.user;
         if (!user) {
           setUserPlan("free");
+          setIsAdminUser(false);
           setTodayWordKanjiSets(0);
           setLimitMessage("");
           return;
@@ -450,7 +478,7 @@ export default function WordPage() {
 
         const { data: profileRow, error: profileError } = await supabase
           .from("profiles")
-          .select("plan")
+          .select("plan, is_admin")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -460,6 +488,7 @@ export default function WordPage() {
 
         const plan = normalizePlan(profileRow?.plan);
         setUserPlan(plan);
+        setIsAdminUser(Boolean(profileRow?.is_admin));
 
         const used = await fetchTodayBasicQuizSetCount(user.id);
         setTodayWordKanjiSets(used);
@@ -747,7 +776,7 @@ export default function WordPage() {
         const levelOk =
           !selectedLevel ||
           normalizeLevel((row as { level?: string }).level || "") ===
-          normalizeLevel(selectedLevel);
+            normalizeLevel(selectedLevel);
         return posOk && levelOk;
       });
 
@@ -856,7 +885,7 @@ export default function WordPage() {
           const levelOk =
             !selectedLevel ||
             normalizeLevel((row as { level?: string }).level || "") ===
-            normalizeLevel(selectedLevel);
+              normalizeLevel(selectedLevel);
           return posOk && levelOk;
         });
 
@@ -1511,6 +1540,72 @@ export default function WordPage() {
           ) : null}
         </div>
 
+        {isAdminUser ? (
+          <div className="mt-4 rounded-2xl border border-gray-300 bg-white">
+            <button
+              type="button"
+              onClick={() => setDebugOpen((prev) => !prev)}
+              className="flex w-full items-center gap-3 px-4 py-4 text-left"
+            >
+              <span className="text-lg">{debugOpen ? "⌄" : "›"}</span>
+              <span className="text-lg font-semibold">
+                🔎 디버그: 품사/레벨별 단어 수
+              </span>
+            </button>
+
+            {debugOpen ? (
+              <div className="border-t border-gray-200 px-4 py-4 space-y-4">
+                <div>
+                  <p className="mb-3 text-sm font-semibold text-gray-700">
+                    레벨별
+                  </p>
+                  <div className="grid grid-cols-5 gap-3 text-center">
+                    {WORD_LEVEL_OPTIONS.map((lv) => (
+                      <div
+                        key={lv}
+                        className="rounded-2xl border border-gray-200 p-4"
+                      >
+                        <p className="text-lg font-bold">{lv}</p>
+                        <p className="mt-2 text-sm text-gray-600">
+                          {levelCounts[lv]}개
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-sm font-semibold text-gray-700">
+                    품사별
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[
+                      ["noun", "명사"],
+                      ["adj_i", "い형용사"],
+                      ["adj_na", "な형용사"],
+                      ["verb", "동사"],
+                      ["adverb", "부사"],
+                      ["particle", "조사"],
+                      ["conjunction", "접속사"],
+                      ["interjection", "감탄사"],
+                    ].map(([key, label]) => (
+                      <div
+                        key={key}
+                        className="rounded-2xl border border-gray-200 p-4 text-center"
+                      >
+                        <p className="text-base font-bold">{label}</p>
+                        <p className="mt-2 text-sm text-gray-600">
+                          {posCounts[key]}개
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="mt-8 border-t border-gray-200 pt-8">
           <div className="grid grid-cols-2 gap-4">
             <button
@@ -1647,7 +1742,8 @@ export default function WordPage() {
                           / 뜻: {q.meaning}
                         </p>
                         <p className="mt-1 text-sm text-gray-700">
-                          품사: {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)} / 레벨: {levelLabel(q.level)}
+                          품사: {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)} /
+                          레벨: {levelLabel(q.level)}
                         </p>
 
                         {q.qtype === "meaning" ? (
@@ -1720,7 +1816,8 @@ export default function WordPage() {
                   ) : (
                     <div className="rounded-2xl bg-yellow-50 p-4">
                       <p className="text-base font-semibold text-yellow-800">
-                        💪 괜찮아요! 틀린 문제는 성장의 재료예요. 다시 한 번 도전해봐요.
+                        💪 괜찮아요! 틀린 문제는 성장의 재료예요. 다시 한 번
+                        도전해봐요.
                       </p>
                     </div>
                   )}
@@ -1822,16 +1919,18 @@ export default function WordPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
-              ? "border-red-200 bg-red-50"
-              : "border-gray-300 bg-white"
-              }`}
+            className={`mt-6 rounded-2xl border p-5 ${
+              !isReviewMode && isDailyLimitReached
+                ? "border-red-200 bg-red-50"
+                : "border-gray-300 bg-white"
+            }`}
           >
             <p
-              className={`text-sm ${!isReviewMode && isDailyLimitReached
-                ? "text-red-700"
-                : "text-gray-500"
-                }`}
+              className={`text-sm ${
+                !isReviewMode && isDailyLimitReached
+                  ? "text-red-700"
+                  : "text-gray-500"
+              }`}
             >
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 유료 플랜으로 계속 이용해 보세요."
@@ -1843,65 +1942,63 @@ export default function WordPage() {
         )}
       </div>
 
-      {
-        completionModalOpen ? (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
-            <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">
-                  {completionTitle}
-                </p>
-                <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
-                  {completionBody}
-                </p>
-              </div>
+      {completionModalOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900">
+                {completionTitle}
+              </p>
+              <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
+                {completionBody}
+              </p>
+            </div>
 
-              <div className="mt-6 space-y-3">
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={handleContinueSameMode}
+                disabled={saving || (!isReviewMode && isDailyLimitReached)}
+                className={
+                  saving || (!isReviewMode && isDailyLimitReached)
+                    ? "w-full rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-lg font-semibold text-gray-400"
+                    : "w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
+                }
+              >
+                {!isReviewMode && isDailyLimitReached
+                  ? "오늘 이용 완료"
+                  : "같은 조건으로 다음 10문항"}
+              </button>
+
+              {completionWrongCount > 0 ? (
                 <button
                   type="button"
-                  onClick={handleContinueSameMode}
-                  disabled={saving || (!isReviewMode && isDailyLimitReached)}
-                  className={
-                    saving || (!isReviewMode && isDailyLimitReached)
-                      ? "w-full rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-lg font-semibold text-gray-400"
-                      : "w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
-                  }
+                  onClick={handleRetryWrongOnlyFromModal}
+                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-900"
                 >
-                  {!isReviewMode && isDailyLimitReached
-                    ? "오늘 이용 완료"
-                    : "같은 조건으로 다음 10문항"}
+                  틀린 문제만 다시 풀기
                 </button>
+              ) : null}
 
-                {completionWrongCount > 0 ? (
-                  <button
-                    type="button"
-                    onClick={handleRetryWrongOnlyFromModal}
-                    className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-900"
-                  >
-                    틀린 문제만 다시 풀기
-                  </button>
-                ) : null}
+              <button
+                type="button"
+                onClick={handleBackToSelect}
+                className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
+              >
+                선택으로 돌아가기
+              </button>
 
-                <button
-                  type="button"
-                  onClick={handleBackToSelect}
-                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
-                >
-                  선택으로 돌아가기
-                </button>
-
-                <button
-                  type="button"
-                  onClick={closeCompletionModal}
-                  className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
-                >
-                  닫기
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={closeCompletionModal}
+                className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
+              >
+                닫기
+              </button>
             </div>
           </div>
-        ) : null
-      }
-    </main >
+        </div>
+      ) : null}
+    </main>
   );
 }

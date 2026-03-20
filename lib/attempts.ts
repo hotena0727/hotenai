@@ -24,6 +24,29 @@ export type SaveQuizAttemptInput = {
   wrong_list?: unknown[];
 };
 
+function getKstDayRange(): { startIso: string; endIso: string } {
+  const now = new Date();
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+
+  const year = Number(parts.find((p) => p.type === "year")?.value);
+  const month = Number(parts.find((p) => p.type === "month")?.value);
+  const day = Number(parts.find((p) => p.type === "day")?.value);
+
+  const startUtcMs = Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 9 * 60 * 60 * 1000;
+  const endUtcMs = Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 9 * 60 * 60 * 1000;
+
+  return {
+    startIso: new Date(startUtcMs).toISOString(),
+    endIso: new Date(endUtcMs).toISOString(),
+  };
+}
+
 export async function saveQuizAttempt(
   payload: SaveQuizAttemptInput
 ): Promise<{ ok: boolean; error?: string }> {
@@ -145,19 +168,14 @@ export async function fetchTodayBasicQuizSetCount(
   if (!userId) return 0;
 
   try {
-    const now = new Date();
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(now);
-    end.setHours(23, 59, 59, 999);
+    const { startIso, endIso } = getKstDayRange();
 
     const { data, error } = await supabase
       .from("quiz_attempts")
       .select("id, created_at, pos_mode")
       .eq("user_id", userId)
-      .gte("created_at", start.toISOString())
-      .lte("created_at", end.toISOString());
+      .gte("created_at", startIso)
+      .lte("created_at", endIso);
 
     if (error) {
       console.error(error);
