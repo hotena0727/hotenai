@@ -346,11 +346,9 @@ function estimateSlowSpeechPenalty(
 
   let penalty = 0;
 
-  if (cps < 2.0) {
-    penalty = 15;
-  } else if (cps < 2.4) {
+  if (cps < 1.5) {
     penalty = 10;
-  } else if (cps < 2.8) {
+  } else if (cps < 1.9) {
     penalty = 5;
   }
 
