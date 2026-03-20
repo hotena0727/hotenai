@@ -181,19 +181,6 @@ function buildActualReadingWithYomiPriority(
   const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
   const transcriptReading = toReadingLike(transcript);
 
-  if (answerYomi) {
-    const shouldAdoptExpectedYomi =
-      hasKanji(transcript) && rawSurfaceScore >= 70;
-
-    return {
-      actualReading: shouldAdoptExpectedYomi
-        ? expectedReading
-        : transcriptReading,
-      adoptedExpectedYomi: shouldAdoptExpectedYomi,
-      surfaceScore: rawSurfaceScore,
-    };
-  }
-
   return {
     actualReading: transcriptReading,
     adoptedExpectedYomi: false,
@@ -316,29 +303,29 @@ function similarityScoreWithYomiPriority(
     }
   }
 
-const scoreRead = scoreByDistance(actualReading, expectedReading);
+  const scoreRead = scoreByDistance(actualReading, expectedReading);
 
-let weighted = Math.round(scoreRead);
-weighted -= flow.penalty + slow.penalty;
+  let weighted = Math.round(scoreRead);
+  weighted -= flow.penalty + slow.penalty;
 
-if (flow.hasFlowIssue && weighted >= 100) {
-  weighted = 97;
-}
+  if (flow.hasFlowIssue && weighted >= 100) {
+    weighted = 97;
+  }
 
-const finalScore =
-  weighted < floorToZero
-    ? 35
-    : Math.max(35, Math.min(100, weighted));
+  const finalScore =
+    weighted < floorToZero
+      ? 35
+      : Math.max(35, Math.min(100, weighted));
 
-return {
-  score: finalScore,
-  expectedReading,
-  actualReading,
-  adoptedExpectedYomi,
-  surfaceScore,
-  displayTranscript,
-  displayAsAnswer,
-};
+  return {
+    score: finalScore,
+    expectedReading,
+    actualReading,
+    adoptedExpectedYomi,
+    surfaceScore,
+    displayTranscript,
+    displayAsAnswer,
+  };
 }
 
 function clipShort(text: string, maxLen = 6) {
