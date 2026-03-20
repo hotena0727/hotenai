@@ -97,6 +97,7 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     /(えっと|ええと|あの|その|うーん|えーと|ま|なんか)/g
   );
 
+  // 같은 글자 연속 반복: たたぶん, そそう  같은 형태
   let repeatedCharCount = 0;
   for (let i = 1; i < norm.length; i += 1) {
     if (norm[i] === norm[i - 1]) {
@@ -104,6 +105,7 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
+  // 1~2글자 토막 반복 탐지
   let repeatedFragmentCount = 0;
   for (let size = 1; size <= 2; size += 1) {
     for (let i = 0; i + size * 2 <= norm.length; i += 1) {
@@ -115,6 +117,7 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
+  // raw 기준 같은 토큰 반복
   const rawTokens = raw
     .normalize("NFKC")
     .split(/[\s\u3000、。,.!?！？]+/)
@@ -129,10 +132,10 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
   }
 
   const penalty =
-    fillerCount * 3 +
-    repeatedCharCount * 2 +
-    repeatedFragmentCount * 3 +
-    repeatedTokenCount * 6;
+    fillerCount * 4 +
+    repeatedCharCount * 3 +
+    repeatedFragmentCount * 4 +
+    repeatedTokenCount * 8;
 
   const hasFlowIssue =
     fillerCount > 0 ||
@@ -150,7 +153,7 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
   };
 }
 
-function similarityScore(a: string, b: string, gate = 0.08, floorToZero = 8) {
+function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const aStrict = normJp(a);
   const bStrict = normJp(b);
 
@@ -164,9 +167,10 @@ function similarityScore(a: string, b: string, gate = 0.08, floorToZero = 8) {
 
   const flow = analyzeSpeechFlow(a, aRead);
 
+  // 발음 자체는 맞더라도 더듬음/반복이 있으면 100점 제한
   if (aRead && bRead && aRead === bRead) {
     const cappedPerfect = flow.hasFlowIssue
-      ? Math.max(90, 100 - flow.penalty)
+      ? Math.max(88, 100 - flow.penalty)
       : 100;
     return cappedPerfect;
   }
@@ -185,13 +189,13 @@ function similarityScore(a: string, b: string, gate = 0.08, floorToZero = 8) {
   const scoreRead = scoreByDistance(aRead, bRead);
 
   let weighted = Math.round(
-    scoreStrict * 0.03 + scoreLoose * 0.12 + scoreRead * 0.85
+    scoreStrict * 0.05 + scoreLoose * 0.1 + scoreRead * 0.85
   );
 
   weighted -= flow.penalty;
 
   if (flow.hasFlowIssue && weighted >= 100) {
-    weighted = 97;
+    weighted = 96;
   }
 
   return weighted < floorToZero
@@ -199,6 +203,20 @@ function similarityScore(a: string, b: string, gate = 0.08, floorToZero = 8) {
     : Math.max(0, Math.min(100, weighted));
 }
 
+/**
+ * answer_jp + answer_yomi를 이용해
+ * transcript 안에 들어온 "정답 문장에 포함된 한자"만
+ * 해당 히라가나 읽기로 치환한다.
+ *
+ * 예)
+ * answer_jp   = 私もそうです
+ * answer_yomi = わたしもそうです
+ * transcript  = 私もそうです
+ * 결과        = わたしもそうです
+ *
+ * 사용자가 전혀 다른 단어를 말한 경우,
+ * answer_jp에 없는 다른 단어는 그대로 남는다.
+ */
 function isKanaChar(ch: string) {
   return /[ぁ-んァ-ンー]/.test(ch);
 }
@@ -359,6 +377,15 @@ function makeDetailedFeedback(
   }
 
   if (score >= 90) {
+    if (flow.hasFlowIssue && !diff) {
+      return [
+        `🎯 좋습니다`,
+        `🗣️ 발음 자체는 거의 정확합니다.`,
+        `다만 조금 끊기거나 반복된 부분이 있었어요.`,
+        `한 번에 자연스럽게 이어서 말하면 100점에 더 가까워집니다.`,
+      ].join("\n");
+    }
+
     if (diff) {
       return [
         `🎯 좋습니다`,
@@ -366,20 +393,6 @@ function makeDetailedFeedback(
         `다만 ${diff.index + 1}번째 글자 근처를 한 번 더 확인해 보세요.`,
         `정답 기준: ${diff.expectedTail}`,
         `인식 결과: ${diff.actualTail}`,
-        flow.hasFlowIssue
-          ? `💡 이번에는 끊지 말고 한 호흡으로 더 자연스럽게 말해 보세요.`
-          : ``,
-      ]
-        .filter(Boolean)
-        .join("\n");
-    }
-
-    if (flow.hasFlowIssue) {
-      return [
-        `🎯 좋습니다`,
-        `🗣️ 발음 자체는 거의 정확합니다.`,
-        `다만 조금 끊기거나 반복된 부분이 있었어요.`,
-        `한 번에 자연스럽게 이어서 말하면 100점에 더 가까워집니다.`,
       ].join("\n");
     }
 
@@ -481,8 +494,8 @@ export async function POST(req: Request) {
     const prompt = [
       "다음 일본어 음성을 전사하세요.",
       "가능하면 히라가나 중심으로 전사하세요.",
-      "동음이의어 한자가 가능하더라도, 출력은 가능한 한 히라가나를 우선해 주세요.",
-      "정답과 같은 발음이면 정답 읽기와 가까운 히라가나 표기를 우선해 주세요.",
+      "동음이의어 한자가 가능하면 정답 문장에 가까운 표기를 우선하세요.",
+      "정답과 같은 발음이면 정답 문장에 가까운 표기를 우선해 주세요.",
       `정답 문장: ${answerJp}`,
       answerYomi ? `정답 읽기: ${answerYomi}` : "",
     ]
@@ -547,21 +560,21 @@ export async function POST(req: Request) {
       );
     }
 
-    const expectedReading = toReadingLike(answerYomi || answerJp);
-    const transcriptForScoring = buildScoringTranscript(
+    const scoringTranscript = buildScoringTranscript(
       transcript,
       answerJp,
       answerYomi
     );
-    const actualReading = transcriptForScoring;
 
     const scoreAgainstYomi = answerYomi
-      ? similarityScore(transcriptForScoring, answerYomi)
+      ? similarityScore(scoringTranscript, answerYomi)
       : 0;
-
-    const scoreAgainstJp = similarityScore(transcriptForScoring, answerJp);
+    const scoreAgainstJp = similarityScore(scoringTranscript, answerJp);
 
     const score = answerYomi ? scoreAgainstYomi : scoreAgainstJp;
+
+    const expectedReading = toReadingLike(answerYomi || answerJp);
+    const actualReading = scoringTranscript;
 
     const feedback = makeDetailedFeedback(
       score,
@@ -573,7 +586,7 @@ export async function POST(req: Request) {
 
     return Response.json({
       transcript,
-      transcript_for_scoring: transcriptForScoring,
+      transcript_for_scoring: scoringTranscript,
       score,
       feedback,
       model: TRANSCRIBE_MODEL,
