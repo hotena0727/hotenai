@@ -2467,288 +2467,287 @@ export default function TalkPage() {
                 <p className="mt-2 text-sm text-gray-500">
                   실제 대화처럼, 너무 오래 끌지 말고 제한 시간 안에 자연스럽게 말해 보세요.
                 </p>
-              </p>
 
-              <div className="mt-4 rounded-[22px] bg-gray-100 px-4 py-4">
-                <div className="flex items-center gap-4 text-gray-500">
-                  <button
-                    type="button"
-                    onClick={
-                      pronStage === "recording"
-                        ? stopPronRecording
-                        : startPronRecording
-                    }
-                    disabled={recordLimitReached && pronStage !== "recording"}
-                    className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${pronStage === "recording"
-                      ? "ring-4 ring-red-100"
-                      : "hover:shadow-md"
-                      }`}
-                    aria-label={
-                      pronStage === "recording" ? "녹음 정지" : "녹음 시작"
-                    }
-                  >
-                    {pronStage === "recording" ? (
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] bg-gray-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
-                        <span className="h-3 w-3 rounded-[3px] bg-white/95" />
-                      </span>
-                    ) : (
-                      <span
-                        aria-label="녹음 시작"
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-400 bg-white"
-                      >
-                        <span className="h-3.5 w-3.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.16)]" />
-                      </span>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={playRecordedPronunciation}
-                    disabled={!recordedAudioUrl}
-                    className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${isRecordedPlaying
-                      ? "ring-4 ring-gray-200 shadow-md"
-                      : "hover:shadow-md"
-                      }`}
-                    aria-label="내 녹음 재생"
-                  >
-                    <span
-                      className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${isRecordedPlaying
-                        ? "border-l-black"
-                        : "border-l-gray-700"
+                <div className="mt-4 rounded-[22px] bg-gray-100 px-4 py-4">
+                  <div className="flex items-center gap-4 text-gray-500">
+                    <button
+                      type="button"
+                      onClick={
+                        pronStage === "recording"
+                          ? stopPronRecording
+                          : startPronRecording
+                      }
+                      disabled={recordLimitReached && pronStage !== "recording"}
+                      className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${pronStage === "recording"
+                        ? "ring-4 ring-red-100"
+                        : "hover:shadow-md"
                         }`}
-                    />
-                  </button>
+                      aria-label={
+                        pronStage === "recording" ? "녹음 정지" : "녹음 시작"
+                      }
+                    >
+                      {pronStage === "recording" ? (
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] bg-gray-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                          <span className="h-3 w-3 rounded-[3px] bg-white/95" />
+                        </span>
+                      ) : (
+                        <span
+                          aria-label="녹음 시작"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-400 bg-white"
+                        >
+                          <span className="h-3.5 w-3.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.16)]" />
+                        </span>
+                      )}
+                    </button>
 
-                  <div className="flex flex-1 items-center justify-center overflow-hidden">
-                    {waveformBars.some((bar) => bar > 0.12) ? (
-                      <div className="flex items-center gap-[3px]">
-                        {waveformBars.map((bar, idx) => (
-                          <span
-                            key={idx}
-                            className="w-[4px] rounded-full bg-gray-400 transition-all duration-100"
-                            style={{
-                              height: `${Math.max(
-                                6,
-                                Math.round(bar * 42)
-                              )}px`,
-                            }}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-[6px]">
-                        {Array.from({ length: 34 }).map((_, idx) => (
-                          <span
-                            key={idx}
-                            className="h-[6px] w-[6px] rounded-full bg-gray-300"
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                    <button
+                      type="button"
+                      onClick={playRecordedPronunciation}
+                      disabled={!recordedAudioUrl}
+                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition duration-150 active:scale-95 disabled:opacity-40 ${isRecordedPlaying
+                        ? "ring-4 ring-gray-200 shadow-md"
+                        : "hover:shadow-md"
+                        }`}
+                      aria-label="내 녹음 재생"
+                    >
+                      <span
+                        className={`ml-[1px] inline-block h-0 w-0 border-y-[6px] border-y-transparent border-l-[10px] ${isRecordedPlaying
+                          ? "border-l-black"
+                          : "border-l-gray-700"
+                          }`}
+                      />
+                    </button>
 
-                  <div className="min-w-[92px] text-right">
-                    {pronStage === "recording" ? (
-                      <>
-                        <div className="text-[28px] font-bold tracking-[0.04em] text-red-500">
-                          {recordCountdown}
+                    <div className="flex flex-1 items-center justify-center overflow-hidden">
+                      {waveformBars.some((bar) => bar > 0.12) ? (
+                        <div className="flex items-center gap-[3px]">
+                          {waveformBars.map((bar, idx) => (
+                            <span
+                              key={idx}
+                              className="w-[4px] rounded-full bg-gray-400 transition-all duration-100"
+                              style={{
+                                height: `${Math.max(
+                                  6,
+                                  Math.round(bar * 42)
+                                )}px`,
+                              }}
+                            />
+                          ))}
                         </div>
-                        <div className="text-[11px] font-medium text-gray-400">
-                          남은 시간
+                      ) : (
+                        <div className="flex items-center gap-[6px]">
+                          {Array.from({ length: 34 }).map((_, idx) => (
+                            <span
+                              key={idx}
+                              className="h-[6px] w-[6px] rounded-full bg-gray-300"
+                            />
+                          ))}
                         </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-[22px] font-medium tracking-[0.08em] text-gray-500">
-                          {pronDuration}
-                        </div>
-                        <div className="text-[11px] font-medium text-gray-400">
-                          녹음 길이
-                        </div>
-                      </>
-                    )}
+                      )}
+                    </div>
+
+                    <div className="min-w-[92px] text-right">
+                      {pronStage === "recording" ? (
+                        <>
+                          <div className="text-[28px] font-bold tracking-[0.04em] text-red-500">
+                            {recordCountdown}
+                          </div>
+                          <div className="text-[11px] font-medium text-gray-400">
+                            남은 시간
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-[22px] font-medium tracking-[0.08em] text-gray-500">
+                            {pronDuration}
+                          </div>
+                          <div className="text-[11px] font-medium text-gray-400">
+                            권장 시간
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {pronError ? (
+                  <p className="mt-4 text-sm text-red-500">{pronError}</p>
+                ) : null}
               </div>
 
-              {pronError ? (
-                <p className="mt-4 text-sm text-red-500">{pronError}</p>
-              ) : null}
-            </div>
+              <div className="mt-8 border-t border-gray-100 pt-6">
+                <TitleImage
+                  src={TITLE_PATHS.score}
+                  alt="말하기 점수"
+                  fallback="말하기 점수"
+                />
 
-            <div className="mt-8 border-t border-gray-100 pt-6">
-              <TitleImage
-                src={TITLE_PATHS.score}
-                alt="말하기 점수"
-                fallback="말하기 점수"
-              />
-
-              {pronScoring ? (
-                <div className="mt-4">
-                  <p className="text-lg text-gray-600">점수 계산 중...</p>
-                </div>
-              ) : pronChecked ? (
-                <div className="mt-4 space-y-5">
-                  <div>
-                    <p className="mt-3 text-[32px] leading-tight text-gray-800">
-                      {pronTranscript || "-"}
-                    </p>
+                {pronScoring ? (
+                  <div className="mt-4">
+                    <p className="text-lg text-gray-600">점수 계산 중...</p>
                   </div>
-
-                  <div>
-                    <p className="text-base text-gray-700">점수</p>
-                    <p className="mt-2 text-6xl font-bold leading-none text-gray-800">
-                      {pronScore ?? 0}
-                    </p>
-                  </div>
-
-                  {pronFeedback ? (
-                    <div className="space-y-2">
-                      {pronFeedback.verdict ? (
-                        <p className="text-emerald-600 font-semibold">
-                          {pronFeedback.verdict}
-                        </p>
-                      ) : null}
-
-                      {pronFeedback.suggestion ? (
-                        <p className="text-blue-600 font-medium">
-                          {pronFeedback.suggestion}
-                        </p>
-                      ) : null}
+                ) : pronChecked ? (
+                  <div className="mt-4 space-y-5">
+                    <div>
+                      <p className="mt-3 text-[32px] leading-tight text-gray-800">
+                        {pronTranscript || "-"}
+                      </p>
                     </div>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="mt-4">
-                  <p className="text-lg text-gray-600">
-                    정답을 보고 2~3번 따라 말해 보세요. 녹음이 끝나면 점수가
-                    자동으로 계산됩니다.
-                  </p>
-                </div>
-              )}
 
-              {!showRewardCard ? (
-                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={handleRewardComplete}
-                    className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
-                  >
-                    ✅ 다 했어요 (보상 받기)
-                  </button>
+                    <div>
+                      <p className="text-base text-gray-700">점수</p>
+                      <p className="mt-2 text-6xl font-bold leading-none text-gray-800">
+                        {pronScore ?? 0}
+                      </p>
+                    </div>
 
-                  <button
-                    type="button"
-                    onClick={handleSkipNext}
-                    className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
-                  >
-                    ➡️ 다음 문제로 (보상 없이)
-                  </button>
-                </div>
-              ) : null}
+                    {pronFeedback ? (
+                      <div className="space-y-2">
+                        {pronFeedback.verdict ? (
+                          <p className="text-emerald-600 font-semibold">
+                            {pronFeedback.verdict}
+                          </p>
+                        ) : null}
 
-              {showPronOnlyNotice ? (
-                <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-[15px] font-medium text-yellow-800">
-                  발음은 100점이지만, 문제 선택이 오답이라 보상은 지급되지
-                  않습니다. (정답/발음은 별개로 관리돼요.)
-                </div>
-              ) : null}
+                        {pronFeedback.suggestion ? (
+                          <p className="text-blue-600 font-medium">
+                            {pronFeedback.suggestion}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <p className="text-lg text-gray-600">
+                      정답을 보고 2~3번 따라 말해 보세요. 녹음이 끝나면 점수가
+                      자동으로 계산됩니다.
+                    </p>
+                  </div>
+                )}
 
-              {showNeedPerfectNotice ? (
-                <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-[15px] font-medium text-yellow-800">
-                  보상은 '녹음 + 100점'일 때만 받을 수 있어요. 지금 바로
-                  녹음하고 100점을 만들어 보세요.
-                </div>
-              ) : null}
+                {!showRewardCard ? (
+                  <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={handleRewardComplete}
+                      className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
+                    >
+                      ✅ 다 했어요 (보상 받기)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSkipNext}
+                      className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
+                    >
+                      ➡️ 다음 문제로 (보상 없이)
+                    </button>
+                  </div>
+                ) : null}
+
+                {showPronOnlyNotice ? (
+                  <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-[15px] font-medium text-yellow-800">
+                    발음은 100점이지만, 문제 선택이 오답이라 보상은 지급되지
+                    않습니다. (정답/발음은 별개로 관리돼요.)
+                  </div>
+                ) : null}
+
+                {showNeedPerfectNotice ? (
+                  <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-[15px] font-medium text-yellow-800">
+                    보상은 '녹음 + 100점'일 때만 받을 수 있어요. 지금 바로
+                    녹음하고 100점을 만들어 보세요.
+                  </div>
+                ) : null}
+              </div>
             </div>
-          </div>
 
             {showRewardCard ? (
-          <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5">
-            <TitleImage
-              src={TITLE_PATHS.reward}
-              alt="말하기 완료 보상"
-              fallback="말하기 완료 보상"
-            />
+              <div className="mt-6 rounded-3xl border border-gray-200 bg-white p-5">
+                <TitleImage
+                  src={TITLE_PATHS.reward}
+                  alt="말하기 완료 보상"
+                  fallback="말하기 완료 보상"
+                />
 
-            <div className="mt-5 rounded-2xl bg-green-50 px-5 py-5">
-              <p className="text-lg font-semibold text-green-700">
-                🎉 발음 100점!
-              </p>
-              <p className="mt-2 text-2xl font-bold text-green-700">
-                +2 XP 🔊 획득
-              </p>
-            </div>
+                <div className="mt-5 rounded-2xl bg-green-50 px-5 py-5">
+                  <p className="text-lg font-semibold text-green-700">
+                    🎉 발음 100점!
+                  </p>
+                  <p className="mt-2 text-2xl font-bold text-green-700">
+                    +2 XP 🔊 획득
+                  </p>
+                </div>
 
-            <p className="mt-5 text-base text-gray-500">
-              보상을 받고 다음 문제로 넘어갑니다.
-            </p>
+                <p className="mt-5 text-base text-gray-500">
+                  보상을 받고 다음 문제로 넘어갑니다.
+                </p>
 
-            <button
-              type="button"
-              onClick={handleRewardComplete}
-              disabled={saving}
-              className="mt-5 w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold disabled:opacity-60"
-            >
-              {saving ? "저장 중..." : "➡️ 다음 문제 풀기"}
-            </button>
-          </div>
+                <button
+                  type="button"
+                  onClick={handleRewardComplete}
+                  disabled={saving}
+                  className="mt-5 w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold disabled:opacity-60"
+                >
+                  {saving ? "저장 중..." : "➡️ 다음 문제 풀기"}
+                </button>
+              </div>
+            ) : null}
+          </section>
         ) : null}
-      </section>
-        ) : null}
-    </div>
+      </div>
 
       {
-    completionModalOpen ? (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
-        <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-900">
-              {completionTitle}
-            </p>
-            <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
-              {completionBody}
-            </p>
+        completionModalOpen ? (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
+            <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">
+                  {completionTitle}
+                </p>
+                <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
+                  {completionBody}
+                </p>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {completionNextSubValue ? (
+                  <button
+                    type="button"
+                    onClick={handleStartNextSub}
+                    className="w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
+                  >
+                    다음 상황 풀기
+                  </button>
+                ) : (
+                  <a
+                    href="/mypage/wrong-talk"
+                    className="block w-full rounded-2xl border border-gray-300 px-5 py-4 text-center text-lg font-semibold text-gray-900"
+                  >
+                    오답노트 보기
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleBackToSelectFromCompletion}
+                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
+                >
+                  선택으로 돌아가기
+                </button>
+
+                <button
+                  type="button"
+                  onClick={closeCompletionModal}
+                  className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div className="mt-6 space-y-3">
-            {completionNextSubValue ? (
-              <button
-                type="button"
-                onClick={handleStartNextSub}
-                className="w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
-              >
-                다음 상황 풀기
-              </button>
-            ) : (
-              <a
-                href="/mypage/wrong-talk"
-                className="block w-full rounded-2xl border border-gray-300 px-5 py-4 text-center text-lg font-semibold text-gray-900"
-              >
-                오답노트 보기
-              </a>
-            )}
-
-            <button
-              type="button"
-              onClick={handleBackToSelectFromCompletion}
-              className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
-            >
-              선택으로 돌아가기
-            </button>
-
-            <button
-              type="button"
-              onClick={closeCompletionModal}
-              className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
-            >
-              닫기
-            </button>
-          </div>
-        </div>
-      </div>
-    ) : null
-  }
+        ) : null
+      }
     </main >
   );
 }
