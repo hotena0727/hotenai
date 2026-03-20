@@ -318,18 +318,16 @@ function similarityScoreWithYomiPriority(
   const slow = estimateSlowSpeechPenalty(durationMs, expectedReading);
 
   if (expectedReading === actualReading) {
-    const hasOnlyMinorFlowIssue = flow.hasFlowIssue && flow.penalty <= 3;
-
-    return {
-      score: hasOnlyMinorFlowIssue ? 97 : 100,
-      expectedReading,
-      actualReading,
-      adoptedExpectedYomi,
-      surfaceScore,
-      displayTranscript,
-      displayAsAnswer,
-    };
-  }
+  return {
+    score: 100,
+    expectedReading,
+    actualReading,
+    adoptedExpectedYomi,
+    surfaceScore,
+    displayTranscript,
+    displayAsAnswer,
+  };
+}
 
   const bb = bigrams(expectedReading);
   if (bb.size > 0) {
