@@ -129,10 +129,10 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
   }
 
   const penalty =
-    fillerCount * 4 +
-    repeatedCharCount * 3 +
-    repeatedFragmentCount * 4 +
-    repeatedTokenCount * 8;
+    fillerCount * 3 +
+    repeatedCharCount * 2 +
+    repeatedFragmentCount * 3 +
+    repeatedTokenCount * 6;
 
   const hasFlowIssue =
     fillerCount > 0 ||
@@ -150,7 +150,7 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
   };
 }
 
-function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
+function similarityScore(a: string, b: string, gate = 0.08, floorToZero = 8) {
   const aStrict = normJp(a);
   const bStrict = normJp(b);
 
@@ -166,7 +166,7 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
 
   if (aRead && bRead && aRead === bRead) {
     const cappedPerfect = flow.hasFlowIssue
-      ? Math.max(88, 100 - flow.penalty)
+      ? Math.max(90, 100 - flow.penalty)
       : 100;
     return cappedPerfect;
   }
@@ -185,13 +185,13 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   const scoreRead = scoreByDistance(aRead, bRead);
 
   let weighted = Math.round(
-    scoreStrict * 0.05 + scoreLoose * 0.1 + scoreRead * 0.85
+    scoreStrict * 0.03 + scoreLoose * 0.12 + scoreRead * 0.85
   );
 
   weighted -= flow.penalty;
 
   if (flow.hasFlowIssue && weighted >= 100) {
-    weighted = 96;
+    weighted = 97;
   }
 
   return weighted < floorToZero
@@ -296,7 +296,7 @@ function replaceAllSafe(text: string, search: string, replacement: string) {
   return text.replace(new RegExp(escapeRegExp(search), "g"), replacement);
 }
 
-function hiraganizeByAnswerMap(
+function buildScoringTranscript(
   transcript: string,
   answerJp: string,
   answerYomi: string
@@ -304,10 +304,7 @@ function hiraganizeByAnswerMap(
   if (!answerYomi) return toReadingLike(transcript);
 
   const answerMap = buildAnswerReadingMap(answerJp, answerYomi);
-  if (!answerMap.length) return toReadingLike(transcript);
-
   let out = String(transcript || "");
-  let matchedCount = 0;
 
   for (const item of answerMap) {
     if (item.isKana) continue;
@@ -315,12 +312,9 @@ function hiraganizeByAnswerMap(
 
     if (out.includes(item.jp)) {
       out = replaceAllSafe(out, item.jp, item.reading);
-      matchedCount += 1;
     }
   }
 
-  // answer_jp 안에 있던 한자만 안전하게 읽기로 치환
-  // 치환이 전혀 안 됐더라도 최종 비교는 히라가나 정규화 문자열로 통일
   return toReadingLike(out);
 }
 
@@ -487,8 +481,8 @@ export async function POST(req: Request) {
     const prompt = [
       "다음 일본어 음성을 전사하세요.",
       "가능하면 히라가나 중심으로 전사하세요.",
-      "한자보다 히라가나 표기를 우선해 주세요.",
-      "정답과 같은 발음이면 가능한 한 히라가나로 적어 주세요.",
+      "동음이의어 한자가 가능하더라도, 출력은 가능한 한 히라가나를 우선해 주세요.",
+      "정답과 같은 발음이면 정답 읽기와 가까운 히라가나 표기를 우선해 주세요.",
       `정답 문장: ${answerJp}`,
       answerYomi ? `정답 읽기: ${answerYomi}` : "",
     ]
@@ -553,21 +547,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // 핵심:
-    // 표시용 transcript는 원본 그대로 두고,
-    // 점수/피드백용은 무조건 히라가나 기준 문자열로 통일
-    const scoringTranscript = answerYomi
-      ? hiraganizeByAnswerMap(transcript, answerJp, answerYomi)
-      : toReadingLike(transcript);
-
     const expectedReading = toReadingLike(answerYomi || answerJp);
-    const actualReading = scoringTranscript;
+    const transcriptForScoring = buildScoringTranscript(
+      transcript,
+      answerJp,
+      answerYomi
+    );
+    const actualReading = transcriptForScoring;
 
     const scoreAgainstYomi = answerYomi
-      ? similarityScore(scoringTranscript, answerYomi)
+      ? similarityScore(transcriptForScoring, answerYomi)
       : 0;
 
-    const scoreAgainstJp = similarityScore(scoringTranscript, answerJp);
+    const scoreAgainstJp = similarityScore(transcriptForScoring, answerJp);
 
     const score = answerYomi ? scoreAgainstYomi : scoreAgainstJp;
 
@@ -581,7 +573,7 @@ export async function POST(req: Request) {
 
     return Response.json({
       transcript,
-      transcript_for_scoring: scoringTranscript,
+      transcript_for_scoring: transcriptForScoring,
       score,
       feedback,
       model: TRANSCRIBE_MODEL,
