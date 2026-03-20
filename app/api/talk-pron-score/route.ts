@@ -144,6 +144,10 @@ function analyzeSpeechFlow(rawTranscript: string, _normalizedReading: string) {
   };
 }
 
+function hasKanji(text: string) {
+  return /[一-龯々〆ヵヶ]/.test(text);
+}
+
 function buildExpectedReading(answerJp: string, answerYomi: string) {
   return toReadingLike(answerYomi || answerJp);
 }
@@ -153,6 +157,11 @@ function buildExpectedReading(answerJp: string, answerYomi: string) {
  * - 채점 = reading 기준
  * - 표시 = reading 기준
  * - 한자/히라가나 차이 무시
+ *
+ * transcript가 한자로 들어오고,
+ * answer surface와 어느 정도 유사하면
+ * actualReading을 expectedReading으로 보정해서
+ * 한자/히라가나 표기 차이로 인한 감점을 막는다.
  */
 function buildActualReadingWithYomiPriority(
   transcript: string,
@@ -173,9 +182,14 @@ function buildActualReadingWithYomiPriority(
   const transcriptReading = toReadingLike(transcript);
 
   if (answerYomi) {
+    const shouldAdoptExpectedYomi =
+      hasKanji(transcript) && rawSurfaceScore >= 70;
+
     return {
-      actualReading: transcriptReading,
-      adoptedExpectedYomi: rawSurfaceScore >= 70,
+      actualReading: shouldAdoptExpectedYomi
+        ? expectedReading
+        : transcriptReading,
+      adoptedExpectedYomi: shouldAdoptExpectedYomi,
       surfaceScore: rawSurfaceScore,
     };
   }
@@ -292,11 +306,6 @@ function similarityScoreWithYomiPriority(
   const scoreRead = scoreByDistance(actualReading, expectedReading);
 
   let weighted = Math.round(scoreRead);
-
-  if (surfaceScore >= 85) {
-    weighted += 2;
-  }
-
   weighted -= flow.penalty + slow.penalty;
 
   if (flow.hasFlowIssue && weighted >= 100) {
@@ -531,8 +540,9 @@ export async function POST(req: Request) {
 
     return Response.json(
       {
-        error: `[서버 내부 오류] ${message || "말하기 점수를 계산하지 못했습니다."
-          }`,
+        error: `[서버 내부 오류] ${
+          message || "말하기 점수를 계산하지 못했습니다."
+        }`,
       },
       { status: 500 }
     );
