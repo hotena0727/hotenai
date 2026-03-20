@@ -299,12 +299,8 @@ function similarityScoreWithYomiPriority(
   const { actualReading, adoptedExpectedYomi, surfaceScore } =
     buildActualReadingWithYomiPriority(transcript, answerJp, answerYomi);
 
-  const displayAsAnswer =
-    !!answerJp &&
-    !!answerYomi &&
-    (adoptedExpectedYomi || surfaceScore >= 70);
-
-  const displayTranscript = displayAsAnswer ? answerJp : transcript;
+  const displayAsAnswer = false;
+  const displayTranscript = transcript;
 
   if (!expectedReading || !actualReading) {
     return {
