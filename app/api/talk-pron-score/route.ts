@@ -210,6 +210,7 @@ function similarityScoreWithYomiPriority(
   transcript: string,
   answerJp: string,
   answerYomi: string,
+  durationMs = 0,
   gate = 0.12,
   floorToZero = 10
 ) {
@@ -229,11 +230,14 @@ function similarityScoreWithYomiPriority(
   }
 
   const flow = analyzeSpeechFlow(transcript, actualReading);
+  const slow = estimateSlowSpeechPenalty(durationMs, expectedReading);
 
   if (expectedReading === actualReading) {
-    const score = flow.hasFlowIssue
-      ? Math.max(88, 100 - flow.penalty)
-      : 100;
+    const totalPenalty = flow.penalty + slow.penalty;
+    const score =
+      flow.hasFlowIssue || slow.isSlow
+        ? Math.max(85, 100 - totalPenalty)
+        : 100;
 
     return {
       score,
@@ -269,7 +273,7 @@ function similarityScoreWithYomiPriority(
     weighted += 4;
   }
 
-  weighted -= flow.penalty;
+  weighted -= flow.penalty + slow.penalty;
 
   if (flow.hasFlowIssue && weighted >= 100) {
     weighted = 97;
@@ -309,6 +313,49 @@ function getFirstDiffInfo(expected: string, actual: string) {
   }
 
   return null;
+}
+
+function estimateSlowSpeechPenalty(
+  durationMs: number,
+  expectedReading: string
+) {
+  if (!durationMs || !expectedReading) {
+    return {
+      penalty: 0,
+      cps: 0,
+      isSlow: false,
+    };
+  }
+
+  const seconds = durationMs / 1000;
+  if (seconds <= 0) {
+    return {
+      penalty: 0,
+      cps: 0,
+      isSlow: false,
+    };
+  }
+
+  const readingLen = Array.from(expectedReading).length;
+  const cps = readingLen / seconds;
+
+  let penalty = 0;
+
+  if (cps < 1.6) {
+    penalty = 12;
+  } else if (cps < 2.0) {
+    penalty = 8;
+  } else if (cps < 2.4) {
+    penalty = 5;
+  } else if (cps < 2.8) {
+    penalty = 2;
+  }
+
+  return {
+    penalty,
+    cps,
+    isSlow: penalty > 0,
+  };
 }
 
 function makeDetailedFeedback(
@@ -406,6 +453,7 @@ export async function POST(req: Request) {
     const inputFile = form.get("file");
     const answerJp = String(form.get("answer_jp") || "").trim();
     const answerYomi = String(form.get("answer_yomi") || "").trim();
+    const durationMs = Number(form.get("duration_ms") || 0);
 
     if (
       !inputFile ||
@@ -501,7 +549,8 @@ export async function POST(req: Request) {
     const judged = similarityScoreWithYomiPriority(
       transcript,
       answerJp,
-      answerYomi
+      answerYomi,
+      durationMs
     );
 
     const feedback = makeDetailedFeedback(
