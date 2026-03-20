@@ -267,16 +267,12 @@ function estimateSlowSpeechPenalty(
   const readingLen = Array.from(expectedReading).length;
   const cps = readingLen / seconds;
 
-  /**
-   * 속도 = 표준 반영
-   * 너무 느릴 때만 약하게 감점
-   */
   let penalty = 0;
 
-  if (cps < 1.8) {
-    penalty = 10;
-  } else if (cps < 2.2) {
+  if (cps < 1.4) {
     penalty = 5;
+  } else if (cps < 1.8) {
+    penalty = 2;
   }
 
   return {
@@ -318,16 +314,16 @@ function similarityScoreWithYomiPriority(
   const slow = estimateSlowSpeechPenalty(durationMs, expectedReading);
 
   if (expectedReading === actualReading) {
-  return {
-    score: 100,
-    expectedReading,
-    actualReading,
-    adoptedExpectedYomi,
-    surfaceScore,
-    displayTranscript,
-    displayAsAnswer,
-  };
-}
+    return {
+      score: 100,
+      expectedReading,
+      actualReading,
+      adoptedExpectedYomi,
+      surfaceScore,
+      displayTranscript,
+      displayAsAnswer,
+    };
+  }
 
   const bb = bigrams(expectedReading);
   if (bb.size > 0) {
@@ -337,7 +333,7 @@ function similarityScoreWithYomiPriority(
 
     if (overlap < gate) {
       return {
-        score: 35,
+        score: 0,
         expectedReading,
         actualReading,
         adoptedExpectedYomi,
