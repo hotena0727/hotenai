@@ -268,7 +268,11 @@ function similarityScoreWithYomiPriority(
   }
 
   const flow = analyzeSpeechFlow(transcript, actualReading);
-  const slow = estimateSlowSpeechPenalty(durationMs, expectedReading);
+  const diff = getFirstDiffInfo(expectedReading, actualReading);
+  const slow = estimateSlowSpeechPenalty(
+    Number(Array.from(expectedReading).length) * 450,
+    expectedReading
+  );
 
   if (expectedReading === actualReading) {
     const totalPenalty = flow.penalty + slow.penalty;
