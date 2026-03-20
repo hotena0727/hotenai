@@ -97,7 +97,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     /(えっと|ええと|あの|その|うーん|えーと|ま|なんか)/g
   );
 
-  // 같은 글자 연속 반복: たたぶん, そそう  같은 형태
   let repeatedCharCount = 0;
   for (let i = 1; i < norm.length; i += 1) {
     if (norm[i] === norm[i - 1]) {
@@ -105,7 +104,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
-  // 1~2글자 토막 반복 탐지
   let repeatedFragmentCount = 0;
   for (let size = 1; size <= 2; size += 1) {
     for (let i = 0; i + size * 2 <= norm.length; i += 1) {
@@ -117,7 +115,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
-  // raw 기준 같은 토큰 반복
   const rawTokens = raw
     .normalize("NFKC")
     .split(/[\s\u3000、。,.!?！？]+/)
@@ -167,7 +164,6 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
 
   const flow = analyzeSpeechFlow(a, aRead);
 
-  // 발음 자체는 맞더라도 더듬음/반복이 있으면 100점 제한
   if (aRead && bRead && aRead === bRead) {
     const cappedPerfect = flow.hasFlowIssue
       ? Math.max(88, 100 - flow.penalty)
@@ -201,6 +197,131 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   return weighted < floorToZero
     ? 0
     : Math.max(0, Math.min(100, weighted));
+}
+
+function isKanaChar(ch: string) {
+  return /[ぁ-んァ-ンー]/.test(ch);
+}
+
+function normalizeKanaOnly(text: string) {
+  return kataToHira(String(text || "").normalize("NFKC"));
+}
+
+function splitByKanaRuns(text: string) {
+  const chars = Array.from(String(text || ""));
+  const parts: { text: string; isKana: boolean }[] = [];
+
+  for (const ch of chars) {
+    const isKana = isKanaChar(ch);
+    const last = parts[parts.length - 1];
+    if (last && last.isKana === isKana) {
+      last.text += ch;
+    } else {
+      parts.push({ text: ch, isKana });
+    }
+  }
+
+  return parts;
+}
+
+function buildAnswerReadingMap(answerJp: string, answerYomi: string) {
+  const parts = splitByKanaRuns(answerJp).filter((p) => p.text.trim() !== "");
+  const yomi = normalizeKanaOnly(answerYomi);
+  const mapped: { jp: string; reading: string; isKana: boolean }[] = [];
+
+  let cursor = 0;
+
+  for (let i = 0; i < parts.length; i += 1) {
+    const cur = parts[i];
+
+    if (cur.isKana) {
+      const kana = normalizeKanaOnly(cur.text);
+      const idx = yomi.indexOf(kana, cursor);
+
+      if (idx >= 0) {
+        if (
+          idx > cursor &&
+          mapped.length > 0 &&
+          !mapped[mapped.length - 1].isKana
+        ) {
+          mapped[mapped.length - 1].reading += yomi.slice(cursor, idx);
+        }
+        mapped.push({ jp: cur.text, reading: kana, isKana: true });
+        cursor = idx + kana.length;
+      } else {
+        mapped.push({ jp: cur.text, reading: kana, isKana: true });
+      }
+      continue;
+    }
+
+    const nextKanaPart = parts.slice(i + 1).find((p) => p.isKana);
+    if (!nextKanaPart) {
+      mapped.push({
+        jp: cur.text,
+        reading: yomi.slice(cursor),
+        isKana: false,
+      });
+      cursor = yomi.length;
+      continue;
+    }
+
+    const nextKana = normalizeKanaOnly(nextKanaPart.text);
+    const nextIdx = yomi.indexOf(nextKana, cursor);
+
+    if (nextIdx >= 0) {
+      mapped.push({
+        jp: cur.text,
+        reading: yomi.slice(cursor, nextIdx),
+        isKana: false,
+      });
+      cursor = nextIdx;
+    } else {
+      mapped.push({
+        jp: cur.text,
+        reading: "",
+        isKana: false,
+      });
+    }
+  }
+
+  return mapped;
+}
+
+function escapeRegExp(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replaceAllSafe(text: string, search: string, replacement: string) {
+  if (!search) return text;
+  return text.replace(new RegExp(escapeRegExp(search), "g"), replacement);
+}
+
+function hiraganizeByAnswerMap(
+  transcript: string,
+  answerJp: string,
+  answerYomi: string
+) {
+  if (!answerYomi) return toReadingLike(transcript);
+
+  const answerMap = buildAnswerReadingMap(answerJp, answerYomi);
+  if (!answerMap.length) return toReadingLike(transcript);
+
+  let out = String(transcript || "");
+  let matchedCount = 0;
+
+  for (const item of answerMap) {
+    if (item.isKana) continue;
+    if (!item.jp || !item.reading) continue;
+
+    if (out.includes(item.jp)) {
+      out = replaceAllSafe(out, item.jp, item.reading);
+      matchedCount += 1;
+    }
+  }
+
+  // answer_jp 안에 있던 한자만 안전하게 읽기로 치환
+  // 치환이 전혀 안 됐더라도 최종 비교는 히라가나 정규화 문자열로 통일
+  return toReadingLike(out);
 }
 
 function getFirstDiffInfo(expected: string, actual: string) {
@@ -244,7 +365,6 @@ function makeDetailedFeedback(
   }
 
   if (score >= 90) {
-    // 높은 점수대라도 글자 차이가 있으면 그 안내를 우선
     if (diff) {
       return [
         `🎯 좋습니다`,
@@ -367,8 +487,8 @@ export async function POST(req: Request) {
     const prompt = [
       "다음 일본어 음성을 전사하세요.",
       "가능하면 히라가나 중심으로 전사하세요.",
-      "동음이의어 한자가 가능하면 정답 문장에 가까운 표기를 우선하세요.",
-      "정답과 같은 발음이면 정답 문장에 가까운 표기를 우선해 주세요.",
+      "한자보다 히라가나 표기를 우선해 주세요.",
+      "정답과 같은 발음이면 가능한 한 히라가나로 적어 주세요.",
       `정답 문장: ${answerJp}`,
       answerYomi ? `정답 읽기: ${answerYomi}` : "",
     ]
@@ -433,17 +553,23 @@ export async function POST(req: Request) {
       );
     }
 
-    const scoreAgainstYomi = answerYomi
-      ? similarityScore(transcript, answerYomi)
-      : 0;
-
-    const scoreAgainstJp = similarityScore(transcript, answerJp);
-
-    // answer_yomi가 있으면 읽기 기준 점수를 우선 사용
-    const score = answerYomi ? scoreAgainstYomi : scoreAgainstJp;
+    // 핵심:
+    // 표시용 transcript는 원본 그대로 두고,
+    // 점수/피드백용은 무조건 히라가나 기준 문자열로 통일
+    const scoringTranscript = answerYomi
+      ? hiraganizeByAnswerMap(transcript, answerJp, answerYomi)
+      : toReadingLike(transcript);
 
     const expectedReading = toReadingLike(answerYomi || answerJp);
-    const actualReading = toReadingLike(transcript);
+    const actualReading = scoringTranscript;
+
+    const scoreAgainstYomi = answerYomi
+      ? similarityScore(scoringTranscript, answerYomi)
+      : 0;
+
+    const scoreAgainstJp = similarityScore(scoringTranscript, answerJp);
+
+    const score = answerYomi ? scoreAgainstYomi : scoreAgainstJp;
 
     const feedback = makeDetailedFeedback(
       score,
@@ -455,6 +581,7 @@ export async function POST(req: Request) {
 
     return Response.json({
       transcript,
+      transcript_for_scoring: scoringTranscript,
       score,
       feedback,
       model: TRANSCRIBE_MODEL,
