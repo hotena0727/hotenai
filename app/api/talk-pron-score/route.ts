@@ -19,7 +19,6 @@ function normJp(text: string) {
 
 function normJpLoose(text: string) {
   return normJp(text)
-    .replace(/ー/g, "")
     .replace(/っ/g, "")
     .replace(/[ゃゅょぁぃぅぇぉゎ]/g, (ch) =>
       (
@@ -164,7 +163,7 @@ function buildActualReadingWithYomiPriority(
 
   const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
 
-  if (answerYomi && rawSurfaceScore >= 90) {
+  if (answerYomi && rawSurfaceScore >= 94) {
     return {
       actualReading: expectedReading,
       adoptedExpectedYomi: true,
@@ -319,10 +318,10 @@ function estimateSlowSpeechPenalty(
 
   let penalty = 0;
 
-  if (cps < 1.5) {
-    penalty = 10;
-  } else if (cps < 1.9) {
-    penalty = 5;
+  if (cps < 1.8) {
+    penalty = 12;
+  } else if (cps < 2.2) {
+    penalty = 6;
   }
 
   return {
