@@ -235,15 +235,31 @@ function buildActualReadingWithYomiPriority(
   };
 }
 
+function getRecommendedSeconds(answerYomi: string, answerJp: string) {
+  const base = String(answerYomi || answerJp || "").trim();
+  const len = Array.from(base).length;
+
+  if (len <= 8) return 3;
+  if (len <= 14) return 4;
+  if (len <= 20) return 5;
+  if (len <= 28) return 6;
+  return 7;
+}
+
 function estimateSlowSpeechPenalty(
   durationMs: number,
-  expectedReading: string
+  expectedReading: string,
+  answerYomi: string,
+  answerJp: string
 ) {
   if (!durationMs || !expectedReading) {
     return {
       penalty: 0,
       cps: 0,
       isSlow: false,
+      recommendedSec: 0,
+      actualSec: 0,
+      overtimeSec: 0,
     };
   }
 
@@ -253,29 +269,40 @@ function estimateSlowSpeechPenalty(
       penalty: 0,
       cps: 0,
       isSlow: false,
+      recommendedSec: 0,
+      actualSec: 0,
+      overtimeSec: 0,
     };
   }
 
   const readingLen = Array.from(expectedReading).length;
   const cps = readingLen / seconds;
+  const recommendedSec = getRecommendedSeconds(answerYomi, answerJp);
+  const overtimeSec = Math.max(0, seconds - recommendedSec);
 
   let penalty = 0;
 
-  // 느리게 말하면 확실히 점수 떨어지게
+  // 1) 권장 시간 초과 감점: 기준보다 늦으면 바로 체감되게
+  if (overtimeSec > 0) {
+    penalty += Math.ceil(overtimeSec) * 8;
+  }
+
+  // 2) 너무 느린 말속도는 추가 감점
   if (cps < 1.2) {
-    penalty = 18;
+    penalty += 12;
   } else if (cps < 1.5) {
-    penalty = 12;
+    penalty += 8;
   } else if (cps < 1.8) {
-    penalty = 7;
-  } else if (cps < 2.1) {
-    penalty = 3;
+    penalty += 4;
   }
 
   return {
     penalty,
     cps,
     isSlow: penalty > 0,
+    recommendedSec,
+    actualSec: seconds,
+    overtimeSec,
   };
 }
 
@@ -326,7 +353,12 @@ function similarityScoreWithYomiPriority(
   }
 
   const flow = analyzeSpeechFlow(transcript, actualReading);
-  const slow = estimateSlowSpeechPenalty(durationMs, expectedReading);
+  const slow = estimateSlowSpeechPenalty(
+    durationMs,
+    expectedReading,
+    answerYomi,
+    answerJp
+  );
 
   if (expectedReading === actualReading) {
     const totalPenalty = flow.penalty + slow.penalty;
@@ -607,7 +639,12 @@ export async function POST(req: Request) {
       durationMs
     );
 
-    const slow = estimateSlowSpeechPenalty(durationMs, judged.expectedReading);
+    const slow = estimateSlowSpeechPenalty(
+      durationMs,
+      judged.expectedReading,
+      answerYomi,
+      answerJp
+    );
 
     const feedback = makeDetailedFeedback(
       judged.score,

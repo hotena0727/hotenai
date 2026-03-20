@@ -2556,10 +2556,25 @@ export default function TalkPage() {
                             남은 시간
                           </div>
                         </>
-                      ) : (
+                      ) : pronStage === "recorded" ? (
                         <>
                           <div className="text-[22px] font-medium tracking-[0.08em] text-gray-500">
                             {pronDuration}
+                          </div>
+                          <div className="text-[11px] font-medium text-gray-400">
+                            실제 시간
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-[22px] font-medium tracking-[0.08em] text-gray-500">
+                            {formatSeconds(
+                              recordMaxSeconds ||
+                              getRecommendedRecordSeconds(
+                                currentQuestion?.answer_yomi,
+                                currentQuestion?.answer_jp
+                              )
+                            )}
                           </div>
                           <div className="text-[11px] font-medium text-gray-400">
                             권장 시간
