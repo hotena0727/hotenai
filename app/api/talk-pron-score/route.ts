@@ -261,10 +261,15 @@ function estimateSlowSpeechPenalty(
 
   let penalty = 0;
 
-  if (cps < 1.4) {
-    penalty = 5;
+  // 느리게 말하면 확실히 점수 떨어지게
+  if (cps < 1.2) {
+    penalty = 18;
+  } else if (cps < 1.5) {
+    penalty = 12;
   } else if (cps < 1.8) {
-    penalty = 2;
+    penalty = 7;
+  } else if (cps < 2.1) {
+    penalty = 3;
   }
 
   return {
@@ -324,8 +329,10 @@ function similarityScoreWithYomiPriority(
   const slow = estimateSlowSpeechPenalty(durationMs, expectedReading);
 
   if (expectedReading === actualReading) {
+    const totalPenalty = flow.penalty + slow.penalty;
+
     return {
-      score: 100,
+      score: Math.max(0, 100 - totalPenalty),
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
