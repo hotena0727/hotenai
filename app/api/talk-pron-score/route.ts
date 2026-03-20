@@ -149,10 +149,10 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
   }
 
   const penalty =
-    fillerCount * 2 +
-    repeatedCharCount * 1 +
-    repeatedFragmentCount * 2 +
-    repeatedTokenCount * 4;
+    fillerCount * 4 +
+    repeatedCharCount * 2 +
+    repeatedFragmentCount * 4 +
+    repeatedTokenCount * 6;
 
   const hasFlowIssue =
     fillerCount > 0 ||
@@ -231,8 +231,12 @@ function similarityScoreWithYomiPriority(
   const flow = analyzeSpeechFlow(transcript, actualReading);
 
   if (expectedReading === actualReading) {
+    const score = flow.hasFlowIssue
+      ? Math.max(88, 100 - flow.penalty)
+      : 100;
+
     return {
-      score: 100,
+      score,
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
@@ -318,9 +322,10 @@ function makeDetailedFeedback(
   const diff = getFirstDiffInfo(expectedReading, actualReading);
   const flow = analyzeSpeechFlow(transcript, actualReading);
 
-  const yomiGuideComment = adoptedExpectedYomi
-    ? `\n📝 한자 표기로 인식됐지만, 발음은 맞게 판단했어요.`
-    : "";
+  const yomiGuideComment =
+    adoptedExpectedYomi && score < 98
+      ? `\n📝 한자 표기로 인식됐지만, 발음은 맞게 판단했어요.`
+      : "";
 
   const flowComment = flow.hasFlowIssue
     ? `\n💡 이번에는 조금 더 끊지 않고 자연스럽게 이어서 말해 보세요.`
