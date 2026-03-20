@@ -363,6 +363,7 @@ function makeDetailedFeedback(
   transcript: string,
   expectedReading: string,
   actualReading: string,
+  slow: { penalty: number; cps: number; isSlow: boolean },
   _adoptedExpectedYomi = false
 ) {
   const flow = analyzeSpeechFlow(transcript, actualReading);
