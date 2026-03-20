@@ -97,7 +97,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     /(えっと|ええと|あの|その|うーん|えーと|ま|なんか)/g
   );
 
-  // 같은 글자 연속 반복: たたぶん, そそう 같은 형태
   let repeatedCharCount = 0;
   for (let i = 1; i < norm.length; i += 1) {
     if (norm[i] === norm[i - 1]) {
@@ -105,7 +104,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
-  // 1~2글자 토막 반복 탐지
   let repeatedFragmentCount = 0;
   for (let size = 1; size <= 2; size += 1) {
     for (let i = 0; i + size * 2 <= norm.length; i += 1) {
@@ -117,7 +115,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
-  // raw 기준 같은 토큰 반복
   const rawTokens = raw
     .normalize("NFKC")
     .split(/[\s\u3000、。,.!?！？]+/)
@@ -167,7 +164,6 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
 
   const flow = analyzeSpeechFlow(a, aRead);
 
-  // 발음 자체는 맞더라도 더듬음/반복이 있으면 100점 제한
   if (aRead && bRead && aRead === bRead) {
     const cappedPerfect = flow.hasFlowIssue
       ? Math.max(88, 100 - flow.penalty)
@@ -203,15 +199,6 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
     : Math.max(0, Math.min(100, weighted));
 }
 
-/**
- * answer_jp 안의 한자 구간을 answer_yomi의 읽기로 대응시켜,
- * transcript에 같은 한자가 나오면 해당 읽기로 치환한다.
- * 예:
- *   answer_jp   = 私もそうです
- *   answer_yomi = わたしもそうです
- *   transcript  = 私もそうです
- * -> projected  = わたしもそうです
- */
 function isKanaChar(ch: string) {
   return /[ぁ-んァ-ンー]/.test(ch);
 }
@@ -300,6 +287,15 @@ function buildAnswerReadingMap(answerJp: string, answerYomi: string) {
   return mapped;
 }
 
+function escapeRegExp(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replaceAllSafe(text: string, search: string, replacement: string) {
+  if (!search) return text;
+  return text.replace(new RegExp(escapeRegExp(search), "g"), replacement);
+}
+
 function projectTranscriptToReading(
   transcript: string,
   answerJp: string,
@@ -318,12 +314,11 @@ function projectTranscriptToReading(
     if (!item.jp || !item.reading) continue;
 
     if (out.includes(item.jp)) {
-      out = out.replace(item.jp, item.reading);
+      out = replaceAllSafe(out, item.jp, item.reading);
       matchedCount += 1;
     }
   }
 
-  // 한자 치환이 전혀 안 된 경우에는 원래 transcript 기준 유지
   if (matchedCount === 0) {
     return toReadingLike(transcript);
   }
@@ -372,7 +367,6 @@ function makeDetailedFeedback(
   }
 
   if (score >= 90) {
-    // 핵심: 90점 이상이라도 diff가 있으면 글자 차이 안내를 우선한다
     if (diff) {
       return [
         `🎯 좋습니다`,
@@ -561,19 +555,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // 핵심 수정:
-    // transcript가 한자로 전사되어도 answer_yomi 기준으로 읽기 투영 후 점수 계산
-    const transcriptReadingProjected = answerYomi
+    const useYomiBasis = !!answerYomi;
+
+    const transcriptReadingProjected = useYomiBasis
       ? projectTranscriptToReading(transcript, answerJp, answerYomi)
       : toReadingLike(transcript);
 
-    const scoreAgainstYomi = answerYomi
+    const scoreAgainstYomi = useYomiBasis
       ? similarityScore(transcriptReadingProjected, answerYomi)
       : 0;
 
     const scoreAgainstJp = similarityScore(transcript, answerJp);
 
-    const useYomiBasis = !!answerYomi && scoreAgainstYomi >= scoreAgainstJp;
     const score = useYomiBasis ? scoreAgainstYomi : scoreAgainstJp;
 
     const expectedReading = useYomiBasis
@@ -599,6 +592,8 @@ export async function POST(req: Request) {
       model: TRANSCRIBE_MODEL,
       basis: useYomiBasis ? "yomi" : "jp",
       projected_reading: transcriptReadingProjected,
+      score_against_yomi: scoreAgainstYomi,
+      score_against_jp: scoreAgainstJp,
     });
   } catch (error) {
     console.error("talk-pron-score error:", error);
