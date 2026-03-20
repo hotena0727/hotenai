@@ -365,8 +365,8 @@ function similarityScoreWithYomiPriority(
 
   const finalScore =
     weighted < floorToZero
-      ? 35
-      : Math.max(35, Math.min(100, weighted));
+      ? 0
+      : Math.max(0, Math.min(100, weighted));
 
   return {
     score: finalScore,
