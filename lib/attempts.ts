@@ -62,7 +62,9 @@ export async function fetchRecentAttempts(
   try {
     const { data, error } = await supabase
       .from("quiz_attempts")
-      .select("id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list")
+      .select(
+        "id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list"
+      )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -88,7 +90,9 @@ export async function fetchAllAttempts(
   try {
     const { data, error } = await supabase
       .from("quiz_attempts")
-      .select("id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list")
+      .select(
+        "id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list"
+      )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -115,7 +119,9 @@ export async function fetchAttemptsByPrefix(
   try {
     const { data, error } = await supabase
       .from("quiz_attempts")
-      .select("id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list")
+      .select(
+        "id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list"
+      )
       .eq("user_id", userId)
       .like("pos_mode", `${posModePrefix}%`)
       .order("created_at", { ascending: false })
@@ -133,8 +139,9 @@ export async function fetchAttemptsByPrefix(
   }
 }
 
-
-export async function fetchTodayWordKanjiSetCount(userId: string): Promise<number> {
+export async function fetchTodayBasicQuizSetCount(
+  userId: string
+): Promise<number> {
   if (!userId) return 0;
 
   try {
@@ -158,9 +165,14 @@ export async function fetchTodayWordKanjiSetCount(userId: string): Promise<numbe
     }
 
     const rows = (data ?? []) as Array<{ pos_mode?: string | null }>;
+
     return rows.filter((row) => {
-      const mode = String(row.pos_mode || "");
-      return mode.startsWith("단어") || mode.startsWith("한자");
+      const mode = String(row.pos_mode || "").trim();
+      return (
+        mode.startsWith("단어") ||
+        mode.startsWith("한자") ||
+        mode.startsWith("활용")
+      );
     }).length;
   } catch (error) {
     console.error(error);

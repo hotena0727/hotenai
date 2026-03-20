@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
+import { fetchTodayBasicQuizSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { WordQType, WordQuestion, WordRow } from "@/app/types/word";
 import { loadWordRows } from "@/lib/word-loader";
 import { buildWordQuiz } from "@/lib/word-quiz";
@@ -134,7 +134,8 @@ const JA_FONT_STYLE = {
 } as const;
 
 const DAILY_FREE_SET_LIMIT = 3;
-const PRO_UPGRADE_URL = "/pro";
+const PRO_UPGRADE_URL =
+  "https://hotena.com/m/study_dan_view.asp?dntGbn=&idx=44";
 const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 
 export default function WordPage() {
@@ -460,12 +461,12 @@ export default function WordPage() {
         const plan = normalizePlan(profileRow?.plan);
         setUserPlan(plan);
 
-        const used = await fetchTodayWordKanjiSetCount(user.id);
+        const used = await fetchTodayBasicQuizSetCount(user.id);
         setTodayWordKanjiSets(used);
 
         if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
           setLimitMessage(
-            "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+            "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
           );
         } else {
           setLimitMessage("");
@@ -830,7 +831,7 @@ export default function WordPage() {
 
       if (isDailyLimitReached) {
         setLimitMessage(
-          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+          "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
         );
         setQuestions([]);
         return;
@@ -1151,12 +1152,12 @@ export default function WordPage() {
         return;
       }
 
-      const used = await fetchTodayWordKanjiSetCount(user.id);
+      const used = await fetchTodayBasicQuizSetCount(user.id);
       setTodayWordKanjiSets(used);
 
       if (!isPaidPlan(userPlan) && used >= DAILY_FREE_SET_LIMIT) {
         setLimitMessage(
-          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
+          "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
         );
       }
 
@@ -1387,7 +1388,7 @@ export default function WordPage() {
                 }
               >
                 {isPaidPlan(userPlan)
-                  ? `${userPlan.toUpperCase()} · 단어·한자 무제한`
+                  ? `${userPlan.toUpperCase()} · 단어·한자·활용 무제한`
                   : `FREE · 오늘 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
               </p>
               <p
@@ -1427,10 +1428,10 @@ export default function WordPage() {
             >
               <p>
                 {isPaidPlan(userPlan)
-                  ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
+                  ? "유료 플랜은 단어·한자·활용을 제한 없이 이용할 수 있습니다."
                   : !isReviewMode && isDailyLimitReached
-                    ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
-                    : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+                    ? "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
+                    : `무료 플랜은 단어·한자·활용을 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
@@ -1441,7 +1442,7 @@ export default function WordPage() {
                 href={PRO_UPGRADE_URL}
                 className="inline-flex rounded-2xl bg-red-500 px-4 py-2 text-sm font-semibold text-white"
               >
-                Pro 업그레이드
+                유료 플랜 보기
               </a>
             </div>
           ) : null}
@@ -1833,7 +1834,7 @@ export default function WordPage() {
                 }`}
             >
               {!isReviewMode && isDailyLimitReached
-                ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
+                ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 유료 플랜으로 계속 이용해 보세요."
                 : isReviewMode
                   ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
                   : "이 조건은 거의 정복했어요. 다른 유형, 품사, 레벨로 넘어가 보세요."}
@@ -1842,63 +1843,65 @@ export default function WordPage() {
         )}
       </div>
 
-      {completionModalOpen ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
-          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">
-                {completionTitle}
-              </p>
-              <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
-                {completionBody}
-              </p>
-            </div>
+      {
+        completionModalOpen ? (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
+            <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">
+                  {completionTitle}
+                </p>
+                <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
+                  {completionBody}
+                </p>
+              </div>
 
-            <div className="mt-6 space-y-3">
-              <button
-                type="button"
-                onClick={handleContinueSameMode}
-                disabled={saving || (!isReviewMode && isDailyLimitReached)}
-                className={
-                  saving || (!isReviewMode && isDailyLimitReached)
-                    ? "w-full rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-lg font-semibold text-gray-400"
-                    : "w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
-                }
-              >
-                {!isReviewMode && isDailyLimitReached
-                  ? "오늘 이용 완료"
-                  : "같은 조건으로 다음 10문항"}
-              </button>
-
-              {completionWrongCount > 0 ? (
+              <div className="mt-6 space-y-3">
                 <button
                   type="button"
-                  onClick={handleRetryWrongOnlyFromModal}
-                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-900"
+                  onClick={handleContinueSameMode}
+                  disabled={saving || (!isReviewMode && isDailyLimitReached)}
+                  className={
+                    saving || (!isReviewMode && isDailyLimitReached)
+                      ? "w-full rounded-2xl border border-gray-200 bg-gray-100 px-5 py-4 text-lg font-semibold text-gray-400"
+                      : "w-full rounded-2xl bg-black px-5 py-4 text-lg font-semibold text-white"
+                  }
                 >
-                  틀린 문제만 다시 풀기
+                  {!isReviewMode && isDailyLimitReached
+                    ? "오늘 이용 완료"
+                    : "같은 조건으로 다음 10문항"}
                 </button>
-              ) : null}
 
-              <button
-                type="button"
-                onClick={handleBackToSelect}
-                className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
-              >
-                선택으로 돌아가기
-              </button>
+                {completionWrongCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={handleRetryWrongOnlyFromModal}
+                    className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-900"
+                  >
+                    틀린 문제만 다시 풀기
+                  </button>
+                ) : null}
 
-              <button
-                type="button"
-                onClick={closeCompletionModal}
-                className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
-              >
-                닫기
-              </button>
+                <button
+                  type="button"
+                  onClick={handleBackToSelect}
+                  className="w-full rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold text-gray-700"
+                >
+                  선택으로 돌아가기
+                </button>
+
+                <button
+                  type="button"
+                  onClick={closeCompletionModal}
+                  className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
+                >
+                  닫기
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : null}
-    </main>
+        ) : null
+      }
+    </main >
   );
 }

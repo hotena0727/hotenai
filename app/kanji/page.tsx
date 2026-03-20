@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { fetchTodayWordKanjiSetCount, saveQuizAttempt } from "@/lib/attempts";
+import { fetchTodayBasicQuizSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/app/types/kanji";
 import { loadKanjiRows } from "@/lib/kanji-loader";
 import { buildKanjiQuiz } from "@/lib/kanji-quiz";
@@ -72,7 +72,8 @@ const JA_FONT_STYLE = {
 } as const;
 
 const DAILY_FREE_SET_LIMIT = 3;
-const PRO_UPGRADE_URL = "/pro";
+const PRO_UPGRADE_URL =
+  "https://hotena.com/m/study_dan_view.asp?dntGbn=&idx=44";
 const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
 
 export default function KanjiPage() {
@@ -304,12 +305,12 @@ export default function KanjiPage() {
         const plan = normalizePlan(profileRow?.plan);
         setUserPlan(plan);
 
-        const used = await fetchTodayWordKanjiSetCount(user.id);
+        const used = await fetchTodayBasicQuizSetCount(user.id);
         setTodayWordKanjiSets(used);
 
         if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
           setLimitMessage(
-            "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+            "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
           );
         } else {
           setLimitMessage("");
@@ -406,9 +407,9 @@ export default function KanjiPage() {
     const pool =
       reviewLevel && reviewLevel.length > 0
         ? allRows.filter(
-            (row) =>
-              String(row.level || "").trim().toUpperCase() === reviewLevel
-          )
+          (row) =>
+            String(row.level || "").trim().toUpperCase() === reviewLevel
+        )
         : allRows;
 
     return targetRows
@@ -557,7 +558,7 @@ export default function KanjiPage() {
 
       if (isDailyLimitReached) {
         setLimitMessage(
-          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요. PRO에서는 제한 없이 이용할 수 있습니다."
+          "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
         );
         setQuestions([]);
         return;
@@ -827,12 +828,12 @@ export default function KanjiPage() {
         return;
       }
 
-      const used = await fetchTodayWordKanjiSetCount(user.id);
+      const used = await fetchTodayBasicQuizSetCount(user.id);
       setTodayWordKanjiSets(used);
 
       if (!isPaidPlan(userPlan) && used >= DAILY_FREE_SET_LIMIT) {
         setLimitMessage(
-          "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자는 내일 다시 이어서 풀 수 있어요."
+          "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
         );
       }
 
@@ -952,7 +953,7 @@ export default function KanjiPage() {
                 }
               >
                 {isPaidPlan(userPlan)
-                  ? `${userPlan.toUpperCase()} · 단어·한자 무제한`
+                  ? `${userPlan.toUpperCase()} · 단어·한자·활용 무제한`
                   : `FREE · 오늘 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
               </p>
               <p
@@ -992,10 +993,10 @@ export default function KanjiPage() {
             >
               <p>
                 {isPaidPlan(userPlan)
-                  ? "유료 플랜은 단어와 한자를 제한 없이 이용할 수 있습니다."
+                  ? "유료 플랜은 단어·한자·활용을 제한 없이 이용할 수 있습니다."
                   : !isReviewMode && isDailyLimitReached
-                    ? "오늘 FREE 이용 한도 3/3세트를 모두 사용했습니다. 단어와 한자는 내일 다시 이어서 풀 수 있어요."
-                    : `FREE는 단어와 한자를 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+                    ? "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
+                    : `무료 플랜은 단어·한자·활용을 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
@@ -1006,7 +1007,7 @@ export default function KanjiPage() {
                 href={PRO_UPGRADE_URL}
                 className="inline-flex rounded-2xl bg-red-500 px-4 py-2 text-sm font-semibold text-white"
               >
-                Pro 업그레이드
+                유료 플랜 보기
               </a>
             </div>
           ) : null}
@@ -1344,21 +1345,19 @@ export default function KanjiPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${
-              !isReviewMode && isDailyLimitReached
+            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
                 ? "border-red-200 bg-red-50"
                 : "border-gray-300 bg-white"
-            }`}
+              }`}
           >
             <p
-              className={`text-sm ${
-                !isReviewMode && isDailyLimitReached
+              className={`text-sm ${!isReviewMode && isDailyLimitReached
                   ? "text-red-700"
                   : "text-gray-500"
-              }`}
+                }`}
             >
               {!isReviewMode && isDailyLimitReached
-                ? "오늘 단어·한자 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
+                ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 유료 플랜으로 계속 이용해 보세요."
                 : isReviewMode
                   ? "선택한 복습 문제로 퀴즈를 만들지 못했습니다."
                   : "이 조건은 거의 정복했어요. 다른 레벨이나 유형으로 넘어가 보세요."}
