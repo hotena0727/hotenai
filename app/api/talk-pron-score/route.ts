@@ -175,7 +175,7 @@ function buildActualReadingWithYomiPriority(
   if (answerYomi) {
     return {
       actualReading: transcriptReading,
-      adoptedExpectedYomi: rawSurfaceScore >= 80,
+      adoptedExpectedYomi: rawSurfaceScore >= 70,
       surfaceScore: rawSurfaceScore,
     };
   }
