@@ -668,7 +668,8 @@ export default function TalkPage() {
   const scorePronunciation = async (
     audioBlob: Blob,
     answerJp: string,
-    answerYomi: string
+    answerYomi: string,
+    durationMs: number
   ) => {
     try {
       setPronScoring(true);
@@ -682,6 +683,7 @@ export default function TalkPage() {
       form.append("file", audioBlob, "speech.wav");
       form.append("answer_jp", answerJp);
       form.append("answer_yomi", answerYomi);
+      form.append("duration_ms", String(durationMs));
 
       const res = await fetch("/api/talk-pron-score", {
         method: "POST",
@@ -739,6 +741,7 @@ export default function TalkPage() {
         1,
         Math.floor((Date.now() - recordStartAtRef.current) / 1000)
       );
+      const elapsedMs = Math.max(1, Date.now() - recordStartAtRef.current);
       setRecordingSeconds(elapsedSec);
       setPronDuration(formatSeconds(elapsedSec));
       await stopRecordingInternal();
@@ -776,7 +779,8 @@ export default function TalkPage() {
         await scorePronunciation(
           wavBlob,
           currentQuestion.answer_jp,
-          currentQuestion.answer_yomi
+          currentQuestion.answer_yomi,
+          elapsedMs
         );
       }
     } catch (error) {
@@ -2416,7 +2420,7 @@ export default function TalkPage() {
                     </div>
 
                     {pronFeedback ? (
-                      <div className="whitespace-pre-line text-lg font-semibold text-red-500">
+                      <div className="whitespace-pre-line text-base leading-7 text-gray-700">
                         {pronFeedback}
                       </div>
                     ) : null}

@@ -368,32 +368,36 @@ function makeDetailedFeedback(
   const flow = analyzeSpeechFlow(transcript, actualReading);
 
   let verdict = "";
-  if (score >= 98) verdict = "아주 좋습니다";
-  else if (score >= 90) verdict = "좋습니다";
-  else if (score >= 80) verdict = "괜찮아요";
-  else if (score >= 65) verdict = "조금만 더";
-  else verdict = "다시 해봐요";
+  if (score >= 98) verdict = "🎯 아주 좋습니다";
+  else if (score >= 90) verdict = "🎯 좋습니다";
+  else if (score >= 80) verdict = "🎯 괜찮아요";
+  else if (score >= 65) verdict = "🎯 조금만 더";
+  else verdict = "🎯 다시 해봐요";
 
   let suggestion = "";
   if (score >= 98) {
-    suggestion = "정확하고 자연스럽게 말했어요.";
+    suggestion = "💡 정확하고 자연스럽게 말했어요.";
   } else if (flow.hasFlowIssue) {
-    suggestion = "문장을 조금 더 끊지 않고 이어서 말해 보세요.";
+    suggestion = "💡 문장을 조금 더 끊지 않고 이어서 말해 보세요.";
   } else if (diff) {
-    suggestion = `${diff.index + 1}번째 글자 근처를 한 번 더 확인해 보세요.`;
+    suggestion = `💡 ${diff.index + 1}번째 글자 근처를 한 번 더 확인해 보세요.`;
   } else {
-    suggestion = "한 번 더 또렷하게 말해 보세요.";
+    suggestion = "💡 한 번 더 또렷하게 말해 보세요.";
   }
 
+  if (score >= 100) {
+    return [verdict, suggestion].join("\n");
+  }
+
+  const expectedSnippet = diff ? diff.expectedTail : expectedReading || "-";
+  const actualSnippet = diff ? diff.actualTail : actualReading || "-";
+
   return [
-    `${score}점`,
-    "",
     verdict,
     suggestion,
     "",
-    `정답 기준: ${expectedReading || "-"}`,
-    `인식 결과: ${actualReading || "-"}`,
-    `전사 원문: ${transcript || "-"}`
+    `정답 기준: ${expectedSnippet}`,
+    `인식 결과: ${actualSnippet}`,
   ].join("\n");
 }
 
