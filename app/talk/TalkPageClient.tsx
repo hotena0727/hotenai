@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { hasSeenHomeToday } from "@/lib/home-gate";
 import { supabase } from "@/lib/supabase";
 import { isPaidPlan, normalizePlan } from "@/lib/plans";
@@ -305,6 +305,7 @@ function clearTalkLocalStateForToday() {
 export default function TalkPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [allRows, setAllRows] = useState<TalkCsvRow[]>([]);
   const [questions, setQuestions] = useState<TalkCsvRow[]>([]);
@@ -953,7 +954,72 @@ export default function TalkPage() {
     });
   }, [selectedStage, selectedTag, allRows]);
 
+  const reviewMode = searchParams.get("review") === "1";
+
+  const reviewQids = useMemo(() => {
+    return new Set(
+      (searchParams.get("qids") || "")
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean)
+    );
+  }, [searchParams]);
+
+  const reviewItemKeys = useMemo(() => {
+    return new Set(
+      (searchParams.get("itemKeys") || "")
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean)
+    );
+  }, [searchParams]);
+
+  const hasReviewTargets = reviewQids.size > 0 || reviewItemKeys.size > 0;
+
   const currentQuestion = questions[currentIndex];
+
+  useEffect(() => {
+    if (loading || allRows.length === 0 || !dailyStateLoaded) return;
+    if (!reviewMode || !hasReviewTargets) return;
+
+    const picked = allRows.filter((row) => {
+      const rowQid = String(row.qid || "").trim();
+      const rowItemKey = String((row as any).item_key || "").trim();
+
+      return reviewQids.has(rowQid) || reviewItemKeys.has(rowItemKey);
+    });
+
+    if (picked.length === 0) {
+      setErrorMsg("복습할 문제를 찾지 못했습니다.");
+      return;
+    }
+
+    setQuestions(picked);
+    setCurrentIndex(0);
+    setSelected("");
+    setSubmitted(false);
+    setScore(0);
+    setWrongList([]);
+    setSaveDone(false);
+    setCoachOpen(false);
+    setCoachAnswer("");
+    setCoachError("");
+    setCoachLoading(false);
+    setCoachQuestion("");
+    setAudioError("");
+    setAudioLoadingKey("");
+    resetPronunciationState();
+    setFinishMessage("");
+    setViewMode("quiz");
+  }, [
+    loading,
+    allRows,
+    dailyStateLoaded,
+    reviewMode,
+    hasReviewTargets,
+    reviewQids,
+    reviewItemKeys,
+  ]);
 
   useEffect(() => {
     setCoachOpen(false);
@@ -1108,6 +1174,11 @@ export default function TalkPage() {
   useEffect(() => {
     const tryResumeDailyState = async () => {
       if (loading || allRows.length === 0 || resumedOnceRef.current) return;
+
+      if (reviewMode && hasReviewTargets) {
+        setDailyStateLoaded(true);
+        return;
+      }
       resumedOnceRef.current = true;
 
       try {
@@ -1165,7 +1236,7 @@ export default function TalkPage() {
     };
 
     void tryResumeDailyState();
-  }, [loading, allRows]);
+  }, [loading, allRows, reviewMode, hasReviewTargets]);
 
   const askTalkCoach = async (params: {
     question: string;
@@ -1300,6 +1371,37 @@ export default function TalkPage() {
       (row) => row.stage === selectedStage && row.tag === selectedTag
     );
 
+    if (reviewMode && hasReviewTargets) {
+      const picked = allRows.filter((row) => {
+        const rowQid = String(row.qid || "").trim();
+        const rowItemKey = String((row as any).item_key || "").trim();
+        return reviewQids.has(rowQid) || reviewItemKeys.has(rowItemKey);
+      });
+
+      if (picked.length === 0) {
+        alert("복습할 문제를 찾지 못했습니다.");
+        return;
+      }
+
+      setQuestions(picked);
+      setCurrentIndex(0);
+      setSelected("");
+      setSubmitted(false);
+      setScore(0);
+      setWrongList([]);
+      setSaveDone(false);
+      setCoachOpen(false);
+      setCoachAnswer("");
+      setCoachError("");
+      setCoachLoading(false);
+      setCoachQuestion("");
+      setAudioError("");
+      setAudioLoadingKey("");
+      resetPronunciationState();
+      setViewMode("quiz");
+      return;
+    }
+
     if (selectedSub !== "전체") {
       pool = pool.filter((row) => row.sub === selectedSub);
     }
@@ -1365,9 +1467,25 @@ export default function TalkPage() {
       setWrongList((prev) => [
         ...prev,
         {
+          app: "talk",
+          qtype: "choice",
+          item_key: String((currentQuestion as any).item_key || currentQuestion.qid || ""),
           qid: currentQuestion.qid,
           selected,
           correct: currentQuestion.answer_jp,
+
+          stage: currentQuestion.stage,
+          tag: currentQuestion.tag,
+          tag_kr: currentQuestion.tag_kr,
+          sub: currentQuestion.sub,
+          sub_kr: currentQuestion.sub_kr,
+
+          situation_kr: currentQuestion.situation_kr,
+          partner_jp: currentQuestion.partner_jp,
+          partner_kr: currentQuestion.partner_kr,
+          answer_jp: currentQuestion.answer_jp,
+          answer_kr: currentQuestion.answer_kr,
+          explain_kr: currentQuestion.explain_kr,
         },
       ]);
     }
@@ -1418,14 +1536,19 @@ export default function TalkPage() {
         return;
       }
 
-      const displaySub =
-        selectedSub === "전체" ? "전체" : getSubLabel(selectedSub);
+      const displaySub = reviewMode
+        ? "오답 복습"
+        : selectedSub === "전체"
+          ? "전체"
+          : getSubLabel(selectedSub);
 
       const payload = buildTalkAttemptPayload({
         user_id: user.id,
         user_email: user.email ?? "",
         level: currentQuestion?.level || "N3",
-        pos_mode: `회화 · ${getTagLabel(selectedTag)} · ${displaySub}`,
+        pos_mode: reviewMode
+          ? "회화 · 오답 복습"
+          : `회화 · ${getTagLabel(selectedTag)} · ${displaySub}`,
         quiz_len: questions.length,
         score,
         wrongList,

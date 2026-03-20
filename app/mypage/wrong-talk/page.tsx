@@ -210,7 +210,7 @@ export default function WrongTalkPage() {
   }, [flattened, selectedTag, selectedSub, searchText]);
 
   const makeSelectionKey = (item: FlattenedWrongItem) =>
-    `${item.app}|${item.qid}`;
+    `${item.app}|${item.item_key || ""}|${item.qid || ""}`;
 
   const toggleKey = (key: string) => {
     setSelectedKeys((prev) =>
@@ -235,23 +235,43 @@ export default function WrongTalkPage() {
       return;
     }
 
+    const selectedItems = filteredItems.filter((item) =>
+      selectedKeys.includes(makeSelectionKey(item))
+    );
+
     const qids = Array.from(
       new Set(
-        filteredItems
-          .filter((item) => selectedKeys.includes(makeSelectionKey(item)))
-          .map((item) => item.qid)
+        selectedItems
+          .map((item) => String(item.qid || "").trim())
           .filter(Boolean)
       )
     );
 
-    if (qids.length === 0) {
+    const itemKeys = Array.from(
+      new Set(
+        selectedItems
+          .map((item) => String(item.item_key || "").trim())
+          .filter(Boolean)
+      )
+    );
+
+    if (qids.length === 0 && itemKeys.length === 0) {
       alert("복습할 문제를 찾지 못했습니다.");
       return;
     }
 
-    window.location.href = `/talk?review=1&qids=${encodeURIComponent(
-      qids.join(",")
-    )}`;
+    const params = new URLSearchParams();
+    params.set("review", "1");
+
+    if (qids.length > 0) {
+      params.set("qids", qids.join(","));
+    }
+
+    if (itemKeys.length > 0) {
+      params.set("itemKeys", itemKeys.join(","));
+    }
+
+    window.location.href = `/talk?${params.toString()}`;
   };
 
   if (loading) {
@@ -470,7 +490,9 @@ export default function WrongTalkPage() {
                     </label>
 
                     <a
-                      href={`/talk?review=1&qids=${encodeURIComponent(item.qid)}`}
+                      href={`/talk?review=1&qids=${encodeURIComponent(
+                        String(item.qid || "")
+                      )}&itemKeys=${encodeURIComponent(String(item.item_key || ""))}`}
                       className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
                     >
                       이 문제만 복습
