@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchTodayBasicQuizSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/app/types/kanji";
@@ -111,7 +111,6 @@ export default function KanjiPage() {
   const [reviewQids, setReviewQids] = useState<string[]>([]);
   const [reviewQtype, setReviewQtype] = useState("");
   const [reviewLevel, setReviewLevel] = useState("");
-  const searchParams = useSearchParams();
 
   const [rows, setRows] = useState<KanjiRow[]>([]);
   const [questions, setQuestions] = useState<KanjiQuestion[]>([]);
@@ -160,20 +159,23 @@ export default function KanjiPage() {
   }, [router, pathname]);
 
   useEffect(() => {
-    const review = searchParams.get("review") === "1";
-    const qids = (searchParams.get("qids") || "")
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const review = params.get("review") === "1";
+    const qids = (params.get("qids") || "")
       .split(",")
       .map((v) => v.trim())
       .filter(Boolean);
-    const qtype = (searchParams.get("qtype") || "").trim();
-    const level = (searchParams.get("level") || "").trim().toUpperCase();
+    const qtype = (params.get("qtype") || "").trim();
+    const level = (params.get("level") || "").trim().toUpperCase();
 
     setIsReviewMode(review);
     setReviewQids(qids);
     setReviewQtype(qtype);
     setReviewLevel(level);
     setReviewReady(true);
-  }, [searchParams]);
+  }, []);
 
   const wrongItems = questions
     .map((q, idx) => ({
