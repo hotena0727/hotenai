@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchTodayBasicQuizSetCount, saveQuizAttempt } from "@/lib/attempts";
 import type { KanjiQType, KanjiQuestion, KanjiRow } from "@/app/types/kanji";
@@ -12,6 +12,7 @@ import { buildKanjiQuiz } from "@/lib/kanji-quiz";
 import { buildKanjiAttemptPayload } from "@/lib/kanji-payload";
 import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
 import { hasSeenHomeToday } from "@/lib/home-gate";
+import { todayKST } from "@/lib/progress";
 
 const LEVEL_OPTIONS = ["N5", "N4", "N3", "N2", "N1"] as const;
 
@@ -66,6 +67,31 @@ function uniqueStrings(values: string[]): string[] {
   return out;
 }
 
+function todayUsageCacheKey(userId: string) {
+  return `kanji-today-usage:${userId}:${todayKST()}`;
+}
+
+function readTodayUsageCache(userId: string): number | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(todayUsageCacheKey(userId));
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeTodayUsageCache(userId: string, value: number) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(todayUsageCacheKey(userId), String(value));
+  } catch {
+    // noop
+  }
+}
+
 const JA_FONT_STYLE = {
   fontFamily:
     '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
@@ -85,6 +111,7 @@ export default function KanjiPage() {
   const [reviewQids, setReviewQids] = useState<string[]>([]);
   const [reviewQtype, setReviewQtype] = useState("");
   const [reviewLevel, setReviewLevel] = useState("");
+  const searchParams = useSearchParams();
 
   const [rows, setRows] = useState<KanjiRow[]>([]);
   const [questions, setQuestions] = useState<KanjiQuestion[]>([]);
@@ -133,23 +160,20 @@ export default function KanjiPage() {
   }, [router, pathname]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams(window.location.search);
-    const review = params.get("review") === "1";
-    const qids = (params.get("qids") || "")
+    const review = searchParams.get("review") === "1";
+    const qids = (searchParams.get("qids") || "")
       .split(",")
       .map((v) => v.trim())
       .filter(Boolean);
-    const qtype = (params.get("qtype") || "").trim();
-    const level = (params.get("level") || "").trim().toUpperCase();
+    const qtype = (searchParams.get("qtype") || "").trim();
+    const level = (searchParams.get("level") || "").trim().toUpperCase();
 
     setIsReviewMode(review);
     setReviewQids(qids);
     setReviewQtype(qtype);
     setReviewLevel(level);
     setReviewReady(true);
-  }, []);
+  }, [searchParams]);
 
   const wrongItems = questions
     .map((q, idx) => ({
@@ -308,16 +332,32 @@ export default function KanjiPage() {
         setUserPlan(plan);
         setIsAdminUser(Boolean(profileRow?.is_admin));
 
-        const used = await fetchTodayBasicQuizSetCount(user.id);
-        setTodayWordKanjiSets(used);
+        const cachedUsed = readTodayUsageCache(user.id);
 
-        if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
-          setLimitMessage(
-            "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
-          );
+        if (cachedUsed !== null) {
+          setTodayWordKanjiSets(cachedUsed);
+
+          if (!isPaidPlan(plan) && cachedUsed >= DAILY_FREE_SET_LIMIT) {
+            setLimitMessage(
+              "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
+            );
+          } else {
+            setLimitMessage("");
+          }
         } else {
-          setLimitMessage("");
+          const used = await fetchTodayBasicQuizSetCount(user.id);
+          setTodayWordKanjiSets(used);
+          writeTodayUsageCache(user.id, used);
+
+          if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
+            setLimitMessage(
+              "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
+            );
+          } else {
+            setLimitMessage("");
+          }
         }
+
       } catch (error) {
         console.error(error);
       }
@@ -410,9 +450,9 @@ export default function KanjiPage() {
     const pool =
       reviewLevel && reviewLevel.length > 0
         ? allRows.filter(
-            (row) =>
-              String(row.level || "").trim().toUpperCase() === reviewLevel
-          )
+          (row) =>
+            String(row.level || "").trim().toUpperCase() === reviewLevel
+        )
         : allRows;
 
     return targetRows
@@ -831,15 +871,17 @@ export default function KanjiPage() {
         return;
       }
 
-      const used = await fetchTodayBasicQuizSetCount(user.id);
-      setTodayWordKanjiSets(used);
+      if (!isReviewMode) {
+        const nextUsed = todayWordKanjiSets + 1;
+        setTodayWordKanjiSets(nextUsed);
+        writeTodayUsageCache(user.id, nextUsed);
 
-      if (!isPaidPlan(userPlan) && used >= DAILY_FREE_SET_LIMIT) {
-        setLimitMessage(
-          "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
-        );
+        if (!isPaidPlan(userPlan) && nextUsed >= DAILY_FREE_SET_LIMIT) {
+          setLimitMessage(
+            "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
+          );
+        }
       }
-
       if (shouldShowCompletionModal(nextExcludedWords)) {
         openCompletionModal(nextScore, currentQuestions, currentAnswers);
       }
@@ -1352,18 +1394,16 @@ export default function KanjiPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${
-              !isReviewMode && isDailyLimitReached
-                ? "border-red-200 bg-red-50"
-                : "border-gray-300 bg-white"
-            }`}
+            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
+              ? "border-red-200 bg-red-50"
+              : "border-gray-300 bg-white"
+              }`}
           >
             <p
-              className={`text-sm ${
-                !isReviewMode && isDailyLimitReached
-                  ? "text-red-700"
-                  : "text-gray-500"
-              }`}
+              className={`text-sm ${!isReviewMode && isDailyLimitReached
+                ? "text-red-700"
+                : "text-gray-500"
+                }`}
             >
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 유료 플랜으로 계속 이용해 보세요."

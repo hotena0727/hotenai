@@ -14,6 +14,7 @@ import { loadPatternRows, filterPatternRows } from "@/lib/pattern-loader";
 import type { PatternRow } from "@/app/types/pattern";
 import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
 import { hasSeenHomeToday } from "@/lib/home-gate";
+import { todayKST } from "@/lib/progress";
 
 const POS_GROUP_OPTIONS = [
   { value: "noun", label: "명사" },
@@ -111,6 +112,31 @@ function shuffleArray<T>(arr: T[]): T[] {
     [copied[i], copied[j]] = [copied[j], copied[i]];
   }
   return copied;
+}
+
+function todayUsageCacheKey(userId: string) {
+  return `word-today-usage:${userId}:${todayKST()}`;
+}
+
+function readTodayUsageCache(userId: string): number | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(todayUsageCacheKey(userId));
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeTodayUsageCache(userId: string, value: number) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(todayUsageCacheKey(userId), String(value));
+  } catch {
+    // noop
+  }
 }
 
 function uniqueStrings(values: string[]): string[] {
@@ -320,8 +346,8 @@ export default function WordPage() {
   const visibleQtypes =
     selectedPosGroup === "other"
       ? QTYPE_OPTIONS.filter(
-          (item) => item.value === "meaning" || item.value === "kr2jp"
-        )
+        (item) => item.value === "meaning" || item.value === "kr2jp"
+      )
       : QTYPE_OPTIONS;
 
   const wrongItems = questions
@@ -490,15 +516,30 @@ export default function WordPage() {
         setUserPlan(plan);
         setIsAdminUser(Boolean(profileRow?.is_admin));
 
-        const used = await fetchTodayBasicQuizSetCount(user.id);
-        setTodayWordKanjiSets(used);
+        const cachedUsed = readTodayUsageCache(user.id);
 
-        if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
-          setLimitMessage(
-            "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
-          );
+        if (cachedUsed !== null) {
+          setTodayWordKanjiSets(cachedUsed);
+
+          if (!isPaidPlan(plan) && cachedUsed >= DAILY_FREE_SET_LIMIT) {
+            setLimitMessage(
+              "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
+            );
+          } else {
+            setLimitMessage("");
+          }
         } else {
-          setLimitMessage("");
+          const used = await fetchTodayBasicQuizSetCount(user.id);
+          setTodayWordKanjiSets(used);
+          writeTodayUsageCache(user.id, used);
+
+          if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
+            setLimitMessage(
+              "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
+            );
+          } else {
+            setLimitMessage("");
+          }
         }
       } catch (error) {
         console.error(error);
@@ -776,7 +817,7 @@ export default function WordPage() {
         const levelOk =
           !selectedLevel ||
           normalizeLevel((row as { level?: string }).level || "") ===
-            normalizeLevel(selectedLevel);
+          normalizeLevel(selectedLevel);
         return posOk && levelOk;
       });
 
@@ -885,7 +926,7 @@ export default function WordPage() {
           const levelOk =
             !selectedLevel ||
             normalizeLevel((row as { level?: string }).level || "") ===
-              normalizeLevel(selectedLevel);
+            normalizeLevel(selectedLevel);
           return posOk && levelOk;
         });
 
@@ -1181,13 +1222,16 @@ export default function WordPage() {
         return;
       }
 
-      const used = await fetchTodayBasicQuizSetCount(user.id);
-      setTodayWordKanjiSets(used);
+      if (!isReviewMode) {
+        const nextUsed = todayWordKanjiSets + 1;
+        setTodayWordKanjiSets(nextUsed);
+        writeTodayUsageCache(user.id, nextUsed);
 
-      if (!isPaidPlan(userPlan) && used >= DAILY_FREE_SET_LIMIT) {
-        setLimitMessage(
-          "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
-        );
+        if (!isPaidPlan(userPlan) && nextUsed >= DAILY_FREE_SET_LIMIT) {
+          setLimitMessage(
+            "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
+          );
+        }
       }
 
       if (shouldShowCompletionModal(nextExcludedWords)) {
@@ -1919,18 +1963,16 @@ export default function WordPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${
-              !isReviewMode && isDailyLimitReached
-                ? "border-red-200 bg-red-50"
-                : "border-gray-300 bg-white"
-            }`}
+            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
+              ? "border-red-200 bg-red-50"
+              : "border-gray-300 bg-white"
+              }`}
           >
             <p
-              className={`text-sm ${
-                !isReviewMode && isDailyLimitReached
-                  ? "text-red-700"
-                  : "text-gray-500"
-              }`}
+              className={`text-sm ${!isReviewMode && isDailyLimitReached
+                ? "text-red-700"
+                : "text-gray-500"
+                }`}
             >
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 유료 플랜으로 계속 이용해 보세요."

@@ -76,6 +76,31 @@ function posLabel(pos: KatsuyouPos): string {
   }
 }
 
+function todayUsageCacheKey(userId: string) {
+  return `katsuyou-today-usage:${userId}:${todayKST()}`;
+}
+
+function readTodayUsageCache(userId: string): number | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(todayUsageCacheKey(userId));
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeTodayUsageCache(userId: string, value: number) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(todayUsageCacheKey(userId), String(value));
+  } catch {
+    // noop
+  }
+}
+
 function circleNumber(index: number): string {
   const nums = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
   return nums[index] || `${index + 1}.`;
@@ -178,8 +203,8 @@ export default function KatsuyouPage() {
         kind === "perfect"
           ? `${BASE_SFX_URL}/perfect.mp3`
           : kind === "correct"
-          ? `${BASE_SFX_URL}/correct.mp3`
-          : `${BASE_SFX_URL}/wrong.mp3`;
+            ? `${BASE_SFX_URL}/correct.mp3`
+            : `${BASE_SFX_URL}/wrong.mp3`;
 
       const audio = new Audio(src);
       audio.preload = "auto";
@@ -287,15 +312,30 @@ export default function KatsuyouPage() {
         setUserPlan(plan);
         setIsAdminUser(Boolean(profileRow?.is_admin));
 
-        const used = await fetchTodayBasicQuizSetCount(user.id);
-        setTodayWordKanjiSets(used);
+        const cachedUsed = readTodayUsageCache(user.id);
 
-        if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
-          setLimitMessage(
-            "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
-          );
+        if (cachedUsed !== null) {
+          setTodayWordKanjiSets(cachedUsed);
+
+          if (!isPaidPlan(plan) && cachedUsed >= DAILY_FREE_SET_LIMIT) {
+            setLimitMessage(
+              "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
+            );
+          } else {
+            setLimitMessage("");
+          }
         } else {
-          setLimitMessage("");
+          const used = await fetchTodayBasicQuizSetCount(user.id);
+          setTodayWordKanjiSets(used);
+          writeTodayUsageCache(user.id, used);
+
+          if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
+            setLimitMessage(
+              "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
+            );
+          } else {
+            setLimitMessage("");
+          }
         }
       } catch (error) {
         console.error(error);
@@ -323,7 +363,7 @@ export default function KatsuyouPage() {
   }, []);
 
   useEffect(() => {
-    if (isDailyLimitReached) {
+    if (!reviewMode && isDailyLimitReached) {
       setQuestions([]);
       setAnswers({});
       setSubmitted(false);
@@ -331,7 +371,7 @@ export default function KatsuyouPage() {
       setAudioError("");
       setAudioLoadingKey("");
     }
-  }, [isDailyLimitReached]);
+  }, [isDailyLimitReached, reviewMode]);
 
   useEffect(() => {
     if (!submitted) return;
@@ -759,17 +799,6 @@ export default function KatsuyouPage() {
     };
 
     setAnswers(nextAnswers);
-
-    if (!reviewMode) {
-      void persistKatsuyouSet({
-        nextQuestions: questions,
-        nextAnswers,
-        nextSubmitted: false,
-        nextScore: score,
-        nextPos: selectedPos,
-        nextQType: selectedQType,
-      });
-    }
   };
 
   const handleSubmitAll = () => {
@@ -918,13 +947,16 @@ export default function KatsuyouPage() {
         return;
       }
 
-      const used = await fetchTodayBasicQuizSetCount(user.id);
-      setTodayWordKanjiSets(used);
+      if (!reviewMode) {
+        const nextUsed = todayWordKanjiSets + 1;
+        setTodayWordKanjiSets(nextUsed);
+        writeTodayUsageCache(user.id, nextUsed);
 
-      if (!isPaidPlan(userPlan) && used >= DAILY_FREE_SET_LIMIT) {
-        setLimitMessage(
-          "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
-        );
+        if (!isPaidPlan(userPlan) && nextUsed >= DAILY_FREE_SET_LIMIT) {
+          setLimitMessage(
+            "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
+          );
+        }
       }
 
       if (!reviewMode) {
@@ -1065,10 +1097,10 @@ export default function KatsuyouPage() {
                 {isPaidPlan(userPlan)
                   ? "자세한 이용 안내 보기"
                   : isDailyLimitReached
-                  ? "오늘 이용 완료"
-                  : remainingSets === 1
-                  ? "오늘 1세트 남음"
-                  : `오늘 ${remainingSets}세트 남음`}
+                    ? "오늘 이용 완료"
+                    : remainingSets === 1
+                      ? "오늘 1세트 남음"
+                      : `오늘 ${remainingSets}세트 남음`}
               </p>
             </div>
             <span
@@ -1094,8 +1126,8 @@ export default function KatsuyouPage() {
                 {isPaidPlan(userPlan)
                   ? "유료 플랜은 단어·한자·활용을 제한 없이 이용할 수 있습니다."
                   : isDailyLimitReached
-                  ? "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
-                  : `무료 플랜은 단어·한자·활용을 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
+                    ? "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
+                    : `무료 플랜은 단어·한자·활용을 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
@@ -1117,7 +1149,7 @@ export default function KatsuyouPage() {
             <button
               type="button"
               onClick={makeNewQuiz}
-              disabled={isDailyLimitReached}
+              disabled={!reviewMode && isDailyLimitReached}
               className={
                 isDailyLimitReached
                   ? "rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
@@ -1127,8 +1159,8 @@ export default function KatsuyouPage() {
               {reviewMode
                 ? "일반 활용 문제로 돌아가기"
                 : isDailyLimitReached
-                ? "오늘 이용 완료"
-                : "🔄 새문제(랜덤 10문항)"}
+                  ? "오늘 이용 완료"
+                  : "🔄 새문제(랜덤 10문항)"}
             </button>
             <button
               type="button"
@@ -1173,7 +1205,7 @@ export default function KatsuyouPage() {
           </div>
         ) : null}
 
-        {!isDailyLimitReached && questions.length > 0 ? (
+        {(reviewMode || !isDailyLimitReached) && questions.length > 0 ? (
           <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
             {audioError ? (
               <p className="mb-4 text-sm text-red-500">{audioError}</p>
@@ -1241,8 +1273,8 @@ export default function KatsuyouPage() {
                                 isCorrectChoice
                                   ? "font-semibold text-green-600"
                                   : isWrongChoice
-                                  ? "font-semibold text-red-600"
-                                  : ""
+                                    ? "font-semibold text-red-600"
+                                    : ""
                               }
                             >
                               <span lang="ja" style={JA_FONT_STYLE}>
@@ -1261,8 +1293,8 @@ export default function KatsuyouPage() {
                             isRight
                               ? "text-sm font-semibold text-green-600"
                               : isWrong
-                              ? "text-sm font-semibold text-red-600"
-                              : "text-sm text-gray-500"
+                                ? "text-sm font-semibold text-red-600"
+                                : "text-sm text-gray-500"
                           }
                         >
                           {isRight ? "정답입니다." : "오답입니다."}
@@ -1456,22 +1488,20 @@ export default function KatsuyouPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${
-              isDailyLimitReached
-                ? "border-red-200 bg-red-50"
-                : "border-gray-300 bg-white"
-            }`}
+            className={`mt-6 rounded-2xl border p-5 ${isDailyLimitReached
+              ? "border-red-200 bg-red-50"
+              : "border-gray-300 bg-white"
+              }`}
           >
             <p
-              className={`text-sm ${
-                isDailyLimitReached ? "text-red-700" : "text-gray-500"
-              }`}
+              className={`text-sm ${isDailyLimitReached ? "text-red-700" : "text-gray-500"
+                }`}
             >
               {isDailyLimitReached
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : reviewMode
-                ? "선택한 오답 문제를 찾지 못했습니다."
-                : "이 조건은 거의 정복했어요. 다른 품사나 방향으로 넘어가 보세요."}
+                  ? "선택한 오답 문제를 찾지 못했습니다."
+                  : "이 조건은 거의 정복했어요. 다른 품사나 방향으로 넘어가 보세요."}
             </p>
           </div>
         )}
@@ -1503,8 +1533,8 @@ export default function KatsuyouPage() {
                 {reviewMode
                   ? "일반 활용 문제로 돌아가기"
                   : !reviewMode && isDailyLimitReached
-                  ? "오늘 이용 완료"
-                  : "같은 조건으로 다음 10문항"}
+                    ? "오늘 이용 완료"
+                    : "같은 조건으로 다음 10문항"}
               </button>
 
               {completionWrongCount > 0 ? (
