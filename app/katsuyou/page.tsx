@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { hasSeenHomeToday } from "@/lib/home-gate";
 import { supabase } from "@/lib/supabase";
-import { fetchTodayBasicQuizSetCount, saveQuizAttempt } from "@/lib/attempts";
+import { saveQuizAttempt } from "@/lib/attempts";
 import type {
   KatsuyouPos,
   KatsuyouQType,
@@ -17,7 +17,6 @@ import { buildKatsuyouAttemptPayload } from "@/lib/katsuyou-payload";
 import {
   hasPlan,
   isPaidPlan,
-  normalizePlan,
   type PlanCode,
 } from "@/lib/plans";
 import {
@@ -28,6 +27,10 @@ import {
   saveDailyState,
   todayKST,
 } from "@/lib/progress";
+import {
+  loadBasicPlanAndUsage,
+  writeTodayUsageCache,
+} from "@/lib/basic-usage";
 
 const POS_OPTIONS: Array<{ value: KatsuyouPos; label: string }> = [
   { value: "i_adj", label: "い형용사" },
@@ -73,31 +76,6 @@ function posLabel(pos: KatsuyouPos): string {
       return "동사";
     default:
       return pos;
-  }
-}
-
-function todayUsageCacheKey(userId: string) {
-  return `katsuyou-today-usage:${userId}:${todayKST()}`;
-}
-
-function readTodayUsageCache(userId: string): number | null {
-  try {
-    if (typeof window === "undefined") return null;
-    const raw = window.localStorage.getItem(todayUsageCacheKey(userId));
-    if (!raw) return null;
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeTodayUsageCache(userId: string, value: number) {
-  try {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(todayUsageCacheKey(userId), String(value));
-  } catch {
-    // noop
   }
 }
 
@@ -283,66 +261,22 @@ export default function KatsuyouPage() {
   }, []);
 
   useEffect(() => {
-    const loadPlanAndUsage = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+    const initPlanAndUsage = async () => {
+      const result = await loadBasicPlanAndUsage({
+        appKey: "katsuyou",
+        todayKey: todayKST(),
+        dailyFreeSetLimit: DAILY_FREE_SET_LIMIT,
+        limitReachedMessageWithUpgrade:
+          "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다.",
+      });
 
-        const user = session?.user;
-        if (!user) {
-          setUserPlan("free");
-          setIsAdminUser(false);
-          setTodayWordKanjiSets(0);
-          setLimitMessage("");
-          return;
-        }
-
-        const { data: profileRow, error: profileError } = await supabase
-          .from("profiles")
-          .select("plan, is_admin")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error(profileError);
-        }
-
-        const plan = normalizePlan(profileRow?.plan);
-        setUserPlan(plan);
-        setIsAdminUser(Boolean(profileRow?.is_admin));
-
-        const cachedUsed = readTodayUsageCache(user.id);
-
-        if (cachedUsed !== null) {
-          setTodayWordKanjiSets(cachedUsed);
-
-          if (!isPaidPlan(plan) && cachedUsed >= DAILY_FREE_SET_LIMIT) {
-            setLimitMessage(
-              "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
-            );
-          } else {
-            setLimitMessage("");
-          }
-        } else {
-          const used = await fetchTodayBasicQuizSetCount(user.id);
-          setTodayWordKanjiSets(used);
-          writeTodayUsageCache(user.id, used);
-
-          if (!isPaidPlan(plan) && used >= DAILY_FREE_SET_LIMIT) {
-            setLimitMessage(
-              "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요. 유료 플랜에서는 제한 없이 이용할 수 있습니다."
-            );
-          } else {
-            setLimitMessage("");
-          }
-        }
-      } catch (error) {
-        console.error(error);
-      }
+      setUserPlan(result.plan);
+      setIsAdminUser(result.isAdminUser);
+      setTodayWordKanjiSets(result.used);
+      setLimitMessage(result.limitMessage);
     };
 
-    void loadPlanAndUsage();
+    void initPlanAndUsage();
   }, []);
 
   useEffect(() => {
@@ -950,7 +884,7 @@ export default function KatsuyouPage() {
       if (!reviewMode) {
         const nextUsed = todayWordKanjiSets + 1;
         setTodayWordKanjiSets(nextUsed);
-        writeTodayUsageCache(user.id, nextUsed);
+        writeTodayUsageCache("katsuyou", user.id, todayKST(), nextUsed);
 
         if (!isPaidPlan(userPlan) && nextUsed >= DAILY_FREE_SET_LIMIT) {
           setLimitMessage(
