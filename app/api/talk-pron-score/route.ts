@@ -507,7 +507,7 @@ export async function POST(req: Request) {
         ? inputFile.name
         : "speech.wav";
 
-    const MIN_DURATION_MS = 3000;
+    const MIN_DURATION_MS = 1000;
     const SILENCE_RMS_THRESHOLD = 0.018;
 
     if (durationMs < MIN_DURATION_MS) {
