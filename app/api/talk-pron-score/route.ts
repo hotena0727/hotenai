@@ -56,7 +56,7 @@ function removeJapaneseSpaces(text: string) {
 
 function normalizeForSurfaceMatch(text: string) {
   return removeJapaneseSpaces(text).replace(
-    /[、。．，,！？!？「」『』（）()$begin:math:display$$end:math:display${}…~"'`´]/g,
+    /[、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g,
     ""
   );
 }
@@ -114,7 +114,7 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
 
   const fillerCount = countOccurrences(
     raw,
-    /(えっと|ええと|あの|その|うーん|えーと|ま|なんか)/g
+    /(えっと|ええと|あの|その|うーん|えーと|なんか)/g
   );
 
   let repeatedCharCount = 0;
@@ -231,12 +231,8 @@ function similarityScoreWithYomiPriority(
   const flow = analyzeSpeechFlow(transcript, actualReading);
 
   if (expectedReading === actualReading) {
-    const cappedPerfect = flow.hasFlowIssue
-      ? Math.max(95, 100 - flow.penalty)
-      : 100;
-
     return {
-      score: cappedPerfect,
+      score: 100,
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
@@ -524,9 +520,8 @@ export async function POST(req: Request) {
 
     return Response.json(
       {
-        error: `[서버 내부 오류] ${
-          message || "말하기 점수를 계산하지 못했습니다."
-        }`,
+        error: `[서버 내부 오류] ${message || "말하기 점수를 계산하지 못했습니다."
+          }`,
       },
       { status: 500 }
     );
