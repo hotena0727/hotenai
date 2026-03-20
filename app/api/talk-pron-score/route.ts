@@ -175,7 +175,7 @@ function buildActualReadingWithYomiPriority(
   if (answerYomi) {
     return {
       actualReading: transcriptReading,
-      adoptedExpectedYomi: rawSurfaceScore >= 90,
+      adoptedExpectedYomi: rawSurfaceScore >= 80,
       surfaceScore: rawSurfaceScore,
     };
   }
@@ -531,9 +531,8 @@ export async function POST(req: Request) {
 
     return Response.json(
       {
-        error: `[서버 내부 오류] ${
-          message || "말하기 점수를 계산하지 못했습니다."
-        }`,
+        error: `[서버 내부 오류] ${message || "말하기 점수를 계산하지 못했습니다."
+          }`,
       },
       { status: 500 }
     );
