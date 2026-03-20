@@ -41,6 +41,7 @@ function normJpLoose(text: string) {
 function replaceCommonVariants(text: string) {
   return normJpLoose(text)
     .replace(/ふいんき/g, "ふんいき")
+    .replace(/কে/g, "け")
     .replace(/を/g, "お");
 }
 
@@ -97,7 +98,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     /(えっと|ええと|あの|その|うーん|えーと|ま|なんか)/g
   );
 
-  // 같은 글자 연속 반복: たたぶん, そそう  같은 형태
   let repeatedCharCount = 0;
   for (let i = 1; i < norm.length; i += 1) {
     if (norm[i] === norm[i - 1]) {
@@ -105,7 +105,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
-  // 1~2글자 토막 반복 탐지
   let repeatedFragmentCount = 0;
   for (let size = 1; size <= 2; size += 1) {
     for (let i = 0; i + size * 2 <= norm.length; i += 1) {
@@ -117,7 +116,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
-  // raw 기준 같은 토큰 반복
   const rawTokens = raw
     .normalize("NFKC")
     .split(/[\s\u3000、。,.!?！？]+/)
@@ -167,7 +165,6 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
 
   const flow = analyzeSpeechFlow(a, aRead);
 
-  // 발음 자체는 맞더라도 더듬음/반복이 있으면 100점 제한
   if (aRead && bRead && aRead === bRead) {
     const cappedPerfect = flow.hasFlowIssue
       ? Math.max(88, 100 - flow.penalty)
@@ -223,6 +220,26 @@ function getFirstDiffInfo(expected: string, actual: string) {
   }
 
   return null;
+}
+
+function buildActualReading(
+  transcript: string,
+  answerJp: string,
+  answerYomi: string
+) {
+  const transcriptLoose = normJpLoose(transcript);
+  const answerJpLoose = normJpLoose(answerJp);
+
+  const jpCloseness = scoreByDistance(transcriptLoose, answerJpLoose);
+
+  // 전사 결과가 정답 원문(한자 포함)과 충분히 가깝다면
+  // 실제 읽기는 answer_yomi 기준으로 간주
+  // 예: 私もそうです  ≒  わたしもそうです
+  if (answerYomi && jpCloseness >= 90) {
+    return toReadingLike(answerYomi);
+  }
+
+  return toReadingLike(transcript);
 }
 
 function makeDetailedFeedback(
@@ -430,19 +447,26 @@ export async function POST(req: Request) {
     const scoreAgainstYomi = answerYomi
       ? similarityScore(transcript, answerYomi)
       : 0;
+
     const scoreAgainstJp = similarityScore(transcript, answerJp);
 
-    const score = Math.max(scoreAgainstYomi, scoreAgainstJp);
+    const useYomiBasis = !!answerYomi && scoreAgainstYomi >= scoreAgainstJp;
+    const score = useYomiBasis ? scoreAgainstYomi : scoreAgainstJp;
 
-    const expectedReading = toReadingLike(answerYomi || answerJp);
-    const actualReading = toReadingLike(transcript);
+    const expectedForFeedback = useYomiBasis
+      ? toReadingLike(answerYomi)
+      : normJpLoose(answerJp);
+
+    const actualForFeedback = useYomiBasis
+      ? buildActualReading(transcript, answerJp, answerYomi)
+      : normJpLoose(transcript);
 
     const feedback = makeDetailedFeedback(
       score,
       answerJp,
       transcript,
-      expectedReading,
-      actualReading
+      expectedForFeedback,
+      actualForFeedback
     );
 
     return Response.json({
@@ -450,6 +474,7 @@ export async function POST(req: Request) {
       score,
       feedback,
       model: TRANSCRIBE_MODEL,
+      basis: useYomiBasis ? "yomi" : "jp",
     });
   } catch (error) {
     console.error("talk-pron-score error:", error);
