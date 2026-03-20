@@ -216,7 +216,7 @@ function buildActualReadingWithYomiPriority(
 
     const shouldAdoptExpectedYomi =
       hasKanji(transcript) &&
-      rawSurfaceScore >= 70 &&
+      rawSurfaceScore >= 96 &&
       !hasCriticalMismatch;
 
     return {
