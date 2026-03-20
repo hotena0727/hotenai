@@ -97,6 +97,7 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     /(えっと|ええと|あの|その|うーん|えーと|ま|なんか)/g
   );
 
+  // 같은 글자 연속 반복: たたぶん, そそう  같은 형태
   let repeatedCharCount = 0;
   for (let i = 1; i < norm.length; i += 1) {
     if (norm[i] === norm[i - 1]) {
@@ -104,6 +105,7 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
+  // 1~2글자 토막 반복 탐지
   let repeatedFragmentCount = 0;
   for (let size = 1; size <= 2; size += 1) {
     for (let i = 0; i + size * 2 <= norm.length; i += 1) {
@@ -115,6 +117,7 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
+  // raw 기준 같은 토큰 반복
   const rawTokens = raw
     .normalize("NFKC")
     .split(/[\s\u3000、。,.!?！？]+/)
@@ -164,6 +167,7 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
 
   const flow = analyzeSpeechFlow(a, aRead);
 
+  // 발음 자체는 맞더라도 더듬음/반복이 있으면 100점 제한
   if (aRead && bRead && aRead === bRead) {
     const cappedPerfect = flow.hasFlowIssue
       ? Math.max(88, 100 - flow.penalty)
@@ -197,133 +201,6 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
   return weighted < floorToZero
     ? 0
     : Math.max(0, Math.min(100, weighted));
-}
-
-function isKanaChar(ch: string) {
-  return /[ぁ-んァ-ンー]/.test(ch);
-}
-
-function normalizeKanaOnly(text: string) {
-  return kataToHira(String(text || "").normalize("NFKC"));
-}
-
-function splitByKanaRuns(text: string) {
-  const chars = Array.from(String(text || ""));
-  const parts: { text: string; isKana: boolean }[] = [];
-
-  for (const ch of chars) {
-    const isKana = isKanaChar(ch);
-    const last = parts[parts.length - 1];
-    if (last && last.isKana === isKana) {
-      last.text += ch;
-    } else {
-      parts.push({ text: ch, isKana });
-    }
-  }
-
-  return parts;
-}
-
-function buildAnswerReadingMap(answerJp: string, answerYomi: string) {
-  const parts = splitByKanaRuns(answerJp).filter((p) => p.text.trim() !== "");
-  const yomi = normalizeKanaOnly(answerYomi);
-  const mapped: { jp: string; reading: string; isKana: boolean }[] = [];
-
-  let cursor = 0;
-
-  for (let i = 0; i < parts.length; i += 1) {
-    const cur = parts[i];
-
-    if (cur.isKana) {
-      const kana = normalizeKanaOnly(cur.text);
-      const idx = yomi.indexOf(kana, cursor);
-
-      if (idx >= 0) {
-        if (
-          idx > cursor &&
-          mapped.length > 0 &&
-          !mapped[mapped.length - 1].isKana
-        ) {
-          mapped[mapped.length - 1].reading += yomi.slice(cursor, idx);
-        }
-        mapped.push({ jp: cur.text, reading: kana, isKana: true });
-        cursor = idx + kana.length;
-      } else {
-        mapped.push({ jp: cur.text, reading: kana, isKana: true });
-      }
-      continue;
-    }
-
-    const nextKanaPart = parts.slice(i + 1).find((p) => p.isKana);
-    if (!nextKanaPart) {
-      mapped.push({
-        jp: cur.text,
-        reading: yomi.slice(cursor),
-        isKana: false,
-      });
-      cursor = yomi.length;
-      continue;
-    }
-
-    const nextKana = normalizeKanaOnly(nextKanaPart.text);
-    const nextIdx = yomi.indexOf(nextKana, cursor);
-
-    if (nextIdx >= 0) {
-      mapped.push({
-        jp: cur.text,
-        reading: yomi.slice(cursor, nextIdx),
-        isKana: false,
-      });
-      cursor = nextIdx;
-    } else {
-      mapped.push({
-        jp: cur.text,
-        reading: "",
-        isKana: false,
-      });
-    }
-  }
-
-  return mapped;
-}
-
-function escapeRegExp(text: string) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function replaceAllSafe(text: string, search: string, replacement: string) {
-  if (!search) return text;
-  return text.replace(new RegExp(escapeRegExp(search), "g"), replacement);
-}
-
-function projectTranscriptToReading(
-  transcript: string,
-  answerJp: string,
-  answerYomi: string
-) {
-  if (!answerYomi) return toReadingLike(transcript);
-
-  const answerMap = buildAnswerReadingMap(answerJp, answerYomi);
-  if (!answerMap.length) return toReadingLike(transcript);
-
-  let out = String(transcript || "");
-  let matchedCount = 0;
-
-  for (const item of answerMap) {
-    if (item.isKana) continue;
-    if (!item.jp || !item.reading) continue;
-
-    if (out.includes(item.jp)) {
-      out = replaceAllSafe(out, item.jp, item.reading);
-      matchedCount += 1;
-    }
-  }
-
-  if (matchedCount === 0) {
-    return toReadingLike(transcript);
-  }
-
-  return toReadingLike(out);
 }
 
 function getFirstDiffInfo(expected: string, actual: string) {
@@ -367,6 +244,7 @@ function makeDetailedFeedback(
   }
 
   if (score >= 90) {
+    // 높은 점수대라도 글자 차이가 있으면 그 안내를 우선
     if (diff) {
       return [
         `🎯 좋습니다`,
@@ -555,27 +433,17 @@ export async function POST(req: Request) {
       );
     }
 
-    const useYomiBasis = !!answerYomi;
-
-    const transcriptReadingProjected = useYomiBasis
-      ? projectTranscriptToReading(transcript, answerJp, answerYomi)
-      : toReadingLike(transcript);
-
-    const scoreAgainstYomi = useYomiBasis
-      ? similarityScore(transcriptReadingProjected, answerYomi)
+    const scoreAgainstYomi = answerYomi
+      ? similarityScore(transcript, answerYomi)
       : 0;
 
     const scoreAgainstJp = similarityScore(transcript, answerJp);
 
-    const score = useYomiBasis ? scoreAgainstYomi : scoreAgainstJp;
+    // answer_yomi가 있으면 읽기 기준 점수를 우선 사용
+    const score = answerYomi ? scoreAgainstYomi : scoreAgainstJp;
 
-    const expectedReading = useYomiBasis
-      ? toReadingLike(answerYomi)
-      : normJpLoose(answerJp);
-
-    const actualReading = useYomiBasis
-      ? transcriptReadingProjected
-      : normJpLoose(transcript);
+    const expectedReading = toReadingLike(answerYomi || answerJp);
+    const actualReading = toReadingLike(transcript);
 
     const feedback = makeDetailedFeedback(
       score,
@@ -590,8 +458,8 @@ export async function POST(req: Request) {
       score,
       feedback,
       model: TRANSCRIBE_MODEL,
-      basis: useYomiBasis ? "yomi" : "jp",
-      projected_reading: transcriptReadingProjected,
+      expected_reading: expectedReading,
+      actual_reading: actualReading,
       score_against_yomi: scoreAgainstYomi,
       score_against_jp: scoreAgainstJp,
     });
