@@ -97,7 +97,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     /(えっと|ええと|あの|その|うーん|えーと|ま|なんか)/g
   );
 
-  // 같은 글자 연속 반복: たたぶん, そそう  같은 형태
   let repeatedCharCount = 0;
   for (let i = 1; i < norm.length; i += 1) {
     if (norm[i] === norm[i - 1]) {
@@ -105,7 +104,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
-  // 1~2글자 토막 반복 탐지
   let repeatedFragmentCount = 0;
   for (let size = 1; size <= 2; size += 1) {
     for (let i = 0; i + size * 2 <= norm.length; i += 1) {
@@ -117,7 +115,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
-  // raw 기준 같은 토큰 반복
   const rawTokens = raw
     .normalize("NFKC")
     .split(/[\s\u3000、。,.!?！？]+/)
@@ -167,7 +164,6 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
 
   const flow = analyzeSpeechFlow(a, aRead);
 
-  // 발음 자체는 맞더라도 더듬음/반복이 있으면 100점 제한
   if (aRead && bRead && aRead === bRead) {
     const cappedPerfect = flow.hasFlowIssue
       ? Math.max(88, 100 - flow.penalty)
@@ -207,7 +203,7 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
  * 점수 계산용 transcript만 보정
  * - answer_jp 안에 실제로 등장하는 한자만
  * - answer_yomi 기준 히라가나로 치환
- * - 피드백용 transcript/actualReading은 건드리지 않음
+ * - 피드백용 원문 transcript는 건드리지 않음
  */
 function isKanaChar(ch: string) {
   return /[ぁ-んァ-ンー]/.test(ch);
@@ -383,8 +379,8 @@ function makeDetailedFeedback(
         `🎯 좋습니다`,
         `🗣️ 거의 정확합니다.`,
         `다만 ${diff.index + 1}번째 글자 근처를 한 번 더 확인해 보세요.`,
-        `정답 기준: ${diff.expectedTail}`,
-        `인식 결과: ${diff.actualTail}`,
+        `읽기 기준: ${diff.expectedTail}`,
+        `인식 읽기: ${diff.actualTail}`,
       ].join("\n");
     }
 
@@ -397,8 +393,8 @@ function makeDetailedFeedback(
         `🎯 좋습니다`,
         `🗣️ 큰 흐름은 맞아요.`,
         `${diff.index + 1}번째 글자 근처가 조금 달라요.`,
-        `정답 기준: ${diff.expectedTail}`,
-        `인식 결과: ${diff.actualTail}`,
+        `읽기 기준: ${diff.expectedTail}`,
+        `인식 읽기: ${diff.actualTail}`,
         flow.hasFlowIssue ? `끊김이나 반복도 조금 줄여 보세요.` : ``,
       ]
         .filter(Boolean)
@@ -414,8 +410,8 @@ function makeDetailedFeedback(
         `🎯 조금만 더`,
         `🗣️ 몇 군데가 달라요.`,
         `${diff.index + 1}번째 글자 근처를 다시 들어보세요.`,
-        `정답 기준: ${diff.expectedTail}`,
-        `인식 결과: ${diff.actualTail}`,
+        `읽기 기준: ${diff.expectedTail}`,
+        `인식 읽기: ${diff.actualTail}`,
         flow.hasFlowIssue
           ? `천천히 끊지 말고 한 번에 말하는 것도 의식해 보세요.`
           : ``,
@@ -432,8 +428,8 @@ function makeDetailedFeedback(
       `🎯 천천히 다시`,
       `🗣️ 발음 차이가 조금 큽니다.`,
       `${diff.index + 1}번째 글자 근처부터 다시 또박또박 말해 보세요.`,
-      `정답 기준: ${diff.expectedTail}`,
-      `인식 결과: ${diff.actualTail}`,
+      `읽기 기준: ${diff.expectedTail}`,
+      `인식 읽기: ${diff.actualTail}`,
       flow.hasFlowIssue
         ? `이번에는 중간에 끊지 말고 짧게 한 번에 말해 보세요.`
         : ``,
@@ -552,23 +548,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // 점수 계산용만 보정
     const scoringTranscript = buildScoringTranscript(
       transcript,
       answerJp,
       answerYomi
     );
 
-    // 점수는 보정된 transcript 기준
     const scoreAgainstYomi = answerYomi
       ? similarityScore(scoringTranscript, answerYomi)
       : 0;
     const scoreAgainstJp = similarityScore(scoringTranscript, answerJp);
     const score = answerYomi ? scoreAgainstYomi : scoreAgainstJp;
 
-    // 피드백은 원본 방식 유지
     const expectedReading = toReadingLike(answerYomi || answerJp);
-    const actualReading = toReadingLike(transcript);
+    const actualReading = scoringTranscript;
 
     const feedback = makeDetailedFeedback(
       score,
