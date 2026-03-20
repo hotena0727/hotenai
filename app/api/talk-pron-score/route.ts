@@ -108,32 +108,13 @@ function countOccurrences(text: string, pattern: RegExp) {
   return matches ? matches.length : 0;
 }
 
-function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
+function analyzeSpeechFlow(rawTranscript: string, _normalizedReading: string) {
   const raw = String(rawTranscript || "").trim();
-  const norm = String(normalizedReading || "");
 
   const fillerCount = countOccurrences(
     raw,
     /(えっと|ええと|あの|その|うーん|えーと|なんか)/g
   );
-
-  let repeatedCharCount = 0;
-  for (let i = 1; i < norm.length; i += 1) {
-    if (norm[i] === norm[i - 1]) {
-      repeatedCharCount += 1;
-    }
-  }
-
-  let repeatedFragmentCount = 0;
-  for (let size = 1; size <= 2; size += 1) {
-    for (let i = 0; i + size * 2 <= norm.length; i += 1) {
-      const a = norm.slice(i, i + size);
-      const b = norm.slice(i + size, i + size * 2);
-      if (a && a === b) {
-        repeatedFragmentCount += 1;
-      }
-    }
-  }
 
   const rawTokens = raw
     .normalize("NFKC")
@@ -148,22 +129,14 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
-  const penalty =
-    fillerCount * 4 +
-    repeatedCharCount * 2 +
-    repeatedFragmentCount * 4 +
-    repeatedTokenCount * 6;
+  const penalty = fillerCount * 4 + repeatedTokenCount * 6;
 
-  const hasFlowIssue =
-    fillerCount > 0 ||
-    repeatedCharCount > 0 ||
-    repeatedFragmentCount > 0 ||
-    repeatedTokenCount > 0;
+  const hasFlowIssue = fillerCount > 0 || repeatedTokenCount > 0;
 
   return {
     fillerCount,
-    repeatedCharCount,
-    repeatedFragmentCount,
+    repeatedCharCount: 0,
+    repeatedFragmentCount: 0,
     repeatedTokenCount,
     penalty,
     hasFlowIssue,
