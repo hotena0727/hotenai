@@ -2447,23 +2447,25 @@ export default function TalkPage() {
                   </div>
                 )}
 
-                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={handleRewardComplete}
-                    className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
-                  >
-                    ✅ 다 했어요 (보상 받기)
-                  </button>
+                {!showRewardCard ? (
+                  <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={handleRewardComplete}
+                      className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
+                    >
+                      ✅ 다 했어요 (보상 받기)
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={handleSkipNext}
-                    className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
-                  >
-                    ➡️ 다음 문제로 (보상 없이)
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={handleSkipNext}
+                      className="rounded-2xl border border-gray-300 px-5 py-4 text-lg font-semibold"
+                    >
+                      ➡️ 다음 문제로 (보상 없이)
+                    </button>
+                  </div>
+                ) : null}
 
                 {showPronOnlyNotice ? (
                   <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-[15px] font-medium text-yellow-800">
@@ -2489,12 +2491,17 @@ export default function TalkPage() {
                   fallback="말하기 완료 보상"
                 />
 
-                <div className="mt-5 rounded-2xl bg-green-50 px-5 py-5 text-xl font-semibold text-green-700">
-                  +2 XP 🔊 (말하기 완료 보상)
+                <div className="mt-5 rounded-2xl bg-green-50 px-5 py-5">
+                  <p className="text-lg font-semibold text-green-700">
+                    🎉 발음 100점!
+                  </p>
+                  <p className="mt-2 text-2xl font-bold text-green-700">
+                    +2 XP 🔊 획득
+                  </p>
                 </div>
 
-                <p className="mt-5 text-lg text-gray-500">
-                  👇 아래 버튼을 누르면 다음 문제로 넘어갑니다.
+                <p className="mt-5 text-base text-gray-500">
+                  보상을 받고 다음 문제로 넘어갑니다.
                 </p>
 
                 <button
