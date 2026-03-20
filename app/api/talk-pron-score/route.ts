@@ -318,14 +318,10 @@ function similarityScoreWithYomiPriority(
   const slow = estimateSlowSpeechPenalty(durationMs, expectedReading);
 
   if (expectedReading === actualReading) {
-    const totalPenalty = flow.penalty + slow.penalty;
-    const score =
-      flow.hasFlowIssue || slow.isSlow
-        ? Math.max(80, 100 - totalPenalty)
-        : 100;
+    const hasOnlyMinorFlowIssue = flow.hasFlowIssue && flow.penalty <= 3;
 
     return {
-      score,
+      score: hasOnlyMinorFlowIssue ? 97 : 100,
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
