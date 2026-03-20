@@ -517,12 +517,15 @@ export async function POST(req: Request) {
       durationMs
     );
 
+    const slow = estimateSlowSpeechPenalty(durationMs, judged.expectedReading);
+
     const feedback = makeDetailedFeedback(
       judged.score,
       answerJp,
       transcript,
       judged.expectedReading,
       judged.actualReading,
+      slow,
       judged.adoptedExpectedYomi
     );
 
