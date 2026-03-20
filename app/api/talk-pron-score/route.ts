@@ -183,11 +183,14 @@ function buildActualReadingWithYomiPriority(
 
   if (answerYomi) {
     const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
+    const readingScore = scoreByDistance(transcriptReading, expectedReading);
 
     const shouldAdoptExpectedYomi =
-      hasKanji(transcript) &&
-      rawSurfaceScore >= 70 &&
-      !hasCriticalMismatch;
+      !hasCriticalMismatch &&
+      (
+        (hasKanji(transcript) && rawSurfaceScore >= 70) ||
+        readingScore >= 96
+      );
 
     return {
       actualReading: shouldAdoptExpectedYomi
