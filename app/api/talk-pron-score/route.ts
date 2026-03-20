@@ -236,7 +236,7 @@ function similarityScoreWithYomiPriority(
     const totalPenalty = flow.penalty + slow.penalty;
     const score =
       flow.hasFlowIssue || slow.isSlow
-        ? Math.max(85, 100 - totalPenalty)
+        ? Math.max(80, 100 - totalPenalty)
         : 100;
 
     return {
@@ -341,14 +341,14 @@ function estimateSlowSpeechPenalty(
 
   let penalty = 0;
 
-  if (cps < 1.6) {
+  if (cps < 1.8) {
+    penalty = 18;
+  } else if (cps < 2.2) {
     penalty = 12;
-  } else if (cps < 2.0) {
+  } else if (cps < 2.6) {
     penalty = 8;
-  } else if (cps < 2.4) {
-    penalty = 5;
-  } else if (cps < 2.8) {
-    penalty = 2;
+  } else if (cps < 3.0) {
+    penalty = 4;
   }
 
   return {
