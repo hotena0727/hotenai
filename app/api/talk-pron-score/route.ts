@@ -203,20 +203,6 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
     : Math.max(0, Math.min(100, weighted));
 }
 
-/**
- * answer_jp + answer_yomi를 이용해
- * transcript 안에 들어온 "정답 문장에 포함된 한자"만
- * 해당 히라가나 읽기로 치환한다.
- *
- * 예)
- * answer_jp   = 私もそうです
- * answer_yomi = わたしもそうです
- * transcript  = 私もそうです
- * 결과        = わたしもそうです
- *
- * 사용자가 전혀 다른 단어를 말한 경우,
- * answer_jp에 없는 다른 단어는 그대로 남는다.
- */
 function isKanaChar(ch: string) {
   return /[ぁ-んァ-ンー]/.test(ch);
 }
