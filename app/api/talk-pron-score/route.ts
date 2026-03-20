@@ -48,6 +48,19 @@ function toReadingLike(text: string) {
   return replaceCommonVariants(text);
 }
 
+function removeJapaneseSpaces(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/[\s\u3000]+/g, "");
+}
+
+function normalizeForSurfaceMatch(text: string) {
+  return removeJapaneseSpaces(text).replace(
+    /[、。．，,！？!？「」『』（）()$begin:math:display$$end:math:display${}…~"'`´]/g,
+    ""
+  );
+}
+
 function bigrams(s: string) {
   const out = new Set<string>();
   for (let i = 0; i < s.length - 1; i += 1) {
@@ -81,6 +94,13 @@ function scoreByDistance(a: string, b: string) {
   if (!a || !b) return 0;
   const dist = levenshtein(a, b);
   return 100 * (1 - dist / Math.max(a.length, b.length, 1));
+}
+
+function surfaceSimilarity(a: string, b: string) {
+  const aa = normalizeForSurfaceMatch(a);
+  const bb = normalizeForSurfaceMatch(b);
+  if (!aa || !bb) return 0;
+  return scoreByDistance(aa, bb);
 }
 
 function countOccurrences(text: string, pattern: RegExp) {
@@ -128,11 +148,12 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
+  // 말해보는 경험 중심이므로 감점은 약하게
   const penalty =
-    fillerCount * 4 +
-    repeatedCharCount * 3 +
-    repeatedFragmentCount * 4 +
-    repeatedTokenCount * 8;
+    fillerCount * 2 +
+    repeatedCharCount * 1 +
+    repeatedFragmentCount * 2 +
+    repeatedTokenCount * 4;
 
   const hasFlowIssue =
     fillerCount > 0 ||
@@ -150,178 +171,128 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
   };
 }
 
-function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
-  const aStrict = normJp(a);
-  const bStrict = normJp(b);
-
-  if (!aStrict || !bStrict) return 0;
-
-  const aLoose = normJpLoose(a);
-  const bLoose = normJpLoose(b);
-
-  const aRead = toReadingLike(a);
-  const bRead = toReadingLike(b);
-
-  const flow = analyzeSpeechFlow(a, aRead);
-
-  if (aRead && bRead && aRead === bRead) {
-    const cappedPerfect = flow.hasFlowIssue
-      ? Math.max(88, 100 - flow.penalty)
-      : 100;
-    return cappedPerfect;
-  }
-
-  const bb = bigrams(bRead);
-  if (bb.size > 0) {
-    const overlap =
-      [...bigrams(aRead)].filter((item) => bb.has(item)).length /
-      Math.max(1, bb.size);
-
-    if (overlap < gate) return 0;
-  }
-
-  const scoreStrict = scoreByDistance(aStrict, bStrict);
-  const scoreLoose = scoreByDistance(aLoose, bLoose);
-  const scoreRead = scoreByDistance(aRead, bRead);
-
-  let weighted = Math.round(
-    scoreStrict * 0.05 + scoreLoose * 0.1 + scoreRead * 0.85
-  );
-
-  weighted -= flow.penalty;
-
-  if (flow.hasFlowIssue && weighted >= 100) {
-    weighted = 96;
-  }
-
-  return weighted < floorToZero
-    ? 0
-    : Math.max(0, Math.min(100, weighted));
+function buildExpectedReading(answerJp: string, answerYomi: string) {
+  return toReadingLike(answerYomi || answerJp);
 }
 
-/**
- * 점수 계산용 transcript만 보정
- * - answer_jp 안에 실제로 등장하는 한자만
- * - answer_yomi 기준 히라가나로 치환
- * - 피드백용 원문 transcript는 건드리지 않음
- */
-function isKanaChar(ch: string) {
-  return /[ぁ-んァ-ンー]/.test(ch);
-}
-
-function normalizeKanaOnly(text: string) {
-  return kataToHira(String(text || "").normalize("NFKC"));
-}
-
-function splitByKanaRuns(text: string) {
-  const chars = Array.from(String(text || ""));
-  const parts: { text: string; isKana: boolean }[] = [];
-
-  for (const ch of chars) {
-    const isKana = isKanaChar(ch);
-    const last = parts[parts.length - 1];
-    if (last && last.isKana === isKana) {
-      last.text += ch;
-    } else {
-      parts.push({ text: ch, isKana });
-    }
-  }
-
-  return parts;
-}
-
-function buildAnswerReadingMap(answerJp: string, answerYomi: string) {
-  const parts = splitByKanaRuns(answerJp).filter((p) => p.text.trim() !== "");
-  const yomi = normalizeKanaOnly(answerYomi);
-  const mapped: { jp: string; reading: string; isKana: boolean }[] = [];
-
-  let cursor = 0;
-
-  for (let i = 0; i < parts.length; i += 1) {
-    const cur = parts[i];
-
-    if (cur.isKana) {
-      const kana = normalizeKanaOnly(cur.text);
-      const idx = yomi.indexOf(kana, cursor);
-
-      if (idx >= 0) {
-        if (
-          idx > cursor &&
-          mapped.length > 0 &&
-          !mapped[mapped.length - 1].isKana
-        ) {
-          mapped[mapped.length - 1].reading += yomi.slice(cursor, idx);
-        }
-        mapped.push({ jp: cur.text, reading: kana, isKana: true });
-        cursor = idx + kana.length;
-      } else {
-        mapped.push({ jp: cur.text, reading: kana, isKana: true });
-      }
-      continue;
-    }
-
-    const nextKanaPart = parts.slice(i + 1).find((p) => p.isKana);
-    if (!nextKanaPart) {
-      mapped.push({
-        jp: cur.text,
-        reading: yomi.slice(cursor),
-        isKana: false,
-      });
-      cursor = yomi.length;
-      continue;
-    }
-
-    const nextKana = normalizeKanaOnly(nextKanaPart.text);
-    const nextIdx = yomi.indexOf(nextKana, cursor);
-
-    if (nextIdx >= 0) {
-      mapped.push({
-        jp: cur.text,
-        reading: yomi.slice(cursor, nextIdx),
-        isKana: false,
-      });
-      cursor = nextIdx;
-    } else {
-      mapped.push({
-        jp: cur.text,
-        reading: "",
-        isKana: false,
-      });
-    }
-  }
-
-  return mapped;
-}
-
-function escapeRegExp(text: string) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function replaceAllSafe(text: string, search: string, replacement: string) {
-  if (!search) return text;
-  return text.replace(new RegExp(escapeRegExp(search), "g"), replacement);
-}
-
-function buildScoringTranscript(
+function buildActualReadingWithYomiPriority(
   transcript: string,
   answerJp: string,
   answerYomi: string
 ) {
-  if (!answerYomi) return toReadingLike(transcript);
+  const expectedReading = buildExpectedReading(answerJp, answerYomi);
 
-  const answerMap = buildAnswerReadingMap(answerJp, answerYomi);
-  let out = String(transcript || "");
+  if (!transcript) {
+    return {
+      actualReading: "",
+      adoptedExpectedYomi: false,
+      surfaceScore: 0,
+    };
+  }
 
-  for (const item of answerMap) {
-    if (item.isKana) continue;
-    if (!item.jp || !item.reading) continue;
+  const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
 
-    if (out.includes(item.jp)) {
-      out = replaceAllSafe(out, item.jp, item.reading);
+  // transcript가 answer_jp와 거의 같으면
+  // 한자 표기라도 answer_yomi를 실제 읽기로 간주
+  if (answerYomi && rawSurfaceScore >= 92) {
+    return {
+      actualReading: expectedReading,
+      adoptedExpectedYomi: true,
+      surfaceScore: rawSurfaceScore,
+    };
+  }
+
+  return {
+    actualReading: toReadingLike(transcript),
+    adoptedExpectedYomi: false,
+    surfaceScore: rawSurfaceScore,
+  };
+}
+
+function similarityScoreWithYomiPriority(
+  transcript: string,
+  answerJp: string,
+  answerYomi: string,
+  gate = 0.12,
+  floorToZero = 10
+) {
+  const expectedReading = buildExpectedReading(answerJp, answerYomi);
+
+  const { actualReading, adoptedExpectedYomi, surfaceScore } =
+    buildActualReadingWithYomiPriority(transcript, answerJp, answerYomi);
+
+  if (!expectedReading || !actualReading) {
+    return {
+      score: 0,
+      expectedReading,
+      actualReading,
+      adoptedExpectedYomi,
+      surfaceScore,
+    };
+  }
+
+  const flow = analyzeSpeechFlow(transcript, actualReading);
+
+  if (expectedReading === actualReading) {
+    const cappedPerfect = flow.hasFlowIssue
+      ? Math.max(95, 100 - flow.penalty)
+      : 100;
+
+    return {
+      score: cappedPerfect,
+      expectedReading,
+      actualReading,
+      adoptedExpectedYomi,
+      surfaceScore,
+    };
+  }
+
+  const bb = bigrams(expectedReading);
+  if (bb.size > 0) {
+    const overlap =
+      [...bigrams(actualReading)].filter((item) => bb.has(item)).length /
+      Math.max(1, bb.size);
+
+    if (overlap < gate) {
+      return {
+        score: 35,
+        expectedReading,
+        actualReading,
+        adoptedExpectedYomi,
+        surfaceScore,
+      };
     }
   }
 
-  return toReadingLike(out);
+  const scoreRead = scoreByDistance(actualReading, expectedReading);
+
+  // 후한 판정: reading 유사도를 거의 그대로 반영
+  let weighted = Math.round(scoreRead);
+
+  // 정답 표면과 꽤 비슷하면 약간 보정
+  if (surfaceScore >= 85) {
+    weighted += 4;
+  }
+
+  weighted -= flow.penalty;
+
+  if (flow.hasFlowIssue && weighted >= 100) {
+    weighted = 97;
+  }
+
+  // 너무 낮게 잘 안 떨어지도록 완화
+  const finalScore =
+    weighted < floorToZero
+      ? 35
+      : Math.max(35, Math.min(100, weighted));
+
+  return {
+    score: finalScore,
+    expectedReading,
+    actualReading,
+    adoptedExpectedYomi,
+    surfaceScore,
+  };
 }
 
 function getFirstDiffInfo(expected: string, actual: string) {
@@ -351,94 +322,76 @@ function makeDetailedFeedback(
   answer: string,
   transcript: string,
   expectedReading: string,
-  actualReading: string
+  actualReading: string,
+  adoptedExpectedYomi = false
 ) {
   const diff = getFirstDiffInfo(expectedReading, actualReading);
   const flow = analyzeSpeechFlow(transcript, actualReading);
 
-  const flowComment = flow.hasFlowIssue
-    ? `\n💡 이번에는 끊지 말고 한 호흡으로 더 자연스럽게 말해 보세요.`
+  const yomiGuideComment = adoptedExpectedYomi
+    ? `\n📝 한자 표기로 인식됐지만, 발음은 맞게 판단했어요.`
     : "";
 
-  if (score >= 100) {
-    return `🎯 아주 좋습니다\n🗣️ ${answer} 를 정확하고 자연스럽게 말했어요.`;
+  const flowComment = flow.hasFlowIssue
+    ? `\n💡 이번에는 조금 더 끊지 않고 자연스럽게 이어서 말해 보세요.`
+    : "";
+
+  if (score >= 98) {
+    return `🎯 아주 좋습니다\n🗣️ ${answer} 를 정확하고 자연스럽게 말했어요.${yomiGuideComment}`;
   }
 
   if (score >= 90) {
-    if (flow.hasFlowIssue && !diff) {
-      return [
-        `🎯 좋습니다`,
-        `🗣️ 발음 자체는 거의 정확합니다.`,
-        `다만 조금 끊기거나 반복된 부분이 있었어요.`,
-        `한 번에 자연스럽게 이어서 말하면 100점에 더 가까워집니다.`,
-      ].join("\n");
-    }
+    return [
+      `🎯 좋습니다`,
+      `🗣️ 거의 정확합니다.`,
+      `지금처럼 말해도 충분히 좋아요.`,
+      `한 번만 더 또렷하고 자연스럽게 이어서 말해 보세요.${yomiGuideComment}${flowComment}`,
+    ].join("\n");
+  }
 
+  if (score >= 80) {
     if (diff) {
       return [
         `🎯 좋습니다`,
-        `🗣️ 거의 정확합니다.`,
-        `다만 ${diff.index + 1}번째 글자 근처를 한 번 더 확인해 보세요.`,
-        `읽기 기준: ${diff.expectedTail}`,
-        `인식 읽기: ${diff.actualTail}`,
+        `🗣️ 큰 흐름은 잘 맞아요.`,
+        `${diff.index + 1}번째 글자 근처를 한 번만 더 확인해 보세요.`,
+        `정답 기준: ${diff.expectedTail}`,
+        `인식 결과: ${diff.actualTail}`,
+        `전체적으로는 잘 따라오고 있습니다.${yomiGuideComment}${flowComment}`,
       ].join("\n");
     }
 
-    return `🎯 좋습니다\n🗣️ 거의 정확합니다. ${answer} 를 한 번만 더 또렷하게 말해 보세요.${flowComment}`;
+    return [
+      `🎯 좋습니다`,
+      `🗣️ 큰 흐름은 맞아요.`,
+      `정답을 보며 한 번 더 자연스럽게 이어서 말해 보세요.${yomiGuideComment}${flowComment}`,
+    ].join("\n");
   }
 
-  if (score >= 75) {
-    if (diff) {
-      return [
-        `🎯 좋습니다`,
-        `🗣️ 큰 흐름은 맞아요.`,
-        `${diff.index + 1}번째 글자 근처가 조금 달라요.`,
-        `읽기 기준: ${diff.expectedTail}`,
-        `인식 읽기: ${diff.actualTail}`,
-        flow.hasFlowIssue ? `끊김이나 반복도 조금 줄여 보세요.` : ``,
-      ]
-        .filter(Boolean)
-        .join("\n");
-    }
-
-    return `🎯 좋습니다\n🗣️ ${transcript || answer} 에서 큰 흐름은 맞아요. 정답을 보며 한 번 더 또렷하고 자연스럽게 말해 보세요.${flowComment}`;
-  }
-
-  if (score >= 50) {
+  if (score >= 65) {
     if (diff) {
       return [
         `🎯 조금만 더`,
-        `🗣️ 몇 군데가 달라요.`,
-        `${diff.index + 1}번째 글자 근처를 다시 들어보세요.`,
-        `읽기 기준: ${diff.expectedTail}`,
-        `인식 읽기: ${diff.actualTail}`,
-        flow.hasFlowIssue
-          ? `천천히 끊지 말고 한 번에 말하는 것도 의식해 보세요.`
-          : ``,
-      ]
-        .filter(Boolean)
-        .join("\n");
+        `🗣️ 잘 말하고 있어요.`,
+        `${diff.index + 1}번째 글자 근처가 조금 달라 보입니다.`,
+        `정답 기준: ${diff.expectedTail}`,
+        `인식 결과: ${diff.actualTail}`,
+        `천천히 한 번 더 따라 말해 보세요.${flowComment}`,
+      ].join("\n");
     }
 
-    return `🎯 조금만 더\n🗣️ ${answer} 와 비슷하지만 몇 군데가 달라요. 정답을 보고 2~3번 따라 말해 보세요.${flowComment}`;
-  }
-
-  if (diff) {
     return [
-      `🎯 천천히 다시`,
-      `🗣️ 발음 차이가 조금 큽니다.`,
-      `${diff.index + 1}번째 글자 근처부터 다시 또박또박 말해 보세요.`,
-      `읽기 기준: ${diff.expectedTail}`,
-      `인식 읽기: ${diff.actualTail}`,
-      flow.hasFlowIssue
-        ? `이번에는 중간에 끊지 말고 짧게 한 번에 말해 보세요.`
-        : ``,
-    ]
-      .filter(Boolean)
-      .join("\n");
+      `🎯 조금만 더`,
+      `🗣️ 전체 흐름은 따라가고 있어요.`,
+      `정답을 보면서 한 번 더 천천히 말해 보세요.${flowComment}`,
+    ].join("\n");
   }
 
-  return `🎯 천천히 다시\n🗣️ ${answer} 를 보고 또박또박, 하지만 끊지 말고 한 번에 말해 보세요.`;
+  return [
+    `🎯 천천히 다시`,
+    `🗣️ 괜찮아요. 지금은 말해보는 것 자체가 중요합니다.`,
+    `정답을 보며 짧게 한 번 더 따라 말해 보세요.${flowComment}`,
+  ].join("\n");
 }
 
 export async function POST(req: Request) {
@@ -484,6 +437,8 @@ export async function POST(req: Request) {
       "가능하면 히라가나 중심으로 전사하세요.",
       "동음이의어 한자가 가능하면 정답 문장에 가까운 표기를 우선하세요.",
       "정답과 같은 발음이면 정답 문장에 가까운 표기를 우선해 주세요.",
+      "이 평가는 사용자가 실제로 말해보는 경험을 돕는 목적입니다.",
+      "정답 읽기와 일치하는 경우, 가능한 한 정답에 가까운 표기를 우선하세요.",
       `정답 문장: ${answerJp}`,
       answerYomi ? `정답 읽기: ${answerYomi}` : "",
     ]
@@ -548,39 +503,36 @@ export async function POST(req: Request) {
       );
     }
 
-    const scoringTranscript = buildScoringTranscript(
+    const judged = similarityScoreWithYomiPriority(
       transcript,
       answerJp,
       answerYomi
     );
 
-    const scoreAgainstYomi = answerYomi
-      ? similarityScore(scoringTranscript, answerYomi)
-      : 0;
-    const scoreAgainstJp = similarityScore(scoringTranscript, answerJp);
-    const score = answerYomi ? scoreAgainstYomi : scoreAgainstJp;
-
-    const expectedReading = toReadingLike(answerYomi || answerJp);
-    const actualReading = scoringTranscript;
+    const score = judged.score;
+    const expectedReading = judged.expectedReading;
+    const actualReading = judged.actualReading;
 
     const feedback = makeDetailedFeedback(
       score,
       answerJp,
       transcript,
       expectedReading,
-      actualReading
+      actualReading,
+      judged.adoptedExpectedYomi
     );
 
     return Response.json({
       transcript,
-      transcript_for_scoring: scoringTranscript,
       score,
       feedback,
       model: TRANSCRIBE_MODEL,
-      expected_reading: expectedReading,
-      actual_reading: actualReading,
-      score_against_yomi: scoreAgainstYomi,
-      score_against_jp: scoreAgainstJp,
+      debug: {
+        expectedReading,
+        actualReading,
+        adoptedExpectedYomi: judged.adoptedExpectedYomi,
+        surfaceScore: judged.surfaceScore,
+      },
     });
   } catch (error) {
     console.error("talk-pron-score error:", error);
