@@ -41,7 +41,6 @@ function normJpLoose(text: string) {
 function replaceCommonVariants(text: string) {
   return normJpLoose(text)
     .replace(/ふいんき/g, "ふんいき")
-    .replace(/কে/g, "け")
     .replace(/を/g, "お");
 }
 
@@ -200,6 +199,124 @@ function similarityScore(a: string, b: string, gate = 0.15, floorToZero = 15) {
     : Math.max(0, Math.min(100, weighted));
 }
 
+function isKanaChar(ch: string) {
+  return /[ぁ-んァ-ンー]/.test(ch);
+}
+
+function normalizeKanaOnly(text: string) {
+  return kataToHira(String(text || "").normalize("NFKC"));
+}
+
+function splitByKanaRuns(text: string) {
+  const chars = Array.from(String(text || ""));
+  const parts: { text: string; isKana: boolean }[] = [];
+
+  for (const ch of chars) {
+    const isKana = isKanaChar(ch);
+    const last = parts[parts.length - 1];
+    if (last && last.isKana === isKana) {
+      last.text += ch;
+    } else {
+      parts.push({ text: ch, isKana });
+    }
+  }
+
+  return parts;
+}
+
+function buildAnswerReadingMap(answerJp: string, answerYomi: string) {
+  const parts = splitByKanaRuns(answerJp).filter((p) => p.text.trim() !== "");
+  const yomi = normalizeKanaOnly(answerYomi);
+  const mapped: { jp: string; reading: string; isKana: boolean }[] = [];
+
+  let cursor = 0;
+
+  for (let i = 0; i < parts.length; i += 1) {
+    const cur = parts[i];
+
+    if (cur.isKana) {
+      const kana = normalizeKanaOnly(cur.text);
+      const idx = yomi.indexOf(kana, cursor);
+
+      if (idx >= 0) {
+        if (
+          idx > cursor &&
+          mapped.length > 0 &&
+          !mapped[mapped.length - 1].isKana
+        ) {
+          mapped[mapped.length - 1].reading += yomi.slice(cursor, idx);
+        }
+        mapped.push({ jp: cur.text, reading: kana, isKana: true });
+        cursor = idx + kana.length;
+      } else {
+        mapped.push({ jp: cur.text, reading: kana, isKana: true });
+      }
+      continue;
+    }
+
+    const nextKanaPart = parts.slice(i + 1).find((p) => p.isKana);
+    if (!nextKanaPart) {
+      mapped.push({
+        jp: cur.text,
+        reading: yomi.slice(cursor),
+        isKana: false,
+      });
+      cursor = yomi.length;
+      continue;
+    }
+
+    const nextKana = normalizeKanaOnly(nextKanaPart.text);
+    const nextIdx = yomi.indexOf(nextKana, cursor);
+
+    if (nextIdx >= 0) {
+      mapped.push({
+        jp: cur.text,
+        reading: yomi.slice(cursor, nextIdx),
+        isKana: false,
+      });
+      cursor = nextIdx;
+    } else {
+      mapped.push({
+        jp: cur.text,
+        reading: "",
+        isKana: false,
+      });
+    }
+  }
+
+  return mapped;
+}
+
+function projectTranscriptToReading(
+  transcript: string,
+  answerJp: string,
+  answerYomi: string
+) {
+  if (!answerYomi) return toReadingLike(transcript);
+
+  const answerMap = buildAnswerReadingMap(answerJp, answerYomi);
+  if (!answerMap.length) return toReadingLike(transcript);
+
+  let out = String(transcript || "");
+  let matchedCount = 0;
+
+  for (const item of answerMap) {
+    if (item.isKana) continue;
+    if (!item.jp || !item.reading) continue;
+
+    if (out.includes(item.jp)) {
+      out = out.replace(item.jp, item.reading);
+      matchedCount += 1;
+    }
+  }
+
+  if (matchedCount === 0) {
+    return toReadingLike(transcript);
+  }
+
+  return toReadingLike(out);
+}
+
 function getFirstDiffInfo(expected: string, actual: string) {
   const a = Array.from(expected);
   const b = Array.from(actual);
@@ -220,26 +337,6 @@ function getFirstDiffInfo(expected: string, actual: string) {
   }
 
   return null;
-}
-
-function buildActualReading(
-  transcript: string,
-  answerJp: string,
-  answerYomi: string
-) {
-  const transcriptLoose = normJpLoose(transcript);
-  const answerJpLoose = normJpLoose(answerJp);
-
-  const jpCloseness = scoreByDistance(transcriptLoose, answerJpLoose);
-
-  // 전사 결과가 정답 원문(한자 포함)과 충분히 가깝다면
-  // 실제 읽기는 answer_yomi 기준으로 간주
-  // 예: 私もそうです  ≒  わたしもそうです
-  if (answerYomi && jpCloseness >= 90) {
-    return toReadingLike(answerYomi);
-  }
-
-  return toReadingLike(transcript);
 }
 
 function makeDetailedFeedback(
@@ -444,8 +541,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const transcriptReadingProjected = answerYomi
+      ? projectTranscriptToReading(transcript, answerJp, answerYomi)
+      : toReadingLike(transcript);
+
     const scoreAgainstYomi = answerYomi
-      ? similarityScore(transcript, answerYomi)
+      ? similarityScore(transcriptReadingProjected, answerYomi)
       : 0;
 
     const scoreAgainstJp = similarityScore(transcript, answerJp);
@@ -458,7 +559,7 @@ export async function POST(req: Request) {
       : normJpLoose(answerJp);
 
     const actualForFeedback = useYomiBasis
-      ? buildActualReading(transcript, answerJp, answerYomi)
+      ? transcriptReadingProjected
       : normJpLoose(transcript);
 
     const feedback = makeDetailedFeedback(
