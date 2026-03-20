@@ -293,6 +293,11 @@ function similarityScoreWithYomiPriority(
   };
 }
 
+function clipShort(text: string, maxLen = 6) {
+  const chars = Array.from(text || "");
+  return chars.slice(0, maxLen).join("");
+}
+
 function getFirstDiffInfo(expected: string, actual: string) {
   const a = Array.from(expected);
   const b = Array.from(actual);
@@ -385,20 +390,25 @@ function makeDetailedFeedback(
     suggestion = "💡 한 번 더 또렷하게 말해 보세요.";
   }
 
-  if (score >= 100) {
-    return [verdict, suggestion].join("\n");
+  if (score === 100) {
+    return {
+      verdict,
+      suggestion,
+      expectedSnippet: "",
+      actualSnippet: "",
+    };
   }
 
-  const expectedSnippet = diff ? diff.expectedTail : expectedReading || "-";
-  const actualSnippet = diff ? diff.actualTail : actualReading || "-";
-
-  return [
+  return {
     verdict,
     suggestion,
-    "",
-    `정답 기준: ${expectedSnippet}`,
-    `인식 결과: ${actualSnippet}`,
-  ].join("\n");
+    expectedSnippet: diff
+      ? clipShort(diff.expectedTail, 6)
+      : clipShort(expectedReading, 6) || "-",
+    actualSnippet: diff
+      ? clipShort(diff.actualTail, 6)
+      : clipShort(actualReading, 6) || "-",
+  };
 }
 
 export async function POST(req: Request) {

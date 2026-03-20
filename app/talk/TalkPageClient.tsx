@@ -361,7 +361,12 @@ export default function TalkPage() {
   const [pronStage, setPronStage] = useState<PronStage>("idle");
   const [pronChecked, setPronChecked] = useState(false);
   const [pronScore, setPronScore] = useState<number | null>(null);
-  const [pronFeedback, setPronFeedback] = useState("");
+  const [pronFeedback, setPronFeedback] = useState<{
+    verdict?: string;
+    suggestion?: string;
+    expectedSnippet?: string;
+    actualSnippet?: string;
+  } | null>(null);
   const [pronTranscript, setPronTranscript] = useState("");
   const [pronDuration, setPronDuration] = useState("00:00");
   const [spokenSentenceCount, setSpokenSentenceCount] = useState(0);
@@ -434,7 +439,7 @@ export default function TalkPage() {
     setPronStage("idle");
     setPronChecked(false);
     setPronScore(null);
-    setPronFeedback("");
+    setPronFeedback(null);
     setPronTranscript("");
     setPronDuration("00:00");
     setPronError("");
@@ -519,7 +524,7 @@ export default function TalkPage() {
       setRewardNoticeRequested(false);
       setPronChecked(false);
       setPronScore(null);
-      setPronFeedback("");
+      setPronFeedback(null);
       setPronTranscript("");
       if (recordedAudioUrl) {
         URL.revokeObjectURL(recordedAudioUrl);
@@ -675,7 +680,7 @@ export default function TalkPage() {
       setPronScoring(true);
       setPronChecked(false);
       setPronScore(null);
-      setPronFeedback("");
+      setPronFeedback(null);
       setPronTranscript("");
       setPronError("");
 
@@ -706,7 +711,7 @@ export default function TalkPage() {
 
       const transcript = String(data?.transcript || "").trim();
       const score = Number(data?.score ?? 0);
-      const feedback = String(data?.feedback || "").trim();
+      const feedback = data?.feedback ?? null;
 
       setPronChecked(true);
       setPronScore(Number.isFinite(score) ? score : 0);
@@ -726,7 +731,7 @@ export default function TalkPage() {
       setPronChecked(false);
       setPronScore(null);
       setPronTranscript("");
-      setPronFeedback("");
+      setPronFeedback(null);
       setPronError(message || "말하기 점수를 계산하지 못했습니다.");
     } finally {
       setPronScoring(false);
@@ -2420,8 +2425,30 @@ export default function TalkPage() {
                     </div>
 
                     {pronFeedback ? (
-                      <div className="whitespace-pre-line text-base leading-7 text-gray-700">
-                        {pronFeedback}
+                      <div className="space-y-2">
+                        {pronFeedback.verdict ? (
+                          <p className="text-emerald-600 font-semibold">
+                            {pronFeedback.verdict}
+                          </p>
+                        ) : null}
+
+                        {pronFeedback.suggestion ? (
+                          <p className="text-blue-600 font-medium">
+                            {pronFeedback.suggestion}
+                          </p>
+                        ) : null}
+
+                        {pronScore !== 100 && pronFeedback.expectedSnippet ? (
+                          <p className="text-gray-800 font-medium">
+                            정답 기준: {pronFeedback.expectedSnippet}
+                          </p>
+                        ) : null}
+
+                        {pronScore !== 100 && pronFeedback.actualSnippet ? (
+                          <p className="text-red-500 font-semibold">
+                            인식 결과: {pronFeedback.actualSnippet}
+                          </p>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
