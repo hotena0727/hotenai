@@ -186,6 +186,21 @@ function hasCriticalTokenMismatch(answerJp: string, transcript: string) {
   return false;
 }
 
+function stripKanaOnly(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/[ぁ-んァ-ンー]/g, "")
+    .replace(/[\s\u3000、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g, "");
+}
+
+function hasSameSkeleton(answerJp: string, transcript: string) {
+  const a = stripKanaOnly(answerJp);
+  const b = stripKanaOnly(transcript);
+
+  if (!a || !b) return false;
+  return a === b;
+}
+
 /**
  * 핵심:
  * - 채점 = reading 기준
@@ -213,11 +228,12 @@ function buildActualReadingWithYomiPriority(
 
   if (answerYomi) {
     const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
+    const sameSkeleton = hasSameSkeleton(answerJp, transcript);
 
     const shouldAdoptExpectedYomi =
       hasKanji(transcript) &&
-      rawSurfaceScore >= 96 &&
-      !hasCriticalMismatch;
+      !hasCriticalMismatch &&
+      (rawSurfaceScore >= 70 || sameSkeleton);
 
     return {
       actualReading: shouldAdoptExpectedYomi
