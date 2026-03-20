@@ -257,6 +257,13 @@ function similarityScoreWithYomiPriority(
   const { actualReading, adoptedExpectedYomi, surfaceScore } =
     buildActualReadingWithYomiPriority(transcript, answerJp, answerYomi);
 
+  const displayAsAnswer =
+    !!answerJp &&
+    !!answerYomi &&
+    (adoptedExpectedYomi || surfaceScore >= 70);
+
+  const displayTranscript = displayAsAnswer ? answerJp : transcript;
+
   if (!expectedReading || !actualReading) {
     return {
       score: 0,
@@ -264,15 +271,13 @@ function similarityScoreWithYomiPriority(
       actualReading,
       adoptedExpectedYomi,
       surfaceScore,
+      displayTranscript,
+      displayAsAnswer,
     };
   }
 
   const flow = analyzeSpeechFlow(transcript, actualReading);
-  const diff = getFirstDiffInfo(expectedReading, actualReading);
-  const slow = estimateSlowSpeechPenalty(
-    Number(Array.from(expectedReading).length) * 450,
-    expectedReading
-  );
+  const slow = estimateSlowSpeechPenalty(durationMs, expectedReading);
 
   if (expectedReading === actualReading) {
     const totalPenalty = flow.penalty + slow.penalty;
@@ -287,6 +292,8 @@ function similarityScoreWithYomiPriority(
       actualReading,
       adoptedExpectedYomi,
       surfaceScore,
+      displayTranscript,
+      displayAsAnswer,
     };
   }
 
@@ -303,31 +310,35 @@ function similarityScoreWithYomiPriority(
         actualReading,
         adoptedExpectedYomi,
         surfaceScore,
+        displayTranscript,
+        displayAsAnswer,
       };
     }
   }
 
-  const scoreRead = scoreByDistance(actualReading, expectedReading);
+const scoreRead = scoreByDistance(actualReading, expectedReading);
 
-  let weighted = Math.round(scoreRead);
-  weighted -= flow.penalty + slow.penalty;
+let weighted = Math.round(scoreRead);
+weighted -= flow.penalty + slow.penalty;
 
-  if (flow.hasFlowIssue && weighted >= 100) {
-    weighted = 97;
-  }
+if (flow.hasFlowIssue && weighted >= 100) {
+  weighted = 97;
+}
 
-  const finalScore =
-    weighted < floorToZero
-      ? 35
-      : Math.max(35, Math.min(100, weighted));
+const finalScore =
+  weighted < floorToZero
+    ? 35
+    : Math.max(35, Math.min(100, weighted));
 
-  return {
-    score: finalScore,
-    expectedReading,
-    actualReading,
-    adoptedExpectedYomi,
-    surfaceScore,
-  };
+return {
+  score: finalScore,
+  expectedReading,
+  actualReading,
+  adoptedExpectedYomi,
+  surfaceScore,
+  displayTranscript,
+  displayAsAnswer,
+};
 }
 
 function clipShort(text: string, maxLen = 6) {
@@ -530,7 +541,9 @@ export async function POST(req: Request) {
     );
 
     return Response.json({
-      transcript,
+      transcript: judged.displayTranscript,
+      rawTranscript: transcript,
+      displayAsAnswer: judged.displayAsAnswer,
       score: judged.score,
       feedback,
       model: TRANSCRIBE_MODEL,
