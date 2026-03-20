@@ -55,7 +55,7 @@ function normalizeForSurfaceMatch(text: string) {
   return String(text || "")
     .normalize("NFKC")
     .replace(/[\s\u3000]+/g, "")
-    .replace(/[、。．，,！？!？「」『』（）()$begin:math:display$$end:math:display${}…~"'`´]/g, "");
+    .replace(/[、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g, "");
 }
 
 function bigrams(s: string) {
@@ -361,8 +361,8 @@ function makeDetailedFeedback(
   actualReading: string,
   _adoptedExpectedYomi = false
 ) {
-  const diff = getFirstDiffInfo(expectedReading, actualReading);
   const flow = analyzeSpeechFlow(transcript, actualReading);
+  const diff = getFirstDiffInfo(expectedReading, actualReading);
 
   let verdict = "";
   if (score >= 98) verdict = "🎯 아주 좋습니다";
@@ -376,30 +376,21 @@ function makeDetailedFeedback(
     suggestion = "💡 정확하고 자연스럽게 말했어요.";
   } else if (flow.hasFlowIssue) {
     suggestion = "💡 문장을 조금 더 끊지 않고 이어서 말해 보세요.";
+  } else if (score >= 90) {
+    suggestion = "💡 조금만 더 또렷하게 말해 보세요.";
+  } else if (score >= 80) {
+    suggestion = "💡 말의 길이와 리듬을 조금만 더 자연스럽게 맞춰 보세요.";
   } else if (diff) {
-    suggestion = `💡 ${diff.index + 1}번째 글자 근처를 한 번 더 확인해 보세요.`;
+    suggestion = "💡 발음을 다시 듣고 한 번 더 따라 해 보세요.";
   } else {
-    suggestion = "💡 한 번 더 또렷하게 말해 보세요.";
-  }
-
-  if (score === 100) {
-    return {
-      verdict,
-      suggestion,
-      expectedSnippet: "",
-      actualSnippet: "",
-    };
+    suggestion = "💡 천천히 다시 듣고 한 번 더 말해 보세요.";
   }
 
   return {
     verdict,
     suggestion,
-    expectedSnippet: diff
-      ? clipShort(diff.expectedTail, 6)
-      : clipShort(expectedReading, 6) || "-",
-    actualSnippet: diff
-      ? clipShort(diff.actualTail, 6)
-      : clipShort(actualReading, 6) || "-",
+    expectedSnippet: "",
+    actualSnippet: "",
   };
 }
 
@@ -540,9 +531,8 @@ export async function POST(req: Request) {
 
     return Response.json(
       {
-        error: `[서버 내부 오류] ${
-          message || "말하기 점수를 계산하지 못했습니다."
-        }`,
+        error: `[서버 내부 오류] ${message || "말하기 점수를 계산하지 못했습니다."
+          }`,
       },
       { status: 500 }
     );

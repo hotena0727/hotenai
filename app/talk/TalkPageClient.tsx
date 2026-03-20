@@ -364,8 +364,6 @@ export default function TalkPage() {
   const [pronFeedback, setPronFeedback] = useState<{
     verdict?: string;
     suggestion?: string;
-    expectedSnippet?: string;
-    actualSnippet?: string;
   } | null>(null);
   const [pronTranscript, setPronTranscript] = useState("");
   const [pronDuration, setPronDuration] = useState("00:00");
@@ -2435,18 +2433,6 @@ export default function TalkPage() {
                         {pronFeedback.suggestion ? (
                           <p className="text-blue-600 font-medium">
                             {pronFeedback.suggestion}
-                          </p>
-                        ) : null}
-
-                        {pronScore !== 100 && pronFeedback.expectedSnippet ? (
-                          <p className="text-gray-800 font-medium">
-                            정답 기준: {pronFeedback.expectedSnippet}
-                          </p>
-                        ) : null}
-
-                        {pronScore !== 100 && pronFeedback.actualSnippet ? (
-                          <p className="text-red-500 font-semibold">
-                            인식 결과: {pronFeedback.actualSnippet}
                           </p>
                         ) : null}
                       </div>
