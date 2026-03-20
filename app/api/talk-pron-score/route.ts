@@ -55,7 +55,7 @@ function normalizeForSurfaceMatch(text: string) {
   return String(text || "")
     .normalize("NFKC")
     .replace(/[\s\u3000]+/g, "")
-    .replace(/[、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g, "");
+    .replace(/[、。．，,！？!？「」『』（）()$begin:math:display$$end:math:display${}…~"'`´]/g, "");
 }
 
 function bigrams(s: string) {
@@ -152,62 +152,6 @@ function buildExpectedReading(answerJp: string, answerYomi: string) {
   return toReadingLike(answerYomi || answerJp);
 }
 
-/**
- * 핵심:
- * - 채점 = reading 기준
- * - 표시 = reading 기준
- * - 한자/히라가나 차이 무시
- *
- * transcript가 한자로 들어오고,
- * answer surface와 어느 정도 유사하면
- * actualReading을 expectedReading으로 보정해서
- * 한자/히라가나 표기 차이로 인한 감점을 막는다.
- */
-function buildActualReadingWithYomiPriority(
-  transcript: string,
-  answerJp: string,
-  answerYomi: string
-) {
-  const expectedReading = buildExpectedReading(answerJp, answerYomi);
-
-  if (!transcript) {
-    return {
-      actualReading: "",
-      adoptedExpectedYomi: false,
-      surfaceScore: 0,
-    };
-  }
-
-  const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
-  const transcriptReading = toReadingLike(transcript);
-
-  if (answerYomi) {
-    const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
-    const readingScore = scoreByDistance(transcriptReading, expectedReading);
-
-    const shouldAdoptExpectedYomi =
-      !hasCriticalMismatch &&
-      (
-        (hasKanji(transcript) && rawSurfaceScore >= 70) ||
-        readingScore >= 96
-      );
-
-    return {
-      actualReading: shouldAdoptExpectedYomi
-        ? expectedReading
-        : transcriptReading,
-      adoptedExpectedYomi: shouldAdoptExpectedYomi,
-      surfaceScore: rawSurfaceScore,
-    };
-  }
-
-  return {
-    actualReading: transcriptReading,
-    adoptedExpectedYomi: false,
-    surfaceScore: rawSurfaceScore,
-  };
-}
-
 function normalizeNumericJapanese(text: string) {
   return String(text || "")
     .normalize("NFKC")
@@ -232,11 +176,7 @@ function hasCriticalTokenMismatch(answerJp: string, transcript: string) {
   const a = extractCriticalTokens(answerJp);
   const b = extractCriticalTokens(transcript);
 
-  // transcript 쪽에서 숫자/기간 토큰을 명확히 못 뽑으면
-  // 괜히 불일치로 보지 말고 그냥 통과
   if (a.length === 0 || b.length === 0) return false;
-
-  // 양쪽 다 숫자 토큰이 분명히 잡혔는데 개수가 다르면 그때만 mismatch
   if (a.length !== b.length) return true;
 
   for (let i = 0; i < a.length; i += 1) {
@@ -244,6 +184,55 @@ function hasCriticalTokenMismatch(answerJp: string, transcript: string) {
   }
 
   return false;
+}
+
+/**
+ * 핵심:
+ * - 채점 = reading 기준
+ * - 표시 = transcript 그대로
+ * - 한자/히라가나 차이만 무시
+ * - 단, 숫자/기간 같은 핵심 토큰이 다르면 yomi 강제채택 금지
+ */
+function buildActualReadingWithYomiPriority(
+  transcript: string,
+  answerJp: string,
+  answerYomi: string
+) {
+  const expectedReading = buildExpectedReading(answerJp, answerYomi);
+
+  if (!transcript) {
+    return {
+      actualReading: "",
+      adoptedExpectedYomi: false,
+      surfaceScore: 0,
+    };
+  }
+
+  const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
+  const transcriptReading = toReadingLike(transcript);
+
+  if (answerYomi) {
+    const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
+
+    const shouldAdoptExpectedYomi =
+      hasKanji(transcript) &&
+      rawSurfaceScore >= 70 &&
+      !hasCriticalMismatch;
+
+    return {
+      actualReading: shouldAdoptExpectedYomi
+        ? expectedReading
+        : transcriptReading,
+      adoptedExpectedYomi: shouldAdoptExpectedYomi,
+      surfaceScore: rawSurfaceScore,
+    };
+  }
+
+  return {
+    actualReading: transcriptReading,
+    adoptedExpectedYomi: false,
+    surfaceScore: rawSurfaceScore,
+  };
 }
 
 function estimateSlowSpeechPenalty(
@@ -283,6 +272,24 @@ function estimateSlowSpeechPenalty(
     cps,
     isSlow: penalty > 0,
   };
+}
+
+function calcAudioRmsFromInt16Pcm(buffer: ArrayBuffer) {
+  const view = new DataView(buffer);
+
+  if (view.byteLength <= 44) return 0;
+
+  let sumSq = 0;
+  let count = 0;
+
+  for (let offset = 44; offset + 1 < view.byteLength; offset += 2) {
+    const sample = view.getInt16(offset, true) / 32768;
+    sumSq += sample * sample;
+    count += 1;
+  }
+
+  if (count === 0) return 0;
+  return Math.sqrt(sumSq / count);
 }
 
 function similarityScoreWithYomiPriority(
@@ -336,7 +343,7 @@ function similarityScoreWithYomiPriority(
 
     if (overlap < gate) {
       return {
-        score: 0,
+        score: 35,
         expectedReading,
         actualReading,
         adoptedExpectedYomi,
@@ -370,11 +377,6 @@ function similarityScoreWithYomiPriority(
     displayTranscript,
     displayAsAnswer,
   };
-}
-
-function clipShort(text: string, maxLen = 6) {
-  const chars = Array.from(text || "");
-  return chars.slice(0, maxLen).join("");
 }
 
 function getFirstDiffInfo(expected: string, actual: string) {
@@ -443,6 +445,22 @@ function makeDetailedFeedback(
   };
 }
 
+function buildSilentResponse(model: string, suggestion: string) {
+  return Response.json({
+    transcript: "",
+    rawTranscript: "",
+    displayAsAnswer: false,
+    score: 0,
+    feedback: {
+      verdict: "🎯 다시 해봐요",
+      suggestion,
+      expectedSnippet: "",
+      actualSnippet: "",
+    },
+    model,
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -482,6 +500,35 @@ export async function POST(req: Request) {
         ? inputFile.name
         : "speech.wav";
 
+    const MIN_DURATION_MS = 500;
+    const SILENCE_RMS_THRESHOLD = 0.008;
+
+    if (durationMs < MIN_DURATION_MS) {
+      return buildSilentResponse(
+        TRANSCRIBE_MODEL,
+        "💡 목소리가 너무 짧게 들어갔어요. 조금 더 또렷하게 말해 보세요."
+      );
+    }
+
+    let audioArrayBuffer: ArrayBuffer;
+    try {
+      audioArrayBuffer = await (inputFile as File).arrayBuffer();
+    } catch {
+      return Response.json(
+        { error: "녹음 파일을 읽지 못했습니다." },
+        { status: 400 }
+      );
+    }
+
+    const rms = calcAudioRmsFromInt16Pcm(audioArrayBuffer);
+
+    if (rms < SILENCE_RMS_THRESHOLD) {
+      return buildSilentResponse(
+        TRANSCRIBE_MODEL,
+        "💡 목소리가 거의 감지되지 않았어요. 마이크를 켜고 조금 더 크게 말해 보세요."
+      );
+    }
+
     const prompt = [
       "다음 일본어 음성을 전사하세요.",
       "가능하면 히라가나 중심으로 전사하세요.",
@@ -495,7 +542,7 @@ export async function POST(req: Request) {
       .join("\n");
 
     const fd = new FormData();
-    fd.append("file", inputFile, name);
+    fd.append("file", new Blob([audioArrayBuffer], { type: "audio/wav" }), name);
     fd.append("model", TRANSCRIBE_MODEL);
     fd.append("language", "ja");
     fd.append("response_format", "json");
@@ -546,9 +593,9 @@ export async function POST(req: Request) {
     }
 
     if (!transcript) {
-      return Response.json(
-        { error: "전사 결과가 비어 있습니다." },
-        { status: 500 }
+      return buildSilentResponse(
+        TRANSCRIBE_MODEL,
+        "💡 음성이 제대로 인식되지 않았어요. 조금 더 또렷하게 다시 말해 보세요."
       );
     }
 
@@ -585,8 +632,9 @@ export async function POST(req: Request) {
 
     return Response.json(
       {
-        error: `[서버 내부 오류] ${message || "말하기 점수를 계산하지 못했습니다."
-          }`,
+        error: `[서버 내부 오류] ${
+          message || "말하기 점수를 계산하지 못했습니다."
+        }`,
       },
       { status: 500 }
     );
