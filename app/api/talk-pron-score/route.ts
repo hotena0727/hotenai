@@ -374,16 +374,18 @@ function makeDetailedFeedback(
   let suggestion = "";
   if (score >= 98) {
     suggestion = "💡 정확하고 자연스럽게 말했어요.";
+  } else if (slow.isSlow) {
+    suggestion = "💡 지금보다 조금만 더 자연스럽고 빠르게 말해 보세요.";
   } else if (flow.hasFlowIssue) {
-    suggestion = "💡 문장을 조금 더 끊지 않고 이어서 말해 보세요.";
+    suggestion = "💡 문장을 끊지 말고 조금만 더 부드럽게 이어서 말해 보세요.";
   } else if (score >= 90) {
-    suggestion = "💡 조금만 더 또렷하게 말해 보세요.";
+    suggestion = "💡 발음을 조금만 더 또렷하고 안정감 있게 말해 보세요.";
   } else if (score >= 80) {
     suggestion = "💡 말의 길이와 리듬을 조금만 더 자연스럽게 맞춰 보세요.";
   } else if (diff) {
-    suggestion = "💡 발음을 다시 듣고 한 번 더 따라 해 보세요.";
+    suggestion = "💡 정답 발음을 다시 듣고 한 번 더 따라 해 보세요.";
   } else {
-    suggestion = "💡 천천히 다시 듣고 한 번 더 말해 보세요.";
+    suggestion = "💡 정답 발음을 다시 듣고 리듬에 맞춰 한 번 더 말해 보세요.";
   }
 
   return {
