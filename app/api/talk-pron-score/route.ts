@@ -148,7 +148,6 @@ function analyzeSpeechFlow(rawTranscript: string, normalizedReading: string) {
     }
   }
 
-  // 말해보는 경험 중심이므로 감점은 약하게
   const penalty =
     fillerCount * 2 +
     repeatedCharCount * 1 +
@@ -192,9 +191,7 @@ function buildActualReadingWithYomiPriority(
 
   const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
 
-  // transcript가 answer_jp와 거의 같으면
-  // 한자 표기라도 answer_yomi를 실제 읽기로 간주
-  if (answerYomi && rawSurfaceScore >= 92) {
+  if (answerYomi && rawSurfaceScore >= 90) {
     return {
       actualReading: expectedReading,
       adoptedExpectedYomi: true,
@@ -266,10 +263,8 @@ function similarityScoreWithYomiPriority(
 
   const scoreRead = scoreByDistance(actualReading, expectedReading);
 
-  // 후한 판정: reading 유사도를 거의 그대로 반영
   let weighted = Math.round(scoreRead);
 
-  // 정답 표면과 꽤 비슷하면 약간 보정
   if (surfaceScore >= 85) {
     weighted += 4;
   }
@@ -280,7 +275,6 @@ function similarityScoreWithYomiPriority(
     weighted = 97;
   }
 
-  // 너무 낮게 잘 안 떨어지도록 완화
   const finalScore =
     weighted < floorToZero
       ? 35
@@ -509,30 +503,20 @@ export async function POST(req: Request) {
       answerYomi
     );
 
-    const score = judged.score;
-    const expectedReading = judged.expectedReading;
-    const actualReading = judged.actualReading;
-
     const feedback = makeDetailedFeedback(
-      score,
+      judged.score,
       answerJp,
       transcript,
-      expectedReading,
-      actualReading,
+      judged.expectedReading,
+      judged.actualReading,
       judged.adoptedExpectedYomi
     );
 
     return Response.json({
       transcript,
-      score,
+      score: judged.score,
       feedback,
       model: TRANSCRIBE_MODEL,
-      debug: {
-        expectedReading,
-        actualReading,
-        adoptedExpectedYomi: judged.adoptedExpectedYomi,
-        surfaceScore: judged.surfaceScore,
-      },
     });
   } catch (error) {
     console.error("talk-pron-score error:", error);
