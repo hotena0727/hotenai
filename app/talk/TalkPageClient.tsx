@@ -39,7 +39,7 @@ import {
 const QUIZ_SET_SIZE = 10;
 const PRO_UPGRADE_URL =
   "https://hotena.com/m/study_dan_view.asp?dntGbn=&idx=44";
-const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx";
+const BASE_SFX_URL = "https://hotena.com/hotena/app/mp3/sfx/";
 const DAILY_TALK_LISTEN_LIMIT = 3;
 const DAILY_TALK_RECORD_LIMIT = 3;
 
