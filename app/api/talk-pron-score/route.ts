@@ -500,8 +500,8 @@ export async function POST(req: Request) {
         ? inputFile.name
         : "speech.wav";
 
-    const MIN_DURATION_MS = 500;
-    const SILENCE_RMS_THRESHOLD = 0.008;
+    const MIN_DURATION_MS = 1500;
+    const SILENCE_RMS_THRESHOLD = 0.018;
 
     if (durationMs < MIN_DURATION_MS) {
       return buildSilentResponse(
@@ -532,14 +532,8 @@ export async function POST(req: Request) {
     const prompt = [
       "다음 일본어 음성을 전사하세요.",
       "가능하면 히라가나 중심으로 전사하세요.",
-      "한자 대신 히라가나로 전사해도 됩니다.",
-      "정답과 발음이 같으면 한자/히라가나 차이는 무시해도 됩니다.",
-      "정답 읽기와 일치하는 경우, 가능한 한 그 읽기에 맞는 히라가나 전사를 우선하세요.",
-      `정답 문장: ${answerJp}`,
-      answerYomi ? `정답 읽기: ${answerYomi}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
+      "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
+    ].join("\n");
 
     const fd = new FormData();
     fd.append("file", new Blob([audioArrayBuffer], { type: "audio/wav" }), name);
@@ -632,9 +626,8 @@ export async function POST(req: Request) {
 
     return Response.json(
       {
-        error: `[서버 내부 오류] ${
-          message || "말하기 점수를 계산하지 못했습니다."
-        }`,
+        error: `[서버 내부 오류] ${message || "말하기 점수를 계산하지 못했습니다."
+          }`,
       },
       { status: 500 }
     );
