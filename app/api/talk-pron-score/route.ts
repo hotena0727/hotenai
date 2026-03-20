@@ -181,11 +181,66 @@ function buildActualReadingWithYomiPriority(
   const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
   const transcriptReading = toReadingLike(transcript);
 
+  if (answerYomi) {
+    const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
+
+    const shouldAdoptExpectedYomi =
+      hasKanji(transcript) &&
+      rawSurfaceScore >= 70 &&
+      !hasCriticalMismatch;
+
+    return {
+      actualReading: shouldAdoptExpectedYomi
+        ? expectedReading
+        : transcriptReading,
+      adoptedExpectedYomi: shouldAdoptExpectedYomi,
+      surfaceScore: rawSurfaceScore,
+    };
+  }
+
   return {
     actualReading: transcriptReading,
     adoptedExpectedYomi: false,
     surfaceScore: rawSurfaceScore,
   };
+}
+
+function normalizeNumericJapanese(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/か月/g, "ヶ月")
+    .replace(/ケ月/g, "ヶ月")
+    .replace(/ヵ月/g, "ヶ月")
+    .replace(/カ月/g, "ヶ月");
+}
+
+function extractCriticalTokens(text: string) {
+  const s = normalizeNumericJapanese(text);
+
+  const matches =
+    s.match(
+      /(\d+ヶ月|\d+月|\d+年|\d+回|\d+日|\d+時間|\d+分|\d+人|\d+つ|\d+個|\d+本|\d+枚|\d+歳|[一二三四五六七八九十百千万]+ヶ月|[一二三四五六七八九十百千万]+月|[一二三四五六七八九十百千万]+年|[一二三四五六七八九十百千万]+回|[一二三四五六七八九十百千万]+日|[一二三四五六七八九十百千万]+時間|[一二三四五六七八九十百千万]+分|[一二三四五六七八九十百千万]+人|[一二三四五六七八九十百千万]+つ|[一二三四五六七八九十百千万]+個|[一二三四五六七八九十百千万]+本|[一二三四五六七八九十百千万]+枚|[一二三四五六七八九十百千万]+歳)/g
+    ) || [];
+
+  return matches;
+}
+
+function hasCriticalTokenMismatch(answerJp: string, transcript: string) {
+  const a = extractCriticalTokens(answerJp);
+  const b = extractCriticalTokens(transcript);
+
+  // transcript 쪽에서 숫자/기간 토큰을 명확히 못 뽑으면
+  // 괜히 불일치로 보지 말고 그냥 통과
+  if (a.length === 0 || b.length === 0) return false;
+
+  // 양쪽 다 숫자 토큰이 분명히 잡혔는데 개수가 다르면 그때만 mismatch
+  if (a.length !== b.length) return true;
+
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return true;
+  }
+
+  return false;
 }
 
 function estimateSlowSpeechPenalty(
