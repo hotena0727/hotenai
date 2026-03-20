@@ -2465,7 +2465,7 @@ export default function TalkPage() {
                   🎤 직접 말해 보기
                 </p>
                 <p className="mt-2 text-sm text-gray-500">
-                  실제 대화처럼, 너무 오래 끌지 말고 제한 시간 안에 자연스럽게 말해 보세요.
+                  실제 대화처럼, 기준 시간 안에 자연스럽게 말해 보세요.
                 </p>
 
                 <div className="mt-4 rounded-[22px] bg-gray-100 px-4 py-4">
@@ -2562,8 +2562,14 @@ export default function TalkPage() {
                             {pronDuration}
                           </div>
                           <div className="text-[11px] font-medium text-gray-400">
-                            실제 시간
+                            걸린 시간
                           </div>
+
+                          {Math.max(recordingSeconds - recordMaxSeconds, 0) > 0 ? (
+                            <div className="mt-1 text-[12px] font-semibold text-red-500">
+                              +{Math.max(recordingSeconds - recordMaxSeconds, 0)}초 초과
+                            </div>
+                          ) : null}
                         </>
                       ) : (
                         <>
@@ -2577,7 +2583,7 @@ export default function TalkPage() {
                             )}
                           </div>
                           <div className="text-[11px] font-medium text-gray-400">
-                            권장 시간
+                            기준 시간
                           </div>
                         </>
                       )}

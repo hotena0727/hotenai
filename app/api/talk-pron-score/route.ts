@@ -20,6 +20,26 @@ function normalizeForSurfaceMatch(text: string) {
     .replace(/[、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g, "");
 }
 
+function hasEndingMismatch(expectedReading: string, transcriptReading: string) {
+  const a = String(expectedReading || "");
+  const b = String(transcriptReading || "");
+
+  if (!a || !b) return false;
+
+  const tailLens = [4, 3, 2];
+
+  for (const len of tailLens) {
+    if (a.length >= len && b.length >= len) {
+      const aTail = a.slice(-len);
+      const bTail = b.slice(-len);
+      if (aTail !== bTail) return true;
+      return false;
+    }
+  }
+
+  return false;
+}
+
 function normJp(text: string) {
   return kataToHira(stripPunctuation(text)).toLowerCase();
 }
@@ -213,11 +233,16 @@ function buildActualReadingWithYomiPriority(
 
   if (answerYomi) {
     const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
+    const endingMismatch = hasEndingMismatch(
+      expectedReading,
+      transcriptReading
+    );
 
     const shouldAdoptExpectedYomi =
       hasKanji(transcript) &&
-      rawSurfaceScore >= 70 &&
-      !hasCriticalMismatch;
+      rawSurfaceScore >= 90 &&
+      !hasCriticalMismatch &&
+      !endingMismatch;
 
     return {
       actualReading: shouldAdoptExpectedYomi
