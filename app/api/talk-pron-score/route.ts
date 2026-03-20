@@ -13,6 +13,13 @@ function stripPunctuation(text: string) {
     .replace(/[、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g, "");
 }
 
+function normalizeForSurfaceMatch(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/[\s\u3000]+/g, "")
+    .replace(/[、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g, "");
+}
+
 function normJp(text: string) {
   return kataToHira(stripPunctuation(text)).toLowerCase();
 }
@@ -49,13 +56,6 @@ function replaceCommonVariants(text: string) {
 
 function toReadingLike(text: string) {
   return replaceCommonVariants(text);
-}
-
-function normalizeForSurfaceMatch(text: string) {
-  return String(text || "")
-    .normalize("NFKC")
-    .replace(/[\s\u3000]+/g, "")
-    .replace(/[、。．，,！？!？「」『』（）()$begin:math:display$$end:math:display${}…~"'`´]/g, "");
 }
 
 function bigrams(s: string) {
@@ -186,21 +186,6 @@ function hasCriticalTokenMismatch(answerJp: string, transcript: string) {
   return false;
 }
 
-function stripKanaOnly(text: string) {
-  return String(text || "")
-    .normalize("NFKC")
-    .replace(/[ぁ-んァ-ンー]/g, "")
-    .replace(/[\s\u3000、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g, "");
-}
-
-function hasSameSkeleton(answerJp: string, transcript: string) {
-  const a = stripKanaOnly(answerJp);
-  const b = stripKanaOnly(transcript);
-
-  if (!a || !b) return false;
-  return a === b;
-}
-
 /**
  * 핵심:
  * - 채점 = reading 기준
@@ -228,12 +213,11 @@ function buildActualReadingWithYomiPriority(
 
   if (answerYomi) {
     const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
-    const sameSkeleton = hasSameSkeleton(answerJp, transcript);
 
     const shouldAdoptExpectedYomi =
       hasKanji(transcript) &&
-      !hasCriticalMismatch &&
-      (rawSurfaceScore >= 70 || sameSkeleton);
+      rawSurfaceScore >= 70 &&
+      !hasCriticalMismatch;
 
     return {
       actualReading: shouldAdoptExpectedYomi
@@ -366,7 +350,7 @@ function similarityScoreWithYomiPriority(
 
     if (overlap < gate) {
       return {
-        score: 35,
+        score: 0,
         expectedReading,
         actualReading,
         adoptedExpectedYomi,
@@ -523,7 +507,7 @@ export async function POST(req: Request) {
         ? inputFile.name
         : "speech.wav";
 
-    const MIN_DURATION_MS = 1500;
+    const MIN_DURATION_MS = 3000;
     const SILENCE_RMS_THRESHOLD = 0.018;
 
     if (durationMs < MIN_DURATION_MS) {

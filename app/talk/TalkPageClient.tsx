@@ -302,6 +302,17 @@ function clearTalkLocalStateForToday() {
   }
 }
 
+function getRecommendedRecordSeconds(answerYomi?: string, answerJp?: string) {
+  const base = String(answerYomi || answerJp || "").trim();
+  const len = Array.from(base).length;
+
+  if (len <= 8) return 3;
+  if (len <= 14) return 4;
+  if (len <= 20) return 5;
+  if (len <= 28) return 6;
+  return 7;
+}
+
 export default function TalkPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -378,6 +389,8 @@ export default function TalkPage() {
   const [waveformBars, setWaveformBars] = useState<number[]>(
     makeWaveformBars(0.06)
   );
+  const [recordCountdown, setRecordCountdown] = useState(0);
+  const [recordMaxSeconds, setRecordMaxSeconds] = useState(0);
 
   const restoringRef = useRef(false);
   const resumedOnceRef = useRef(false);
@@ -395,6 +408,7 @@ export default function TalkPage() {
   const waveLevelRef = useRef<number>(0.06);
   const waveformPhaseRef = useRef<number>(0);
   const waveformAnimRef = useRef<number | null>(null);
+  const recordAutoStopTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     try {
@@ -447,12 +461,18 @@ export default function TalkPage() {
     setRecordingSeconds(0);
     setRewardNoticeRequested(false);
     setWaveformBars(makeWaveformBars(0.06));
+    setRecordCountdown(0);
+    setRecordMaxSeconds(0);
   };
 
   const stopRecordingInternal = async () => {
     if (recordTimerRef.current) {
       window.clearInterval(recordTimerRef.current);
       recordTimerRef.current = null;
+    }
+    if (recordAutoStopTimerRef.current) {
+      window.clearTimeout(recordAutoStopTimerRef.current);
+      recordAutoStopTimerRef.current = null;
     }
     if (waveformAnimRef.current) {
       window.cancelAnimationFrame(waveformAnimRef.current);
@@ -488,6 +508,7 @@ export default function TalkPage() {
     recordSilenceGainRef.current = null;
     recordContextRef.current = null;
     recordStreamRef.current = null;
+    setRecordCountdown(0);
   };
 
   const startPronRecording = async () => {
@@ -597,19 +618,33 @@ export default function TalkPage() {
       recordProcessorRef.current = processor;
       recordSilenceGainRef.current = silenceGain;
 
+      const maxSeconds = getRecommendedRecordSeconds(
+        currentQuestion?.answer_yomi,
+        currentQuestion?.answer_jp
+      );
+
       setPronStage("recording");
       recordStartAtRef.current = Date.now();
       setRecordingSeconds(0);
       setPronDuration("00:00");
+      setRecordMaxSeconds(maxSeconds);
+      setRecordCountdown(maxSeconds);
 
       recordTimerRef.current = window.setInterval(() => {
         const elapsedSec = Math.max(
           0,
           Math.floor((Date.now() - recordStartAtRef.current) / 1000)
         );
+        const remain = Math.max(maxSeconds - elapsedSec, 0);
+
         setRecordingSeconds(elapsedSec);
         setPronDuration(formatSeconds(elapsedSec));
+        setRecordCountdown(remain);
       }, 200);
+
+      recordAutoStopTimerRef.current = window.setTimeout(() => {
+        void stopPronRecording();
+      }, maxSeconds * 1000);
 
       const animateWaveform = () => {
         waveformPhaseRef.current += 1;
@@ -2429,6 +2464,9 @@ export default function TalkPage() {
                 <p className="text-lg font-semibold">
                   🎤 (선택) 내 발음을 녹음하고 들어보세요
                 </p>
+                <p className="mt-2 text-sm text-gray-500">
+                  녹음을 시작하면 남은 시간이 표시되고, 시간이 끝나면 자동으로 채점됩니다.
+                </p>
 
                 <div className="mt-4 rounded-[22px] bg-gray-100 px-4 py-4">
                   <div className="flex items-center gap-4 text-gray-500">
@@ -2508,9 +2546,27 @@ export default function TalkPage() {
                       )}
                     </div>
 
-                    <span className="min-w-[72px] text-right text-[22px] font-medium tracking-[0.08em] text-gray-500">
-                      {pronDuration}
-                    </span>
+                    <div className="min-w-[92px] text-right">
+                      {pronStage === "recording" ? (
+                        <>
+                          <div className="text-[28px] font-bold tracking-[0.04em] text-red-500">
+                            {recordCountdown}
+                          </div>
+                          <div className="text-[11px] font-medium text-gray-400">
+                            남은 시간
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-[22px] font-medium tracking-[0.08em] text-gray-500">
+                            {pronDuration}
+                          </div>
+                          <div className="text-[11px] font-medium text-gray-400">
+                            녹음 길이
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
