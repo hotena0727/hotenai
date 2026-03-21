@@ -906,7 +906,7 @@ export default function TalkPage() {
           setIsAdminUser(Boolean(profileRow?.is_admin));
           setFreeExpiresAt(profileRow?.free_expires_at ?? null);
           setFreeExpired(
-            !isPaidPlan(normalizedPlan) && isFreeExpired(profileRow?.free_expires_at)
+            isFreeExpired(normalizedPlan, profileRow?.free_expires_at ?? null)
           );
         }
 
