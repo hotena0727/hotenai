@@ -102,7 +102,7 @@ export async function loadBasicPlanAndUsage(params: {
     const plan = normalizePlan(profileRow?.plan);
     const isAdminUser = Boolean(profileRow?.is_admin);
     const freeExpiresAt = profileRow?.free_expires_at ?? null;
-    const freeExpired = !isPaidPlan(plan) && isFreeExpired(freeExpiresAt);
+    const freeExpired = isFreeExpired(plan, freeExpiresAt);
 
     const cachedUsed = readTodayUsageCache(appKey, user.id, todayKey);
 
