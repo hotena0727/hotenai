@@ -942,6 +942,25 @@ export default function MyPage() {
           ) : null}
         </div>
 
+        <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50/70 p-5">
+          <a
+            href="https://hotena.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between gap-4"
+          >
+            <div>
+              <p className="text-base font-bold text-slate-900">
+                교육센터 바로가기
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                공지, 수업 안내, 교육센터 소식을 확인할 수 있어요.
+              </p>
+            </div>
+            <span className="shrink-0 text-xl font-bold text-slate-500">→</span>
+          </a>
+        </div>
+
         <div className={`mt-6 rounded-3xl border p-6 ${planTheme.soft}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
