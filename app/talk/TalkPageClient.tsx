@@ -1896,7 +1896,7 @@ export default function TalkPage() {
                   }
                 >
                   {isPro
-                    ? `유료 · 발음듣기·녹음 무제한`
+                    ? `${String(userPlan).toUpperCase()} · 발음듣기·녹음 무제한`
                     : `무료 · 발음듣기 ${listenUsed}/${DAILY_TALK_LISTEN_LIMIT} · 녹음 ${recordUsed}/${DAILY_TALK_RECORD_LIMIT}`}
                 </p>
                 <p
