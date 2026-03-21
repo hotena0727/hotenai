@@ -1,8 +1,17 @@
 import { supabase } from "@/lib/supabase";
 import { fetchTodayBasicQuizSetCount } from "@/lib/attempts";
-import { isPaidPlan, normalizePlan, type PlanCode } from "@/lib/plans";
+import {
+  isPaidPlan,
+  isFreeExpired,
+  normalizePlan,
+  type PlanCode,
+} from "@/lib/plans";
 
-export function makeTodayUsageCacheKey(appKey: string, userId: string, todayKey: string) {
+export function makeTodayUsageCacheKey(
+  appKey: string,
+  userId: string,
+  todayKey: string
+) {
   return `${appKey}-today-usage:${userId}:${todayKey}`;
 }
 
@@ -46,6 +55,8 @@ type LoadBasicUsageResult = {
   isAdminUser: boolean;
   used: number;
   limitMessage: string;
+  freeExpiresAt: string | null;
+  freeExpired: boolean;
 };
 
 export async function loadBasicPlanAndUsage(params: {
@@ -73,12 +84,14 @@ export async function loadBasicPlanAndUsage(params: {
         isAdminUser: false,
         used: 0,
         limitMessage: "",
+        freeExpiresAt: null,
+        freeExpired: false,
       };
     }
 
     const { data: profileRow, error: profileError } = await supabase
       .from("profiles")
-      .select("plan, is_admin")
+      .select("plan, is_admin, free_expires_at")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -88,6 +101,8 @@ export async function loadBasicPlanAndUsage(params: {
 
     const plan = normalizePlan(profileRow?.plan);
     const isAdminUser = Boolean(profileRow?.is_admin);
+    const freeExpiresAt = profileRow?.free_expires_at ?? null;
+    const freeExpired = !isPaidPlan(plan) && isFreeExpired(freeExpiresAt);
 
     const cachedUsed = readTodayUsageCache(appKey, user.id, todayKey);
 
@@ -100,6 +115,8 @@ export async function loadBasicPlanAndUsage(params: {
           !isPaidPlan(plan) && cachedUsed >= dailyFreeSetLimit
             ? limitReachedMessageWithUpgrade
             : "",
+        freeExpiresAt,
+        freeExpired,
       };
     }
 
@@ -114,6 +131,8 @@ export async function loadBasicPlanAndUsage(params: {
         !isPaidPlan(plan) && used >= dailyFreeSetLimit
           ? limitReachedMessageWithUpgrade
           : "",
+      freeExpiresAt,
+      freeExpired,
     };
   } catch (error) {
     console.error(error);
@@ -122,6 +141,8 @@ export async function loadBasicPlanAndUsage(params: {
       isAdminUser: false,
       used: 0,
       limitMessage: "",
+      freeExpiresAt: null,
+      freeExpired: false,
     };
   }
 }

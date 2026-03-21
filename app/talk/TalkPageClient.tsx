@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { hasSeenHomeToday } from "@/lib/home-gate";
 import { supabase } from "@/lib/supabase";
-import { isPaidPlan, normalizePlan } from "@/lib/plans";
+import { isPaidPlan, normalizePlan, isFreeExpired } from "@/lib/plans";
 import {
   clearDailyState,
   loadAppProgress,
@@ -67,6 +67,16 @@ function shuffleArray<T>(arr: T[]): T[] {
     [copied[i], copied[j]] = [copied[j], copied[i]];
   }
   return copied;
+}
+
+function formatDateKorean(dateStr?: string | null) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}.${m}.${day}`;
 }
 
 function resolveMp3Url(path: string): string {
@@ -345,10 +355,15 @@ export default function TalkPage() {
   const [coachOpen, setCoachOpen] = useState(false);
 
   const [userPlan, setUserPlan] = useState("free");
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [listenUsed, setListenUsed] = useState(0);
   const [recordUsed, setRecordUsed] = useState(0);
   const [quotaMessage, setQuotaMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
+  const [freeExpiresAt, setFreeExpiresAt] = useState<string | null>(null);
+  const [freeExpired, setFreeExpired] = useState(false);
+  const [freeGateOpen, setFreeGateOpen] = useState(false);
+  const freeExpireLabel = formatDateKorean(freeExpiresAt);
 
   const [audioLoadingKey, setAudioLoadingKey] = useState("");
   const [audioError, setAudioError] = useState("");
@@ -512,6 +527,8 @@ export default function TalkPage() {
   };
 
   const startPronRecording = async () => {
+    if (openFreeExpiredGate()) return;
+
     try {
       if (typeof window === "undefined") return;
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -879,11 +896,18 @@ export default function TalkPage() {
         if (user) {
           const { data: profileRow } = await supabase
             .from("profiles")
-            .select("plan")
+            .select("plan, is_admin, free_expires_at")
             .eq("id", user.id)
             .maybeSingle();
 
-          setUserPlan(normalizePlan(profileRow?.plan));
+          const normalizedPlan = normalizePlan(profileRow?.plan);
+
+          setUserPlan(normalizedPlan);
+          setIsAdminUser(Boolean(profileRow?.is_admin));
+          setFreeExpiresAt(profileRow?.free_expires_at ?? null);
+          setFreeExpired(
+            !isPaidPlan(normalizedPlan) && isFreeExpired(profileRow?.free_expires_at)
+          );
         }
 
         const cleaned = await loadTalkRows();
@@ -1091,6 +1115,13 @@ export default function TalkPage() {
 
   const isCorrect = submitted && selected === currentQuestion?.answer_jp;
   const isPro = isPaidPlan(userPlan);
+  const openFreeExpiredGate = () => {
+    if (!isPaidPlan(userPlan) && freeExpired) {
+      setFreeGateOpen(true);
+      return true;
+    }
+    return false;
+  };
   const listenLimitReached = !isPro && listenUsed >= DAILY_TALK_LISTEN_LIMIT;
   const recordLimitReached = !isPro && recordUsed >= DAILY_TALK_RECORD_LIMIT;
   const quotaLimitReached = listenLimitReached || recordLimitReached;
@@ -1305,6 +1336,8 @@ export default function TalkPage() {
   };
 
   const playAudio = async (src: string, key: string) => {
+    if (openFreeExpiredGate()) return;
+
     if (!src) return;
 
     try {
@@ -1354,6 +1387,8 @@ export default function TalkPage() {
   };
 
   const handleAskCustomCoach = async () => {
+    if (openFreeExpiredGate()) return;
+
     if (!currentQuestion) return;
     if (!isPro) {
       setCoachError("AI 스마트코치는 유료 플랜에서 이용할 수 있습니다.");
@@ -1400,6 +1435,7 @@ export default function TalkPage() {
   };
 
   const makeQuizSet = async () => {
+    if (openFreeExpiredGate()) return;
     setFinishMessage("");
 
     let pool = allRows.filter(
@@ -1483,11 +1519,15 @@ export default function TalkPage() {
   };
 
   const handleSelect = (choice: string) => {
+    if (openFreeExpiredGate()) return;
+
     if (submitted) return;
     setSelected(choice);
   };
 
   const handleSubmit = async () => {
+    if (openFreeExpiredGate()) return;
+
     if (!currentQuestion) return;
     if (!selected) {
       alert("보기를 선택해주세요.");
@@ -1688,6 +1728,8 @@ export default function TalkPage() {
   };
 
   const handleRewardComplete = async () => {
+    if (openFreeExpiredGate()) return;
+
     setRewardNoticeRequested(true);
     if (saving) return;
     if (pronScoring) {
@@ -1717,10 +1759,14 @@ export default function TalkPage() {
   };
 
   const handleSkipNext = async () => {
+    if (openFreeExpiredGate()) return;
+
     await handleNext();
   };
 
   const handleRestart = async () => {
+    if (openFreeExpiredGate()) return;
+
     await clearDailyState("talk");
 
     restoringRef.current = false;
@@ -1818,6 +1864,13 @@ export default function TalkPage() {
       <div className="mx-auto w-full max-w-3xl">
         <section className="mt-4">
           <h1 className="text-3xl font-bold">🗣️ 일본어회화</h1>
+          {!isPaidPlan(userPlan) && freeExpired ? (
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              무료 이용 기간 30일이 종료되었습니다.
+              {freeExpireLabel ? ` 무료 이용 가능 기간: ${freeExpireLabel}까지.` : ""}
+              페이지는 볼 수 있지만 학습 기능은 잠겨 있습니다.
+            </div>
+          ) : null}
           <p className="mt-3 text-base text-gray-600">
             1문제씩: 상황 → 상대 발화 → 보기 선택 → 제출 → 정답/설명
           </p>
@@ -2769,6 +2822,46 @@ export default function TalkPage() {
           </div>
         ) : null
       }
+      {freeGateOpen ? (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900">
+                무료 이용 기간이 종료되었습니다
+              </p>
+              <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
+                무료 계정은 가입 후 30일 동안 이용할 수 있습니다.
+                {freeExpireLabel ? `\n무료 이용 가능 기간: ${freeExpireLabel}까지` : ""}
+                {"\n"}계속 이용하려면 소개 페이지 또는 유료 플랜 안내를 확인해 주세요.
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <a
+                href="/intro"
+                className="block w-full rounded-2xl bg-black px-5 py-4 text-center text-lg font-semibold text-white"
+              >
+                소개 페이지 보기
+              </a>
+
+              <a
+                href={PRO_UPGRADE_URL}
+                className="block w-full rounded-2xl border border-gray-300 px-5 py-4 text-center text-lg font-semibold text-gray-900"
+              >
+                유료 플랜 보기
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setFreeGateOpen(false)}
+                className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main >
   );
 }

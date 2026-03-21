@@ -66,6 +66,16 @@ function qtypeLabel(qtype: KatsuyouQType): string {
   }
 }
 
+function formatDateKorean(dateStr?: string | null) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}.${m}.${day}`;
+}
+
 function posLabel(pos: KatsuyouPos): string {
   switch (pos) {
     case "i_adj":
@@ -136,6 +146,10 @@ export default function KatsuyouPage() {
   const [todayWordKanjiSets, setTodayWordKanjiSets] = useState(0);
   const [limitMessage, setLimitMessage] = useState("");
   const [planInfoOpen, setPlanInfoOpen] = useState(false);
+  const [freeExpiresAt, setFreeExpiresAt] = useState<string | null>(null);
+  const [freeExpired, setFreeExpired] = useState(false);
+  const [freeGateOpen, setFreeGateOpen] = useState(false);
+  const freeExpireLabel = formatDateKorean(freeExpiresAt);
 
   const [completionModalOpen, setCompletionModalOpen] = useState(false);
   const [completionTitle, setCompletionTitle] = useState("");
@@ -274,6 +288,8 @@ export default function KatsuyouPage() {
       setIsAdminUser(result.isAdminUser);
       setTodayWordKanjiSets(result.used);
       setLimitMessage(result.limitMessage);
+      setFreeExpiresAt(result.freeExpiresAt);
+      setFreeExpired(result.freeExpired);
     };
 
     void initPlanAndUsage();
@@ -319,6 +335,8 @@ export default function KatsuyouPage() {
   }, [submitted]);
 
   const speakJapanese = (text: string, key: string) => {
+    if (openFreeExpiredGate()) return;
+
     try {
       const raw = String(text || "").trim();
       if (!raw) return;
@@ -444,6 +462,14 @@ export default function KatsuyouPage() {
   ) => {
     if (reviewMode) return false;
     return !canMakeMoreQuizForCurrentCondition(nextExcludedWords);
+  };
+
+  const openFreeExpiredGate = () => {
+    if (!isPaidPlan(userPlan) && freeExpired) {
+      setFreeGateOpen(true);
+      return true;
+    }
+    return false;
   };
 
   const generateQuiz = () => {
@@ -713,6 +739,8 @@ export default function KatsuyouPage() {
       return;
     }
 
+    if (openFreeExpiredGate()) return;
+
     generateQuiz();
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -720,6 +748,8 @@ export default function KatsuyouPage() {
   };
 
   const resetExcludedWords = () => {
+    if (openFreeExpiredGate()) return;
+
     setExcludedWords({});
     alert("맞힌 단어 제외 목록을 초기화했습니다.");
   };
@@ -736,6 +766,8 @@ export default function KatsuyouPage() {
   };
 
   const handleSubmitAll = () => {
+    if (openFreeExpiredGate()) return;
+
     if (questions.length === 0) {
       alert("먼저 문제를 생성해주세요.");
       return;
@@ -790,6 +822,8 @@ export default function KatsuyouPage() {
   };
 
   const handleRetryWrongOnly = () => {
+    if (openFreeExpiredGate()) return;
+
     const nextQuestions = wrongItems.map((item) => item.question);
 
     if (nextQuestions.length === 0) {
@@ -935,6 +969,13 @@ export default function KatsuyouPage() {
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto max-w-3xl">
         <h1 className="mt-4 text-4xl font-bold">🔄 활용</h1>
+        {!isPaidPlan(userPlan) && freeExpired ? (
+          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            무료 이용 기간 30일이 종료되었습니다.
+            {freeExpireLabel ? ` 무료 이용 가능 기간: ${freeExpireLabel}까지.` : ""}
+            페이지는 볼 수 있지만 학습 기능은 잠겨 있습니다.
+          </div>
+        ) : null}
 
         {reviewMode ? (
           <div className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3">
@@ -1492,6 +1533,46 @@ export default function KatsuyouPage() {
               <button
                 type="button"
                 onClick={closeCompletionModal}
+                className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {freeGateOpen ? (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900">
+                무료 이용 기간이 종료되었습니다
+              </p>
+              <p className="mt-3 whitespace-pre-line text-base leading-7 text-gray-600">
+                무료 계정은 가입 후 30일 동안 이용할 수 있습니다.
+                {freeExpireLabel ? `\n무료 이용 가능 기간: ${freeExpireLabel}까지` : ""}
+                {"\n"}계속 이용하려면 소개 페이지 또는 유료 플랜 안내를 확인해 주세요.
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <a
+                href="/intro"
+                className="block w-full rounded-2xl bg-black px-5 py-4 text-center text-lg font-semibold text-white"
+              >
+                소개 페이지 보기
+              </a>
+
+              <a
+                href={PRO_UPGRADE_URL}
+                className="block w-full rounded-2xl border border-gray-300 px-5 py-4 text-center text-lg font-semibold text-gray-900"
+              >
+                유료 플랜 보기
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setFreeGateOpen(false)}
                 className="w-full rounded-2xl px-5 py-3 text-sm font-medium text-gray-500"
               >
                 닫기

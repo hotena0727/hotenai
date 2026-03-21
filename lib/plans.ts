@@ -173,3 +173,25 @@ export function getPlanTheme(plan: string | null | undefined) {
 export function getPlanPillClass(plan: string | null | undefined) {
     return `rounded-full border px-4 py-2 text-sm font-semibold ${getPlanTheme(plan).badge}`;
 }
+
+export function isFreeExpired(
+  plan: string | null | undefined,
+  freeExpiresAt: string | null | undefined
+) {
+  if (normalizePlan(plan) !== "free") return false;
+  if (!freeExpiresAt) return false;
+
+  const expires = new Date(freeExpiresAt).getTime();
+  if (!Number.isFinite(expires)) return false;
+
+  return Date.now() > expires;
+}
+
+export function canUseAppByPlan(params: {
+  plan: string | null | undefined;
+  freeExpiresAt: string | null | undefined;
+}) {
+  const paid = isPaidPlan(params.plan);
+  if (paid) return true;
+  return !isFreeExpired(params.plan, params.freeExpiresAt);
+}
