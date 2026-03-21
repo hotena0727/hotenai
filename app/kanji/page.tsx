@@ -975,8 +975,8 @@ export default function KanjiPage() {
                 }
               >
                 {isPaidPlan(userPlan)
-                  ? `${userPlan.toUpperCase()} · 단어·한자·활용 무제한`
-                  : `FREE · 오늘 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
+                  ? `${userPlan.toUpperCase()} 이용 중 · 단어·한자·활용 무제한`
+                  : `무료 · 오늘 ${todayWordKanjiSets}/${DAILY_FREE_SET_LIMIT}세트`}
               </p>
               <p
                 className={
