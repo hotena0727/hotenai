@@ -140,6 +140,7 @@ export default function KanjiPage() {
   const [completionTitle, setCompletionTitle] = useState("");
   const [completionBody, setCompletionBody] = useState("");
   const [completionWrongCount, setCompletionWrongCount] = useState(0);
+  const [todayRewardMessage, setTodayRewardMessage] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -223,6 +224,33 @@ export default function KanjiPage() {
     } catch (error) {
       console.error("[kanji sfx] unexpected error:", error);
     }
+  };
+
+  const getTodayRewardMessage = (setCount: number) => {
+    if (setCount === 1) {
+      return "✨ 오늘 1세트 완료. 좋은 시작이에요.";
+    }
+    if (setCount === 2) {
+      return "✨ 오늘 2세트 완료. 흐름이 잡히고 있어요.";
+    }
+    if (setCount === 3) {
+      return "🎉 오늘 3세트 완료. 오늘 루틴을 끝까지 해냈어요.";
+    }
+    if (setCount === 4) {
+      return "🔥 오늘 4세트째입니다. 집중력이 정말 좋네요.";
+    }
+    if (setCount === 5) {
+      return "🔥 오늘 5세트째. 이 정도면 이미 상위권입니다.";
+    }
+    if (setCount >= 6) {
+      const messages = [
+        "🔥 계속 이어가고 있어요. 이 흐름이 실력입니다.",
+        "🔥 꾸준함이 실력을 만듭니다.",
+        "🔥 지금처럼만 해도 충분히 성장하고 있어요.",
+      ];
+      return messages[(setCount - 6) % messages.length];
+    }
+    return "";
   };
 
   const levelCounts = useMemo(() => {
@@ -343,6 +371,7 @@ export default function KanjiPage() {
       setScore(0);
       setAudioError("");
       setAudioLoadingKey("");
+      setTodayRewardMessage("");
     }
   }, [isDailyLimitReached, isReviewMode]);
 
@@ -404,9 +433,9 @@ export default function KanjiPage() {
     const pool =
       reviewLevel && reviewLevel.length > 0
         ? allRows.filter(
-          (row) =>
-            String(row.level || "").trim().toUpperCase() === reviewLevel
-        )
+            (row) =>
+              String(row.level || "").trim().toUpperCase() === reviewLevel
+          )
         : allRows;
 
     return targetRows
@@ -520,6 +549,7 @@ export default function KanjiPage() {
           setScore(0);
           setAudioError("");
           setAudioLoadingKey("");
+          setTodayRewardMessage("");
           return;
         }
 
@@ -541,6 +571,7 @@ export default function KanjiPage() {
           setScore(0);
           setAudioError("");
           setAudioLoadingKey("");
+          setTodayRewardMessage("");
           return;
         }
 
@@ -550,6 +581,7 @@ export default function KanjiPage() {
         setScore(0);
         setAudioError("");
         setAudioLoadingKey("");
+        setTodayRewardMessage("");
         return;
       }
 
@@ -584,6 +616,7 @@ export default function KanjiPage() {
       setScore(0);
       setAudioError("");
       setAudioLoadingKey("");
+      setTodayRewardMessage("");
     } catch (error) {
       console.error(error);
       setQuestions([]);
@@ -676,6 +709,7 @@ export default function KanjiPage() {
     setAnswers({});
     setAudioError("");
     setAudioLoadingKey("");
+    setTodayRewardMessage("");
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, 0);
@@ -771,6 +805,7 @@ export default function KanjiPage() {
     setScore(0);
     setAudioError("");
     setAudioLoadingKey("");
+    setTodayRewardMessage("");
   };
 
   const autoSaveResult = async ({
@@ -846,12 +881,15 @@ export default function KanjiPage() {
         setTodayWordKanjiSets(nextUsed);
         writeTodayUsageCache("kanji", user.id, todayKST(), nextUsed);
 
+        setTodayRewardMessage(getTodayRewardMessage(nextUsed));
+
         if (!isPaidPlan(userPlan) && nextUsed >= DAILY_FREE_SET_LIMIT) {
           setLimitMessage(
             "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
           );
         }
       }
+
       if (shouldShowCompletionModal(nextExcludedWords)) {
         openCompletionModal(nextScore, currentQuestions, currentAnswers);
       }
@@ -890,6 +928,7 @@ export default function KanjiPage() {
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto max-w-3xl">
         <h1 className="mt-4 text-4xl font-bold">🈯 한자</h1>
+
         {!isPaidPlan(userPlan) && freeExpired ? (
           <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             무료 이용 기간 30일이 종료되었습니다.
@@ -1059,7 +1098,7 @@ export default function KanjiPage() {
               onClick={resetExcludedWords}
               className="rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
             >
-              맞힌 단어 제외 초기화
+              맞힌 한자 제외 초기화
             </button>
           </div>
         </div>
@@ -1268,6 +1307,14 @@ export default function KanjiPage() {
                     </div>
                   )}
 
+                  {todayRewardMessage ? (
+                    <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                      <p className="text-base font-semibold text-orange-700 sm:text-lg">
+                        {todayRewardMessage}
+                      </p>
+                    </div>
+                  ) : null}
+
                   {wrongItems.length > 0 ? (
                     <div className="mt-2">
                       <h2 className="text-3xl font-bold text-gray-900">
@@ -1360,16 +1407,18 @@ export default function KanjiPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
-              ? "border-red-200 bg-red-50"
-              : "border-gray-300 bg-white"
-              }`}
+            className={`mt-6 rounded-2xl border p-5 ${
+              !isReviewMode && isDailyLimitReached
+                ? "border-red-200 bg-red-50"
+                : "border-gray-300 bg-white"
+            }`}
           >
             <p
-              className={`text-sm ${!isReviewMode && isDailyLimitReached
-                ? "text-red-700"
-                : "text-gray-500"
-                }`}
+              className={`text-sm ${
+                !isReviewMode && isDailyLimitReached
+                  ? "text-red-700"
+                  : "text-gray-500"
+              }`}
             >
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 유료 플랜으로 계속 이용해 보세요."
@@ -1438,6 +1487,7 @@ export default function KanjiPage() {
           </div>
         </div>
       ) : null}
+
       {freeGateOpen ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 px-4">
           <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
