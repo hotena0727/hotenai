@@ -1052,13 +1052,6 @@ export default function WordPage() {
     }, 0);
   };
 
-  const resetExcludedWords = () => {
-    if (openFreeExpiredGate()) return;
-
-    setExcludedWords({});
-    alert("맞힌 단어 제외 목록을 초기화했습니다.");
-  };
-
   const handleSelectChoice = (index: number, choice: string) => {
     if (submitted) return;
     setAnswers((prev) => ({
@@ -1574,7 +1567,7 @@ export default function WordPage() {
         ) : null}
 
         <div className="mt-8 border-t border-gray-200 pt-8">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <button
               type="button"
               onClick={makeNewQuiz}
@@ -1590,13 +1583,6 @@ export default function WordPage() {
                 : isReviewMode
                   ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
                   : "🔄 새문제(랜덤 10문항)"}
-            </button>
-            <button
-              type="button"
-              onClick={resetExcludedWords}
-              className="rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
-            >
-              맞힌 단어 제외 초기화
             </button>
           </div>
         </div>
