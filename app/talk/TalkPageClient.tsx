@@ -2749,7 +2749,7 @@ export default function TalkPage() {
                     🎉 발음 100점!
                   </p>
                   <p className="mt-2 text-2xl font-bold text-green-700">
-                    +2 XP 🔊 획득
+                    🎁 말문 포인트 +1
                   </p>
                 </div>
 
