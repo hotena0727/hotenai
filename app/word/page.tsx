@@ -215,6 +215,7 @@ export default function WordPage() {
   const [completionTitle, setCompletionTitle] = useState("");
   const [completionBody, setCompletionBody] = useState("");
   const [completionWrongCount, setCompletionWrongCount] = useState(0);
+  const [todayRewardMessage, setTodayRewardMessage] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -397,6 +398,33 @@ export default function WordPage() {
     }
   };
 
+  const getTodayRewardMessage = (setCount: number) => {
+    if (setCount === 1) {
+      return "✨ 오늘 1세트 완료. 좋은 시작이에요.";
+    }
+    if (setCount === 2) {
+      return "✨ 오늘 2세트 완료. 흐름이 잡히고 있어요.";
+    }
+    if (setCount === 3) {
+      return "🎉 오늘 3세트 완료. 오늘 루틴을 끝까지 해냈어요.";
+    }
+    if (setCount === 4) {
+      return "🔥 오늘 4세트째입니다. 집중력이 정말 좋네요.";
+    }
+    if (setCount === 5) {
+      return "🔥 오늘 5세트째. 이 정도면 이미 상위권입니다.";
+    }
+    if (setCount >= 6) {
+      const messages = [
+        "🔥 계속 이어가고 있어요. 이 흐름이 실력입니다.",
+        "🔥 꾸준함이 실력을 만듭니다.",
+        "🔥 지금처럼만 해도 충분히 성장하고 있어요.",
+      ];
+      return messages[(setCount - 6) % messages.length];
+    }
+    return "";
+  };
+
   useEffect(() => {
     if (selectedPosGroup === "other" && selectedQType === "reading") {
       setSelectedQType("meaning");
@@ -441,6 +469,7 @@ export default function WordPage() {
       setScore(0);
       setAudioError("");
       setAudioLoadingKey("");
+      setTodayRewardMessage("");
     }
   }, [isDailyLimitReached, isReviewMode]);
 
@@ -849,6 +878,7 @@ export default function WordPage() {
         setScore(0);
         setAudioError("");
         setAudioLoadingKey("");
+        setTodayRewardMessage("");
         return;
       }
 
@@ -928,6 +958,7 @@ export default function WordPage() {
       setScore(0);
       setAudioError("");
       setAudioLoadingKey("");
+      setTodayRewardMessage("");
     } catch (error) {
       console.error(error);
       setQuestions([]);
@@ -1026,6 +1057,7 @@ export default function WordPage() {
     setAnswers({});
     setAudioError("");
     setAudioLoadingKey("");
+    setTodayRewardMessage("");
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, 0);
@@ -1121,6 +1153,7 @@ export default function WordPage() {
     setScore(0);
     setAudioError("");
     setAudioLoadingKey("");
+    setTodayRewardMessage("");
   };
 
   const autoSaveResult = async ({
@@ -1195,6 +1228,8 @@ export default function WordPage() {
         const nextUsed = todayWordKanjiSets + 1;
         setTodayWordKanjiSets(nextUsed);
         writeTodayUsageCache("word", user.id, todayKST(), nextUsed);
+
+        setTodayRewardMessage(getTodayRewardMessage(nextUsed));
 
         if (!isPaidPlan(userPlan) && nextUsed >= DAILY_FREE_SET_LIMIT) {
           setLimitMessage(
@@ -1833,6 +1868,14 @@ export default function WordPage() {
                       </p>
                     </div>
                   )}
+
+                  {todayRewardMessage ? (
+                    <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                      <p className="text-base font-semibold text-orange-700 sm:text-lg">
+                        {todayRewardMessage}
+                      </p>
+                    </div>
+                  ) : null}
 
                   {showWrongNote ? (
                     <div className="mt-2">
