@@ -151,13 +151,13 @@ export default function KatsuyouPage() {
   const [completionTitle, setCompletionTitle] = useState("");
   const [completionBody, setCompletionBody] = useState("");
   const [completionWrongCount, setCompletionWrongCount] = useState(0);
+  const [todayRewardMessage, setTodayRewardMessage] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!hasSeenHomeToday()) {
-      const fullNext = `${pathname || "/katsuyou"}${
-        window.location.search || ""
-      }`;
+      const fullNext = `${pathname || "/katsuyou"}${window.location.search || ""
+        }`;
       router.replace(`/?next=${encodeURIComponent(fullNext)}`);
     }
   }, [router, pathname]);
@@ -234,6 +234,33 @@ export default function KatsuyouPage() {
 
     return map;
   }, [rows]);
+
+  const getTodayRewardMessage = (setCount: number) => {
+    if (setCount === 1) {
+      return "✨ 오늘 1세트 완료. 좋은 시작이에요.";
+    }
+    if (setCount === 2) {
+      return "✨ 오늘 2세트 완료. 흐름이 잡히고 있어요.";
+    }
+    if (setCount === 3) {
+      return "🎉 오늘 3세트 완료. 오늘 루틴을 끝까지 해냈어요.";
+    }
+    if (setCount === 4) {
+      return "🔥 오늘 4세트째입니다. 집중력이 정말 좋네요.";
+    }
+    if (setCount === 5) {
+      return "🔥 오늘 5세트째. 이 정도면 이미 상위권입니다.";
+    }
+    if (setCount >= 6) {
+      const messages = [
+        "🔥 계속 이어가고 있어요. 이 흐름이 실력입니다.",
+        "🔥 꾸준함이 실력을 만듭니다.",
+        "🔥 지금처럼만 해도 충분히 성장하고 있어요.",
+      ];
+      return messages[(setCount - 6) % messages.length];
+    }
+    return "";
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -318,6 +345,7 @@ export default function KatsuyouPage() {
       setScore(0);
       setAudioError("");
       setAudioLoadingKey("");
+      setTodayRewardMessage("");
     }
   }, [isDailyLimitReached, reviewMode]);
 
@@ -503,6 +531,7 @@ export default function KatsuyouPage() {
       setScore(0);
       setAudioError("");
       setAudioLoadingKey("");
+      setTodayRewardMessage("");
 
       if (!reviewMode) {
         void persistKatsuyouSet({
@@ -522,11 +551,6 @@ export default function KatsuyouPage() {
 
   const generateReviewQuiz = () => {
     try {
-      if (reviewQids.length === 0) {
-        setQuestions([]);
-        return;
-      }
-
       const filteredRows = rows.filter((row) => {
         const rowId = String(row.id || "").trim();
         return reviewQids.includes(rowId);
@@ -534,6 +558,7 @@ export default function KatsuyouPage() {
 
       if (!filteredRows.length) {
         setQuestions([]);
+        setTodayRewardMessage("");
         return;
       }
 
@@ -561,6 +586,7 @@ export default function KatsuyouPage() {
       setScore(0);
       setAudioError("");
       setAudioLoadingKey("");
+      setTodayRewardMessage("");
 
       setSelectedPos(targetPos);
       setSelectedQType(targetQType);
@@ -619,6 +645,7 @@ export default function KatsuyouPage() {
         setScore(Number(lastSet.score || 0));
         setAudioError("");
         setAudioLoadingKey("");
+        setTodayRewardMessage("");
       } catch (error) {
         console.error(error);
       } finally {
@@ -725,6 +752,7 @@ export default function KatsuyouPage() {
     setAnswers({});
     setAudioError("");
     setAudioLoadingKey("");
+    setTodayRewardMessage("");
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, 0);
@@ -835,6 +863,7 @@ export default function KatsuyouPage() {
     setScore(0);
     setAudioError("");
     setAudioLoadingKey("");
+    setTodayRewardMessage("");
 
     if (!reviewMode) {
       void persistKatsuyouSet({
@@ -917,6 +946,8 @@ export default function KatsuyouPage() {
         const nextUsed = todayWordKanjiSets + 1;
         setTodayWordKanjiSets(nextUsed);
         writeTodayUsageCache("katsuyou", user.id, todayKST(), nextUsed);
+
+        setTodayRewardMessage(getTodayRewardMessage(nextUsed));
 
         if (!isPaidPlan(userPlan) && nextUsed >= DAILY_FREE_SET_LIMIT) {
           setLimitMessage(
@@ -1355,11 +1386,18 @@ export default function KatsuyouPage() {
                   ) : (
                     <div className="rounded-2xl bg-yellow-50 p-4">
                       <p className="text-base font-semibold text-yellow-800">
-                        💪 괜찮아요! 틀린 문제는 성장의 재료예요. 다시 한 번
-                        도전해봐요.
+                        💪 괜찮아요! 틀린 문제는 성장의 재료예요. 다시 한 번 도전해봐요.
                       </p>
                     </div>
                   )}
+
+                  {todayRewardMessage ? (
+                    <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                      <p className="text-base font-semibold text-orange-700 sm:text-lg">
+                        {todayRewardMessage}
+                      </p>
+                    </div>
+                  ) : null}
 
                   {wrongItems.length > 0 ? (
                     <div className="mt-2">
@@ -1370,9 +1408,8 @@ export default function KatsuyouPage() {
                       <div className="mt-4 space-y-4">
                         {wrongItems.slice(0, 3).map((item, i) => (
                           <div
-                            key={`${
-                              item.question.item_key || item.question.jp_word
-                            }-${i}`}
+                            key={`${item.question.item_key || item.question.jp_word
+                              }-${i}`}
                             className="rounded-3xl border border-gray-200 bg-white p-5"
                           >
                             <div className="flex items-start justify-between gap-3">
@@ -1457,18 +1494,16 @@ export default function KatsuyouPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${
-              !reviewMode && isDailyLimitReached
-                ? "border-red-200 bg-red-50"
-                : "border-gray-300 bg-white"
-            }`}
+            className={`mt-6 rounded-2xl border p-5 ${!reviewMode && isDailyLimitReached
+              ? "border-red-200 bg-red-50"
+              : "border-gray-300 bg-white"
+              }`}
           >
             <p
-              className={`text-sm ${
-                !reviewMode && isDailyLimitReached
-                  ? "text-red-700"
-                  : "text-gray-500"
-              }`}
+              className={`text-sm ${!reviewMode && isDailyLimitReached
+                ? "text-red-700"
+                : "text-gray-500"
+                }`}
             >
               {!reviewMode && isDailyLimitReached
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
