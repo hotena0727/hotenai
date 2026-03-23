@@ -206,6 +206,7 @@ function euForms(root: string) {
     바쁘: { past: "바빴다", polite: "바쁩니다", te: "바빠" },
     기쁘: { past: "기뻤다", polite: "기쁩니다", te: "기뻐" },
     크: { past: "컸다", polite: "큽니다", te: "커" },
+    나쁘: { past: "나빴다", polite: "나쁩니다", te: "나빠" },
   };
 
   return map[root] ?? {
@@ -913,6 +914,30 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     polite_negative_past: "멋지지 않았습니다",
     te_form_a: "멋지고",
     te_form_b: "멋져서",
+  },
+  生意気: {
+    plain_present: "건방지다",
+    polite_present: "건방집니다",
+    plain_negative: "건방지지 않다",
+    polite_negative: "건방지지 않습니다",
+    plain_past: "건방졌다",
+    polite_past: "건방졌습니다",
+    plain_negative_past: "건방지지 않았다",
+    polite_negative_past: "건방지지 않았습니다",
+    te_form_a: "건방지고",
+    te_form_b: "건방져서",
+  },
+    器用: {
+    plain_present: "야무지다",
+    polite_present: "야무집니다",
+    plain_negative: "야무지지 않다",
+    polite_negative: "야무지지 않습니다",
+    plain_past: "야무졌다",
+    polite_past: "야무졌습니다",
+    plain_negative_past: "야무지지 않았다",
+    polite_negative_past: "야무지지 않았습니다",
+    te_form_a: "야무지고",
+    te_form_b: "야무져서",
   },
   でたらめ: {
     plain_present: "엉터리다",
