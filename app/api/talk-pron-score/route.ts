@@ -392,7 +392,13 @@ function similarityScoreWithYomiPriority(
   );
 
   if (expectedReading === actualReading) {
-    const totalPenalty = flow.penalty;
+    const overtimeOnlyPenalty = Math.max(
+      0,
+      Math.ceil(slow.overtimeSec) * 3
+    );
+
+    const totalPenalty = flow.penalty + overtimeOnlyPenalty;
+
     return {
       score: Math.max(95, 100 - totalPenalty),
       expectedReading,
