@@ -233,10 +233,16 @@ function buildActualReadingWithYomiPriority(
 
   if (answerYomi) {
     const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
-    const endingMismatch = hasEndingMismatch(
-      expectedReading,
-      transcriptReading
-    );
+
+    const normalizedAnswerSurface = normalizeForSurfaceMatch(answerJp);
+    const normalizedTranscriptSurface = normalizeForSurfaceMatch(transcript);
+
+    const isSameSurface =
+      normalizedAnswerSurface === normalizedTranscriptSurface;
+
+    const endingMismatch = isSameSurface
+      ? false
+      : hasEndingMismatch(expectedReading, transcriptReading);
 
     const shouldAdoptExpectedYomi =
       hasKanji(transcript) &&
@@ -386,10 +392,9 @@ function similarityScoreWithYomiPriority(
   );
 
   if (expectedReading === actualReading) {
-    const totalPenalty = flow.penalty + slow.penalty;
-
+    const totalPenalty = flow.penalty;
     return {
-      score: Math.max(0, 100 - totalPenalty),
+      score: Math.max(95, 100 - totalPenalty),
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
