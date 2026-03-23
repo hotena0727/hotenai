@@ -1820,12 +1820,6 @@ export default function WordPage() {
                     </p>
                   </div>
 
-                  <div ref={resultRef} className="rounded-2xl bg-green-50 p-4">
-                    <p className="text-base font-semibold text-green-700 sm:text-lg">
-                      점수: {score} / {questions.length}
-                    </p>
-                  </div>
-
                   {isPerfect ? (
                     <div className="rounded-2xl bg-green-50 p-4">
                       <p className="text-base font-semibold text-green-700 sm:text-lg">
