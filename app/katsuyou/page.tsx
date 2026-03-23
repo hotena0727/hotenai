@@ -1150,32 +1150,22 @@ export default function KatsuyouPage() {
         </div>
 
         <div className="mt-8 border-t border-gray-200 pt-8">
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={makeNewQuiz}
-              disabled={!reviewMode && isDailyLimitReached}
-              className={
-                !reviewMode && isDailyLimitReached
-                  ? "rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
-                  : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
-              }
-            >
-              {reviewMode
-                ? "일반 활용 문제로 돌아가기"
-                : !reviewMode && isDailyLimitReached
-                  ? "오늘 이용 완료"
-                  : "🔄 새문제(랜덤 10문항)"}
-            </button>
-
-            <button
-              type="button"
-              onClick={resetExcludedWords}
-              className="rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
-            >
-              맞힌 항목 제외 초기화
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={makeNewQuiz}
+            disabled={!reviewMode && isDailyLimitReached}
+            className={
+              !reviewMode && isDailyLimitReached
+                ? "w-full rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
+                : "w-full rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
+            }
+          >
+            {reviewMode
+              ? "일반 활용 문제로 돌아가기"
+              : !reviewMode && isDailyLimitReached
+                ? "오늘 이용 완료"
+                : "🔄 새문제(랜덤 10문항)"}
+          </button>
         </div>
 
         {isAdminUser ? (

@@ -113,6 +113,7 @@ export default function KanjiPage() {
   const [saving, setSaving] = useState(false);
 
   const [excludedWords, setExcludedWords] = useState<ExcludedWordMap>({});
+
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -433,9 +434,9 @@ export default function KanjiPage() {
     const pool =
       reviewLevel && reviewLevel.length > 0
         ? allRows.filter(
-            (row) =>
-              String(row.level || "").trim().toUpperCase() === reviewLevel
-          )
+          (row) =>
+            String(row.level || "").trim().toUpperCase() === reviewLevel
+        )
         : allRows;
 
     return targetRows
@@ -727,13 +728,6 @@ export default function KanjiPage() {
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, 0);
-  };
-
-  const resetExcludedWords = () => {
-    if (openFreeExpiredGate()) return;
-
-    setExcludedWords({});
-    alert("맞힌 한자 제외 목록을 초기화했습니다.");
   };
 
   const handleSelectChoice = (index: number, choice: string) => {
@@ -1075,32 +1069,22 @@ export default function KanjiPage() {
         </div>
 
         <div className="mt-8 border-t border-gray-200 pt-8">
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={makeNewQuiz}
-              disabled={!isReviewMode && isDailyLimitReached}
-              className={
-                !isReviewMode && isDailyLimitReached
-                  ? "rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
-                  : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
-              }
-            >
-              {!isReviewMode && isDailyLimitReached
-                ? "오늘 이용 완료"
-                : isReviewMode
-                  ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
-                  : "🔄 새문제(랜덤 10문항)"}
-            </button>
-
-            <button
-              type="button"
-              onClick={resetExcludedWords}
-              className="rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
-            >
-              맞힌 한자 제외 초기화
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={makeNewQuiz}
+            disabled={!isReviewMode && isDailyLimitReached}
+            className={
+              !isReviewMode && isDailyLimitReached
+                ? "w-full rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
+                : "w-full rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
+            }
+          >
+            {!isReviewMode && isDailyLimitReached
+              ? "오늘 이용 완료"
+              : isReviewMode
+                ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
+                : "🔄 새문제(랜덤 10문항)"}
+          </button>
         </div>
 
         {isAdminUser ? (
@@ -1407,18 +1391,16 @@ export default function KanjiPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${
-              !isReviewMode && isDailyLimitReached
-                ? "border-red-200 bg-red-50"
-                : "border-gray-300 bg-white"
-            }`}
+            className={`mt-6 rounded-2xl border p-5 ${!isReviewMode && isDailyLimitReached
+              ? "border-red-200 bg-red-50"
+              : "border-gray-300 bg-white"
+              }`}
           >
             <p
-              className={`text-sm ${
-                !isReviewMode && isDailyLimitReached
-                  ? "text-red-700"
-                  : "text-gray-500"
-              }`}
+              className={`text-sm ${!isReviewMode && isDailyLimitReached
+                ? "text-red-700"
+                : "text-gray-500"
+                }`}
             >
               {!isReviewMode && isDailyLimitReached
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 유료 플랜으로 계속 이용해 보세요."
