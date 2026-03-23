@@ -1500,6 +1500,27 @@ export default function WordPage() {
           ) : null}
         </div>
 
+        <div className="mt-8 border-t border-gray-200 pt-8">
+          <div className="grid grid-cols-1 gap-4">
+            <button
+              type="button"
+              onClick={makeNewQuiz}
+              disabled={!isReviewMode && isDailyLimitReached}
+              className={
+                !isReviewMode && isDailyLimitReached
+                  ? "rounded-2xl border border-gray-200 bg-gray-100 px-3 py-3 text-sm font-semibold text-gray-400 sm:px-4 sm:py-4 sm:text-lg"
+                  : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
+              }
+            >
+              {!isReviewMode && isDailyLimitReached
+                ? "오늘 이용 완료"
+                : isReviewMode
+                  ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
+                  : "🔄 새문제(랜덤 10문항)"}
+            </button>
+          </div>
+        </div>
+
         {isAdminUser ? (
           <div className="mt-4 rounded-2xl border border-gray-300 bg-white">
             <button
@@ -1565,27 +1586,6 @@ export default function WordPage() {
             ) : null}
           </div>
         ) : null}
-
-        <div className="mt-8 border-t border-gray-200 pt-8">
-          <div className="grid grid-cols-1 gap-4">
-            <button
-              type="button"
-              onClick={makeNewQuiz}
-              disabled={!isReviewMode && isDailyLimitReached}
-              className={
-                !isReviewMode && isDailyLimitReached
-                  ? "rounded-2xl border border-gray-200 bg-gray-100 px-3 py-3 text-sm font-semibold text-gray-400 sm:px-4 sm:py-4 sm:text-lg"
-                  : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
-              }
-            >
-              {!isReviewMode && isDailyLimitReached
-                ? "오늘 이용 완료"
-                : isReviewMode
-                  ? `🔄 선택한 복습 문제 다시 불러오기 (${reviewRows.length}문항)`
-                  : "🔄 새문제(랜덤 10문항)"}
-            </button>
-          </div>
-        </div>
 
         {questions.length > 0 ? (
           <div className="mt-6 rounded-2xl border border-gray-300 bg-white p-5">
