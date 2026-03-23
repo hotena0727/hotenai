@@ -10,8 +10,6 @@ import type { WordQType, WordQuestion, WordRow } from "@/app/types/word";
 import { loadWordRows } from "@/lib/word-loader";
 import { buildWordQuiz } from "@/lib/word-quiz";
 import { buildWordAttemptPayload } from "@/lib/word-payload";
-import { loadPatternRows, filterPatternRows } from "@/lib/pattern-loader";
-import type { PatternRow } from "@/app/types/pattern";
 import { isPaidPlan, type PlanCode } from "@/lib/plans";
 import { hasSeenHomeToday } from "@/lib/home-gate";
 import { todayKST } from "@/lib/progress";
@@ -165,7 +163,6 @@ export default function WordPage() {
   const [reviewLevel, setReviewLevel] = useState("");
 
   const [rows, setRows] = useState<WordRow[]>([]);
-  const [patternRows, setPatternRows] = useState<PatternRow[]>([]);
   const [questions, setQuestions] = useState<WordQuestion[]>([]);
 
   const [selectedPosGroup, setSelectedPosGroup] = useState("noun");
@@ -181,7 +178,6 @@ export default function WordPage() {
     "interjection",
   ]);
 
-  const [patternOpen, setPatternOpen] = useState(false);
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
@@ -298,21 +294,6 @@ export default function WordPage() {
       setSelectedLevel(visibleLevelOptions[0]);
     }
   }, [visibleLevelOptions, selectedLevel]);
-
-  const visiblePatterns = useMemo(
-    () =>
-      filterPatternRows(
-        patternRows,
-        selectedPosGroup === "other" ? "" : selectedPosGroup
-      ),
-    [patternRows, selectedPosGroup]
-  );
-
-  const featuredPattern = useMemo(() => {
-    if (visiblePatterns.length === 0) return null;
-    const randomIndex = Math.floor(Math.random() * visiblePatterns.length);
-    return visiblePatterns[randomIndex];
-  }, [visiblePatterns]);
 
   const reviewRows = useMemo(() => {
     if (!isReviewMode || reviewQids.length === 0) return [] as WordRow[];
@@ -489,14 +470,8 @@ export default function WordPage() {
       try {
         setLoading(true);
         setErrorMsg("");
-
-        const [loadedWords, loadedPatterns] = await Promise.all([
-          loadWordRows(),
-          loadPatternRows(),
-        ]);
-
+        const loadedWords = await loadWordRows();
         setRows(loadedWords);
-        setPatternRows(loadedPatterns);
       } catch (error) {
         console.error(error);
         setErrorMsg("단어 데이터를 불러오지 못했습니다.");
@@ -1528,69 +1503,6 @@ export default function WordPage() {
               >
                 유료 플랜 보기
               </a>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="mt-6 rounded-2xl border border-gray-300 bg-white">
-          <button
-            type="button"
-            onClick={() => setPatternOpen((prev) => !prev)}
-            className="flex w-full items-center gap-3 px-4 py-4 text-left"
-          >
-            <span className="text-lg">{patternOpen ? "⌄" : "›"}</span>
-            <span className="text-lg font-semibold">
-              📌 필수패턴 (카드로 빠르게 익히기)
-            </span>
-          </button>
-
-          {patternOpen ? (
-            <div className="border-t border-gray-200 px-4 py-4">
-              {!featuredPattern ? (
-                <p className="text-sm text-gray-500">표시할 패턴이 없습니다.</p>
-              ) : (
-                <div className="space-y-4">
-                  <div className="rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600">
-                    랜덤 1개 패턴
-                  </div>
-
-                  <div className="rounded-3xl border border-gray-200 p-5">
-                    <p className="text-2xl font-bold sm:text-3xl">
-                      {featuredPattern.title}
-                    </p>
-                    <p className="mt-4 text-xl font-semibold sm:text-2xl">
-                      <span lang="ja" style={JA_FONT_STYLE}>
-                        {featuredPattern.jp}
-                      </span>
-                    </p>
-                    <p className="mt-2 text-xl text-gray-700">
-                      {featuredPattern.kr}
-                    </p>
-
-                    <div className="mt-6">
-                      <p className="text-base font-semibold sm:text-xl">
-                        <span lang="ja" style={JA_FONT_STYLE}>
-                          {featuredPattern.ex1_jp}
-                        </span>
-                      </p>
-                      <p className="mt-1 text-sm text-gray-700 sm:text-lg">
-                        {featuredPattern.ex1_kr}
-                      </p>
-                    </div>
-
-                    <div className="mt-5">
-                      <p className="text-base font-semibold sm:text-xl">
-                        <span lang="ja" style={JA_FONT_STYLE}>
-                          {featuredPattern.ex2_jp}
-                        </span>
-                      </p>
-                      <p className="mt-1 text-sm text-gray-700 sm:text-lg">
-                        {featuredPattern.ex2_kr}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           ) : null}
         </div>
