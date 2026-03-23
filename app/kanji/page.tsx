@@ -699,7 +699,7 @@ export default function KanjiPage() {
     if (openFreeExpiredGate()) return;
 
     setExcludedWords({});
-    alert("맞힌 단어 제외 목록을 초기화했습니다.");
+    alert("맞힌 한자 제외 목록을 초기화했습니다.");
   };
 
   const handleSelectChoice = (index: number, choice: string) => {
@@ -1255,18 +1255,11 @@ export default function KanjiPage() {
                   </div>
 
                   {isPerfect ? (
-                    <>
-                      <div className="rounded-2xl bg-green-50 p-4">
-                        <p className="text-base font-semibold text-green-700 sm:text-lg">
-                          🎉 완벽해요! 전부 정답입니다.
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-green-50 p-4">
-                        <p className="text-base font-semibold text-green-700 sm:text-lg">
-                          🎉 Perfect Streak! {questions.length}연속 정답!
-                        </p>
-                      </div>
-                    </>
+                    <div className="rounded-2xl bg-green-50 p-4">
+                      <p className="text-base font-semibold text-green-700 sm:text-lg">
+                        🎉 완벽해요! {questions.length}문항 전부 정답입니다.
+                      </p>
+                    </div>
                   ) : (
                     <div className="rounded-2xl bg-yellow-50 p-4">
                       <p className="text-base font-semibold text-yellow-800">
@@ -1274,10 +1267,6 @@ export default function KanjiPage() {
                       </p>
                     </div>
                   )}
-
-                  <div className="text-sm text-gray-500">
-                    🧠 이번 최고 콤보: {score}연속
-                  </div>
 
                   {wrongItems.length > 0 ? (
                     <div className="mt-2">

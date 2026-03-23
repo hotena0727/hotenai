@@ -14,11 +14,7 @@ import type {
 import { loadKatsuyouRows } from "@/lib/katsuyou-loader";
 import { buildKatsuyouQuiz } from "@/lib/katsuyou-quiz";
 import { buildKatsuyouAttemptPayload } from "@/lib/katsuyou-payload";
-import {
-  hasPlan,
-  isPaidPlan,
-  type PlanCode,
-} from "@/lib/plans";
+import { hasPlan, isPaidPlan, type PlanCode } from "@/lib/plans";
 import {
   clearDailyState,
   loadAppProgress,
@@ -159,7 +155,9 @@ export default function KatsuyouPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!hasSeenHomeToday()) {
-      const fullNext = `${pathname || "/katsuyou"}${window.location.search || ""}`;
+      const fullNext = `${pathname || "/katsuyou"}${
+        window.location.search || ""
+      }`;
       router.replace(`/?next=${encodeURIComponent(fullNext)}`);
     }
   }, [router, pathname]);
@@ -751,7 +749,7 @@ export default function KatsuyouPage() {
     if (openFreeExpiredGate()) return;
 
     setExcludedWords({});
-    alert("맞힌 단어 제외 목록을 초기화했습니다.");
+    alert("맞힌 항목 제외 목록을 초기화했습니다.");
   };
 
   const handleSelectChoice = (index: number, choice: string) => {
@@ -969,6 +967,7 @@ export default function KatsuyouPage() {
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto max-w-3xl">
         <h1 className="mt-4 text-4xl font-bold">🔄 활용</h1>
+
         {!isPaidPlan(userPlan) && freeExpired ? (
           <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             무료 이용 기간 30일이 종료되었습니다.
@@ -1040,7 +1039,7 @@ export default function KatsuyouPage() {
 
         <div
           className={
-            isDailyLimitReached
+            !reviewMode && isDailyLimitReached
               ? "mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 sm:px-4 sm:py-4"
               : "mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 sm:px-4 sm:py-4"
           }
@@ -1053,7 +1052,7 @@ export default function KatsuyouPage() {
             <div className="min-w-0">
               <p
                 className={
-                  isDailyLimitReached
+                  !reviewMode && isDailyLimitReached
                     ? "text-xs font-semibold text-red-700 sm:text-sm"
                     : "text-xs font-semibold text-gray-800 sm:text-sm"
                 }
@@ -1064,14 +1063,14 @@ export default function KatsuyouPage() {
               </p>
               <p
                 className={
-                  isDailyLimitReached
+                  !reviewMode && isDailyLimitReached
                     ? "mt-1 text-xs text-red-600"
                     : "mt-1 text-xs text-gray-500"
                 }
               >
                 {isPaidPlan(userPlan)
                   ? "자세한 이용 안내 보기"
-                  : isDailyLimitReached
+                  : !reviewMode && isDailyLimitReached
                     ? "오늘 이용 완료"
                     : remainingSets === 1
                       ? "오늘 1세트 남음"
@@ -1080,7 +1079,7 @@ export default function KatsuyouPage() {
             </div>
             <span
               className={
-                isDailyLimitReached
+                !reviewMode && isDailyLimitReached
                   ? "shrink-0 text-sm text-red-500 sm:text-base"
                   : "shrink-0 text-sm text-gray-500 sm:text-base"
               }
@@ -1092,7 +1091,7 @@ export default function KatsuyouPage() {
           {planInfoOpen ? (
             <div
               className={
-                isDailyLimitReached
+                !reviewMode && isDailyLimitReached
                   ? "mt-3 border-t border-red-200 pt-3 text-xs leading-6 text-red-700 sm:text-sm"
                   : "mt-3 border-t border-gray-200 pt-3 text-xs leading-6 text-gray-600 sm:text-sm"
               }
@@ -1100,14 +1099,14 @@ export default function KatsuyouPage() {
               <p>
                 {isPaidPlan(userPlan)
                   ? "유료 플랜은 단어·한자·활용을 제한 없이 이용할 수 있습니다."
-                  : isDailyLimitReached
+                  : !reviewMode && isDailyLimitReached
                     ? "오늘 무료 이용 한도 3/3세트를 모두 사용했습니다. 단어·한자·활용은 내일 다시 이어서 풀 수 있어요."
                     : `무료 플랜은 단어·한자·활용을 합산 하루 3세트까지 이용할 수 있습니다. 오늘은 ${remainingSets}세트 더 이용할 수 있습니다.`}
               </p>
             </div>
           ) : null}
 
-          {isDailyLimitReached ? (
+          {!reviewMode && isDailyLimitReached ? (
             <div className="mt-3">
               <a
                 href={PRO_UPGRADE_URL}
@@ -1126,23 +1125,24 @@ export default function KatsuyouPage() {
               onClick={makeNewQuiz}
               disabled={!reviewMode && isDailyLimitReached}
               className={
-                isDailyLimitReached
+                !reviewMode && isDailyLimitReached
                   ? "rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 sm:px-4 sm:py-4 sm:text-lg"
                   : "rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
               }
             >
               {reviewMode
                 ? "일반 활용 문제로 돌아가기"
-                : isDailyLimitReached
+                : !reviewMode && isDailyLimitReached
                   ? "오늘 이용 완료"
                   : "🔄 새문제(랜덤 10문항)"}
             </button>
+
             <button
               type="button"
               onClick={resetExcludedWords}
               className="rounded-2xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 sm:px-4 sm:py-4 sm:text-lg"
             >
-              맞힌 단어 제외 초기화
+              맞힌 항목 제외 초기화
             </button>
           </div>
         </div>
@@ -1274,12 +1274,14 @@ export default function KatsuyouPage() {
                         >
                           {isRight ? "정답입니다." : "오답입니다."}
                         </p>
+
                         <p className="mt-2 text-sm text-gray-700">
                           정답:{" "}
                           <span lang="ja" style={JA_FONT_STYLE}>
                             {correct}
                           </span>
                         </p>
+
                         <p className="mt-1 text-sm text-gray-700">
                           일본어:{" "}
                           <span lang="ja" style={JA_FONT_STYLE}>
@@ -1296,6 +1298,7 @@ export default function KatsuyouPage() {
                           ) : null}{" "}
                           / 한국어: {q.kr_word}
                         </p>
+
                         <p className="mt-1 text-sm text-gray-700">
                           품사: {posLabel(q.pos)} / 유형: {qtypeLabel(q.qtype)}
                         </p>
@@ -1344,18 +1347,11 @@ export default function KatsuyouPage() {
                   </div>
 
                   {isPerfect ? (
-                    <>
-                      <div className="rounded-2xl bg-green-50 p-4">
-                        <p className="text-base font-semibold text-green-700 sm:text-lg">
-                          🎉 완벽해요! 전부 정답입니다.
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-green-50 p-4">
-                        <p className="text-base font-semibold text-green-700 sm:text-lg">
-                          🎉 Perfect Streak! 10연속 정답!
-                        </p>
-                      </div>
-                    </>
+                    <div className="rounded-2xl bg-green-50 p-4">
+                      <p className="text-base font-semibold text-green-700 sm:text-lg">
+                        🎉 완벽해요! {questions.length}문항 전부 정답입니다.
+                      </p>
+                    </div>
                   ) : (
                     <div className="rounded-2xl bg-yellow-50 p-4">
                       <p className="text-base font-semibold text-yellow-800">
@@ -1364,10 +1360,6 @@ export default function KatsuyouPage() {
                       </p>
                     </div>
                   )}
-
-                  <div className="text-sm text-gray-500">
-                    🧠 오늘 최고 콤보: {score}연속
-                  </div>
 
                   {wrongItems.length > 0 ? (
                     <div className="mt-2">
@@ -1378,7 +1370,9 @@ export default function KatsuyouPage() {
                       <div className="mt-4 space-y-4">
                         {wrongItems.slice(0, 3).map((item, i) => (
                           <div
-                            key={`${item.question.item_key || item.question.jp_word}-${i}`}
+                            key={`${
+                              item.question.item_key || item.question.jp_word
+                            }-${i}`}
                             className="rounded-3xl border border-gray-200 bg-white p-5"
                           >
                             <div className="flex items-start justify-between gap-3">
@@ -1463,16 +1457,20 @@ export default function KatsuyouPage() {
           </div>
         ) : (
           <div
-            className={`mt-6 rounded-2xl border p-5 ${isDailyLimitReached
-              ? "border-red-200 bg-red-50"
-              : "border-gray-300 bg-white"
-              }`}
+            className={`mt-6 rounded-2xl border p-5 ${
+              !reviewMode && isDailyLimitReached
+                ? "border-red-200 bg-red-50"
+                : "border-gray-300 bg-white"
+            }`}
           >
             <p
-              className={`text-sm ${isDailyLimitReached ? "text-red-700" : "text-gray-500"
-                }`}
+              className={`text-sm ${
+                !reviewMode && isDailyLimitReached
+                  ? "text-red-700"
+                  : "text-gray-500"
+              }`}
             >
-              {isDailyLimitReached
+              {!reviewMode && isDailyLimitReached
                 ? "오늘 단어·한자·활용 학습은 모두 완료했습니다. 내일 다시 이어서 풀거나 PRO로 계속 이용해 보세요."
                 : reviewMode
                   ? "선택한 오답 문제를 찾지 못했습니다."
@@ -1541,6 +1539,7 @@ export default function KatsuyouPage() {
           </div>
         </div>
       ) : null}
+
       {freeGateOpen ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 px-4">
           <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
