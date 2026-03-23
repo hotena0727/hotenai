@@ -68,6 +68,85 @@ function normJpForReading(text: string) {
   );
 }
 
+function normalizeJapaneseCountersToReading(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+
+    // ヶ月 / か月 / カ月 / ヵ月
+    .replace(/1(?:ヶ月|か月|カ月|ヵ月)|一(?:ヶ月|か月|カ月|ヵ月)/g, "いっかげつ")
+    .replace(/2(?:ヶ月|か月|カ月|ヵ月)|二(?:ヶ月|か月|カ月|ヵ月)/g, "にかげつ")
+    .replace(/3(?:ヶ月|か月|カ月|ヵ月)|三(?:ヶ月|か月|カ月|ヵ月)/g, "さんかげつ")
+    .replace(/4(?:ヶ月|か月|カ月|ヵ月)|四(?:ヶ月|か月|カ月|ヵ月)/g, "よんかげつ")
+    .replace(/5(?:ヶ月|か月|カ月|ヵ月)|五(?:ヶ月|か月|カ月|ヵ月)/g, "ごかげつ")
+    .replace(/6(?:ヶ月|か月|カ月|ヵ月)|六(?:ヶ月|か月|カ月|ヵ月)/g, "ろっかげつ")
+    .replace(/7(?:ヶ月|か月|カ月|ヵ月)|七(?:ヶ月|か月|カ月|ヵ月)/g, "ななかげつ")
+    .replace(/8(?:ヶ月|か月|カ月|ヵ月)|八(?:ヶ月|か月|カ月|ヵ月)/g, "はっかげつ")
+    .replace(/9(?:ヶ月|か月|カ月|ヵ月)|九(?:ヶ月|か月|カ月|ヵ月)/g, "きゅうかげつ")
+    .replace(/10(?:ヶ月|か月|カ月|ヵ月)|十(?:ヶ月|か月|カ月|ヵ月)/g, "じゅっかげつ")
+
+    // 回
+    .replace(/1回|一回/g, "いっかい")
+    .replace(/2回|二回/g, "にかい")
+    .replace(/3回|三回/g, "さんかい")
+    .replace(/4回|四回/g, "よんかい")
+    .replace(/5回|五回/g, "ごかい")
+    .replace(/6回|六回/g, "ろっかい")
+    .replace(/7回|七回/g, "ななかい")
+    .replace(/8回|八回/g, "はっかい")
+    .replace(/9回|九回/g, "きゅうかい")
+    .replace(/10回|十回/g, "じゅっかい")
+
+    // 人
+    .replace(/1人|一人/g, "ひとり")
+    .replace(/2人|二人/g, "ふたり")
+    .replace(/3人|三人/g, "さんにん")
+    .replace(/4人|四人/g, "よにん")
+    .replace(/5人|五人/g, "ごにん")
+    .replace(/6人|六人/g, "ろくにん")
+    .replace(/7人|七人/g, "しちにん")
+    .replace(/8人|八人/g, "はちにん")
+    .replace(/9人|九人/g, "きゅうにん")
+    .replace(/10人|十人/g, "じゅうにん")
+
+    // 時間
+    .replace(/1時間|一時間/g, "いちじかん")
+    .replace(/2時間|二時間/g, "にじかん")
+    .replace(/3時間|三時間/g, "さんじかん")
+    .replace(/4時間|四時間/g, "よじかん")
+    .replace(/5時間|五時間/g, "ごじかん")
+    .replace(/6時間|六時間/g, "ろくじかん")
+    .replace(/7時間|七時間/g, "しちじかん")
+    .replace(/8時間|八時間/g, "はちじかん")
+    .replace(/9時間|九時間/g, "くじかん")
+    .replace(/10時間|十時間/g, "じゅうじかん")
+
+    // 分（時間の「分」だけ 최소 대응)
+    .replace(/1分|一分/g, "いっぷん")
+    .replace(/2分|二分/g, "にふん")
+    .replace(/3分|三分/g, "さんぷん")
+    .replace(/4分|四分/g, "よんぷん")
+    .replace(/5分|五分/g, "ごふん")
+    .replace(/6分|六分/g, "ろっぷん")
+    .replace(/7分|七分/g, "ななふん")
+    .replace(/8分|八分/g, "はっぷん")
+    .replace(/9分|九分/g, "きゅうふん")
+    .replace(/10分|十分/g, "じゅっぷん")
+
+    // 日（よく使うもの만)
+    .replace(/1日|一日/g, "ついたち")
+    .replace(/2日|二日/g, "ふつか")
+    .replace(/3日|三日/g, "みっか")
+    .replace(/4日|四日/g, "よっか")
+    .replace(/5日|五日/g, "いつか")
+    .replace(/6日|六日/g, "むいか")
+    .replace(/7日|七日/g, "なのか")
+    .replace(/8日|八日/g, "ようか")
+    .replace(/9日|九日/g, "ここのか")
+    .replace(/10日|十日/g, "とおか")
+    .replace(/14日|十四日/g, "じゅうよっか")
+    .replace(/20日|二十日/g, "はつか");
+}
+
 function replaceCommonVariants(text: string) {
   return normJpForReading(text)
     .replace(/ふいんき/g, "ふんいき")
@@ -75,7 +154,9 @@ function replaceCommonVariants(text: string) {
 }
 
 function toReadingLike(text: string) {
-  return replaceCommonVariants(text);
+  return replaceCommonVariants(
+    normalizeJapaneseCountersToReading(text)
+  );
 }
 
 function bigrams(s: string) {
