@@ -1821,29 +1821,21 @@ export default function WordPage() {
                   </div>
 
                   {isPerfect ? (
-                    <>
-                      <div className="rounded-2xl bg-green-50 p-4">
-                        <p className="text-base font-semibold text-green-700 sm:text-lg">
-                          🎉 완벽해요! 전부 정답입니다.
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-green-50 p-4">
-                        <p className="text-base font-semibold text-green-700 sm:text-lg">
-                          🎉 Perfect Streak! {questions.length}연속 정답!
-                        </p>
-                      </div>
-                    </>
+                    <div className="rounded-2xl bg-green-50 p-4">
+                      <p className="text-base font-semibold text-green-700 sm:text-lg">
+                        🎉 완벽해요! {questions.length}문항 전부 정답입니다.
+                      </p>
+                    </div>
                   ) : (
                     <div className="rounded-2xl bg-yellow-50 p-4">
                       <p className="text-base font-semibold text-yellow-800">
-                        💪 괜찮아요! 틀린 문제는 성장의 재료예요. 다시 한 번
-                        도전해봐요.
+                        💪 괜찮아요! 틀린 문제는 성장의 재료예요. 다시 한 번 도전해봐요.
                       </p>
                     </div>
                   )}
 
                   <div className="text-sm text-gray-500">
-                    🧠 이번 최고 콤보: {score}연속
+                    🧠 이번 정답 수: {score} / {questions.length}
                   </div>
 
                   {showWrongNote ? (
