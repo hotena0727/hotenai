@@ -10,7 +10,18 @@ function normalizeLevel(raw: string): string {
 }
 
 function normalizePos(raw: string): string {
-  return String(raw || "").trim().toLowerCase();
+  const s = String(raw || "").trim().toLowerCase();
+
+  if (["noun", "명사"].includes(s)) return "noun";
+  if (["adj_i", "i_adj", "adj-i", "い형용사"].includes(s)) return "adj_i";
+  if (["adj_na", "na_adj", "adj-na", "な형용사"].includes(s)) return "adj_na";
+  if (["verb", "동사"].includes(s)) return "verb";
+  if (["adverb", "부사"].includes(s)) return "adverb";
+  if (["particle", "조사"].includes(s)) return "particle";
+  if (["conjunction", "접속사"].includes(s)) return "conjunction";
+  if (["interjection", "감탄사"].includes(s)) return "interjection";
+
+  return s;
 }
 
 export async function loadWordRows(): Promise<WordRow[]> {
