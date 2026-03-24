@@ -19,7 +19,10 @@ function normalizeJapaneseVariantSurface(text: string) {
     .replace(/友だち/g, "友達")
     .replace(/こども/g, "子供")
     .replace(/子ども/g, "子供")
-    .replace(/下さい/g, "ください");
+    .replace(/下さい/g, "ください")
+    .replace(/マンガ/g, "漫画")
+    .replace(/まんが/g, "漫画")
+    .replace(/ときどき/g, "時々");
 }
 
 function normalizeForSurfaceMatch(text: string) {
