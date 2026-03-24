@@ -160,6 +160,7 @@ function makePolitePresent(baseKr: string): string {
     꺼내: "꺼냅니다",
     넣: "넣습니다",
     듣: "듭니다",
+    
   };
   if (special[root]) return special[root];
 
