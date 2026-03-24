@@ -83,6 +83,8 @@ function normalizeJapaneseCountersToReading(text: string) {
     .replace(/8(?:ヶ月|か月|カ月|ヵ月)|八(?:ヶ月|か月|カ月|ヵ月)/g, "はっかげつ")
     .replace(/9(?:ヶ月|か月|カ月|ヵ月)|九(?:ヶ月|か月|カ月|ヵ月)/g, "きゅうかげつ")
     .replace(/10(?:ヶ月|か月|カ月|ヵ月)|十(?:ヶ月|か月|カ月|ヵ月)/g, "じゅっかげつ")
+    .replace(/11(?:ヶ月|か月|カ月|ヵ月)|十一(?:ヶ月|か月|カ月|ヵ月)/g, "じゅういっかげつ")
+    .replace(/12(?:ヶ月|か月|カ月|ヵ月)|十二(?:ヶ月|か月|カ月|ヵ月)/g, "じゅうにかげつ")
 
     // 回
     .replace(/1回|一回/g, "いっかい")
@@ -95,6 +97,8 @@ function normalizeJapaneseCountersToReading(text: string) {
     .replace(/8回|八回/g, "はっかい")
     .replace(/9回|九回/g, "きゅうかい")
     .replace(/10回|十回/g, "じゅっかい")
+    .replace(/11回|十一回/g, "じゅういっかい")
+    .replace(/12回|十二回/g, "じゅうにかい")
 
     // 人
     .replace(/1人|一人/g, "ひとり")
@@ -119,8 +123,11 @@ function normalizeJapaneseCountersToReading(text: string) {
     .replace(/8時間|八時間/g, "はちじかん")
     .replace(/9時間|九時間/g, "くじかん")
     .replace(/10時間|十時間/g, "じゅうじかん")
+    .replace(/11時間|十一時間/g, "じゅういちじかん")
+    .replace(/12時間|十二時間/g, "じゅうにじかん")
+    .replace(/24時間|二十四時間/g, "にじゅうよじかん")
 
-    // 分（時間の「分」だけ 최소 대응)
+    // 分
     .replace(/1分|一分/g, "いっぷん")
     .replace(/2分|二分/g, "にふん")
     .replace(/3分|三分/g, "さんぷん")
@@ -131,8 +138,15 @@ function normalizeJapaneseCountersToReading(text: string) {
     .replace(/8分|八分/g, "はっぷん")
     .replace(/9分|九分/g, "きゅうふん")
     .replace(/10分|十分/g, "じゅっぷん")
+    .replace(/11分|十一分/g, "じゅういっぷん")
+    .replace(/12分|十二分/g, "じゅうにふん")
+    .replace(/15分|十五分/g, "じゅうごふん")
+    .replace(/20分|二十分/g, "にじゅっぷん")
+    .replace(/25分|二十五分/g, "にじゅうごふん")
+    .replace(/30分|三十分/g, "さんじゅっぷん")
+    .replace(/45分|四十五分/g, "よんじゅうごふん")
 
-    // 日（よく使うもの만)
+    // 日
     .replace(/1日|一日/g, "ついたち")
     .replace(/2日|二日/g, "ふつか")
     .replace(/3日|三日/g, "みっか")
@@ -144,7 +158,34 @@ function normalizeJapaneseCountersToReading(text: string) {
     .replace(/9日|九日/g, "ここのか")
     .replace(/10日|十日/g, "とおか")
     .replace(/14日|十四日/g, "じゅうよっか")
-    .replace(/20日|二十日/g, "はつか");
+    .replace(/20日|二十日/g, "はつか")
+    .replace(/24日|二十四日/g, "にじゅうよっか")
+
+    // 月
+    .replace(/1月|一月/g, "いちがつ")
+    .replace(/2月|二月/g, "にがつ")
+    .replace(/3月|三月/g, "さんがつ")
+    .replace(/4月|四月/g, "しがつ")
+    .replace(/5月|五月/g, "ごがつ")
+    .replace(/6月|六月/g, "ろくがつ")
+    .replace(/7月|七月/g, "しちがつ")
+    .replace(/8月|八月/g, "はちがつ")
+    .replace(/9月|九月/g, "くがつ")
+    .replace(/10月|十月/g, "じゅうがつ")
+    .replace(/11月|十一月/g, "じゅういちがつ")
+    .replace(/12月|十二月/g, "じゅうにがつ")
+
+    // 年
+    .replace(/1年|一年/g, "いちねん")
+    .replace(/2年|二年/g, "にねん")
+    .replace(/3年|三年/g, "さんねん")
+    .replace(/4年|四年/g, "よねん")
+    .replace(/5年|五年/g, "ごねん")
+    .replace(/6年|六年/g, "ろくねん")
+    .replace(/7年|七年/g, "しちねん")
+    .replace(/8年|八年/g, "はちねん")
+    .replace(/9年|九年/g, "きゅうねん")
+    .replace(/10年|十年/g, "じゅうねん");
 }
 
 function replaceCommonVariants(text: string) {
