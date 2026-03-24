@@ -327,6 +327,7 @@ export default function TalkPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [spokenCountDateKey, setSpokenCountDateKey] = useState(todayKST());
 
   const [allRows, setAllRows] = useState<TalkCsvRow[]>([]);
   const [questions, setQuestions] = useState<TalkCsvRow[]>([]);
@@ -427,30 +428,34 @@ export default function TalkPage() {
 
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(
-        `talk-spoken-count:${todayKST()}`
-      );
+      const todayKey = todayKST();
+      setSpokenCountDateKey(todayKey);
+
+      const stored = window.localStorage.getItem(`talk-spoken-count:${todayKey}`);
       if (stored) {
         const parsed = Number(stored);
         if (Number.isFinite(parsed) && parsed >= 0) {
           setSpokenSentenceCount(parsed);
+          return;
         }
       }
+
+      setSpokenSentenceCount(0);
     } catch {
-      // noop
+      setSpokenSentenceCount(0);
     }
   }, []);
 
   useEffect(() => {
     try {
       window.localStorage.setItem(
-        `talk-spoken-count:${todayKST()}`,
+        `talk-spoken-count:${spokenCountDateKey}`,
         String(spokenSentenceCount)
       );
     } catch {
       // noop
     }
-  }, [spokenSentenceCount]);
+  }, [spokenSentenceCount, spokenCountDateKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -459,6 +464,46 @@ export default function TalkPage() {
       router.replace(`/?next=${encodeURIComponent(fullNext)}`);
     }
   }, [router, pathname]);
+
+  useEffect(() => {
+    const checkDateChange = () => {
+      const todayKey = todayKST();
+
+      if (todayKey !== spokenCountDateKey) {
+        setSpokenCountDateKey(todayKey);
+
+        try {
+          const stored = window.localStorage.getItem(
+            `talk-spoken-count:${todayKey}`
+          );
+
+          if (stored) {
+            const parsed = Number(stored);
+            if (Number.isFinite(parsed) && parsed >= 0) {
+              setSpokenSentenceCount(parsed);
+              return;
+            }
+          }
+        } catch {
+          // noop
+        }
+
+        setSpokenSentenceCount(0);
+      }
+    };
+
+    checkDateChange();
+
+    const interval = window.setInterval(checkDateChange, 60 * 1000);
+    window.addEventListener("focus", checkDateChange);
+    document.addEventListener("visibilitychange", checkDateChange);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", checkDateChange);
+      document.removeEventListener("visibilitychange", checkDateChange);
+    };
+  }, [spokenCountDateKey]);
 
   const resetPronunciationState = () => {
     if (recordedAudioUrl) {
@@ -921,16 +966,6 @@ export default function TalkPage() {
             ? (talkProgress.completed_subs as Record<string, boolean>)
             : {};
         setCompletedSubsMap(completedMap);
-
-        const hasTalkProgress =
-          talkProgress &&
-          typeof talkProgress === "object" &&
-          Object.keys(talkProgress).length > 0;
-
-        if (!hasTalkProgress) {
-          clearTalkLocalStateForToday();
-          setSpokenSentenceCount(0);
-        }
 
         const stages = getStageOptions(cleaned);
         setStageOptions(stages);
