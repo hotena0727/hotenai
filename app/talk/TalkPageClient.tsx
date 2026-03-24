@@ -2753,10 +2753,6 @@ export default function TalkPage() {
                   </p>
                 </div>
 
-                <p className="mt-5 text-base text-gray-500">
-                  보상을 받고 다음 문제로 넘어갑니다.
-                </p>
-
                 <button
                   type="button"
                   onClick={handleRewardComplete}
