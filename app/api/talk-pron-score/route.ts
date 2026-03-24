@@ -199,7 +199,10 @@ function normalizeJapaneseCountersToReading(text: string) {
 function replaceCommonVariants(text: string) {
   return normJpForReading(text)
     .replace(/ふいんき/g, "ふんいき")
-    .replace(/を/g, "お");
+    .replace(/を/g, "お")
+    .replace(/にほん/g, "にっぽん")
+    .replace(/こんにちわ/g, "こんにちは")
+    .replace(/わたしわ/g, "わたしは");
 }
 
 function toReadingLike(text: string) {
