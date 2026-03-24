@@ -10,7 +10,7 @@ function stripPunctuation(text: string) {
   return String(text || "")
     .normalize("NFKC")
     .replace(/[\s\u3000]+/g, "")
-    .replace(/[、。．，,！？!？「」『』（）()\[\]{}…~"'`´]/g, "");
+    .replace(/[、。．，,！？!？?「」『』（）()\[\]{}…~"'`´]/g, "");
 }
 
 function normalizeJapaneseVariantSurface(text: string) {
