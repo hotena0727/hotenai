@@ -538,16 +538,15 @@ function similarityScoreWithYomiPriority(
     answerJp
   );
 
-  if (expectedReading === actualReading) {
-    const overtimeOnlyPenalty = Math.max(
-      0,
-      Math.ceil(slow.overtimeSec) * 3
-    );
-
-    const totalPenalty = flow.penalty + overtimeOnlyPenalty;
-
+  if (
+    expectedReading === actualReading &&
+    scoreByDistance(
+      normalizeForSurfaceMatch(transcript),
+      normalizeForSurfaceMatch(answerJp)
+    ) >= 85
+  ) {
     return {
-      score: Math.max(95, 100 - totalPenalty),
+      score: 100,
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
@@ -853,18 +852,6 @@ export async function POST(req: Request) {
       score: judged.score,
       feedback,
       model: TRANSCRIBE_MODEL,
-      debug: {
-        answerJp,
-        answerYomi,
-        expectedReading: judged.expectedReading,
-        actualReading: judged.actualReading,
-        adoptedExpectedYomi: judged.adoptedExpectedYomi,
-        surfaceScore: judged.surfaceScore,
-        slowPenalty: slow.penalty,
-        slowCps: slow.cps,
-        slowOvertimeSec: slow.overtimeSec,
-        flowPenalty: analyzeSpeechFlow(transcript, judged.actualReading).penalty,
-      },
     });
   } catch (error) {
     console.error("talk-pron-score error:", error);
