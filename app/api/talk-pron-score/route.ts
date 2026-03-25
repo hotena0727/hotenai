@@ -204,6 +204,14 @@ function normalizeJapaneseCountersToReading(text: string) {
     .replace(/1年|一年/g, "いちねん");
 }
 
+function normalizeKnownWordsToReading(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/本当に/g, "ほんとに")
+    .replace(/理想的/g, "りそうてき")
+    .replace(/休める/g, "やすめる");
+}
+
 function replaceCommonVariants(text: string) {
   return normJpForReading(text)
     .replace(/ふいんき/g, "ふんいき")
@@ -219,7 +227,9 @@ function replaceCommonVariants(text: string) {
 
 function toReadingLike(text: string) {
   return replaceCommonVariants(
-    normalizeJapaneseCountersToReading(text)
+    normalizeJapaneseCountersToReading(
+      normalizeKnownWordsToReading(text)
+    )
   );
 }
 
