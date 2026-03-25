@@ -836,6 +836,16 @@ export async function POST(req: Request) {
       answerJp
     );
 
+    const feedback = makeDetailedFeedback(
+      judged.score,
+      answerJp,
+      transcript,
+      judged.expectedReading,
+      judged.actualReading,
+      slow,
+      judged.adoptedExpectedYomi
+    );
+
     const debug = {
       answerJp,
       answerYomi,
