@@ -217,24 +217,9 @@ function replaceCommonVariants(text: string) {
     .replace(/ゆーちゅぶ/g, "ゆーちゅーぶ");
 }
 
-function normalizeKnownWordsToReading(text: string) {
-  return String(text || "")
-    .normalize("NFKC")
-    .replace(/お菓子/g, "おかし")
-    .replace(/食べていた/g, "たべていた")
-    .replace(/思います/g, "おもいます")
-    .replace(/食べ/g, "たべ")
-    .replace(/思い/g, "おもい")
-    .replace(/後で/g, "あとで")
-    .replace(/夜/g, "よる")
-    .replace(/方/g, "ほう");
-}
-
 function toReadingLike(text: string) {
   return replaceCommonVariants(
-    normalizeJapaneseCountersToReading(
-      normalizeKnownWordsToReading(text)
-    )
+    normalizeJapaneseCountersToReading(text)
   );
 }
 
@@ -475,8 +460,18 @@ function estimateSlowSpeechPenalty(
 
   let penalty = 0;
 
+  // 1) 권장 시간 초과 감점: 기준보다 늦으면 바로 체감되게
   if (overtimeSec > 0) {
     penalty += Math.ceil(overtimeSec) * 8;
+  }
+
+  // 2) 너무 느린 말속도는 추가 감점
+  if (cps < 1.2) {
+    penalty += 12;
+  } else if (cps < 1.5) {
+    penalty += 8;
+  } else if (cps < 1.8) {
+    penalty += 4;
   }
 
   return {
@@ -550,10 +545,8 @@ function similarityScoreWithYomiPriority(
       normalizeForSurfaceMatch(answerJp)
     ) >= 85
   ) {
-    const totalPenalty = flow.penalty + slow.penalty;
-
     return {
-      score: Math.max(0, 100 - totalPenalty),
+      score: 100,
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
@@ -762,13 +755,17 @@ export async function POST(req: Request) {
       "절대로 번역하지 말고, 들린 일본어를 그대로 전사하세요.",
       "출력은 반드시 일본어로만 하세요. 한국어, 영어 번역은 하지 마세요.",
       "가능하면 히라가나 중심으로 전사하세요.",
+      "한자가 들리더라도, 가능한 경우 히라가나로 풀어서 전사하세요.",
+      "특히 조사, 동사 활용, 보조동사까지 포함해 문장 전체를 읽기 기준으로 적어주세요.",
+      "예: 食べていた → たべていた, 思います → おもいます, 後で → あとで, 方 → ほう",
       `정답 문장 후보: ${answerJp}`,
       answerYomi ? `정답 읽기 후보: ${answerYomi}` : "",
-      "음성이 정답 문장 후보와 비슷하게 들리면, 그 문장에 가까운 일본어 표기로 전사하세요.",
+      "음성이 정답 문장 후보와 비슷하게 들리면, 정답 읽기 후보(answer_yomi)에 최대한 가깝게 전사하세요.",
+      "정답 문장 후보와 비슷한 경우, 한자 표기보다 읽기(히라가나) 표기를 우선하세요.",
       "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
     ]
       .filter(Boolean)
-      .join("\n");
+      .join('\n');
 
     const fd = new FormData();
     fd.append("file", new Blob([audioArrayBuffer], { type: "audio/wav" }), name);
