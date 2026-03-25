@@ -217,24 +217,9 @@ function replaceCommonVariants(text: string) {
     .replace(/ゆーちゅぶ/g, "ゆーちゅーぶ");
 }
 
-function normalizeKnownWordsToReading(text: string) {
-  return String(text || "")
-    .normalize("NFKC")
-    .replace(/お菓子/g, "おかし")
-    .replace(/食べていた/g, "たべていた")
-    .replace(/思います/g, "おもいます")
-    .replace(/食べ/g, "たべ")
-    .replace(/思い/g, "おもい")
-    .replace(/後で/g, "あとで")
-    .replace(/夜/g, "よる")
-    .replace(/方/g, "ほう");
-}
-
 function toReadingLike(text: string) {
   return replaceCommonVariants(
-    normalizeJapaneseCountersToReading(
-      normalizeKnownWordsToReading(text)
-    )
+    normalizeJapaneseCountersToReading(text)
   );
 }
 
@@ -868,6 +853,18 @@ export async function POST(req: Request) {
       score: judged.score,
       feedback,
       model: TRANSCRIBE_MODEL,
+      debug: {
+        answerJp,
+        answerYomi,
+        expectedReading: judged.expectedReading,
+        actualReading: judged.actualReading,
+        adoptedExpectedYomi: judged.adoptedExpectedYomi,
+        surfaceScore: judged.surfaceScore,
+        slowPenalty: slow.penalty,
+        slowCps: slow.cps,
+        slowOvertimeSec: slow.overtimeSec,
+        flowPenalty: analyzeSpeechFlow(transcript, judged.actualReading).penalty,
+      },
     });
   } catch (error) {
     console.error("talk-pron-score error:", error);
