@@ -207,9 +207,17 @@ function normalizeJapaneseCountersToReading(text: string) {
 function normalizeKnownWordsToReading(text: string) {
   return String(text || "")
     .normalize("NFKC")
+    .replace(/夜/g, "よる")
+    .replace(/お菓子/g, "おかし")
+    .replace(/食べていた/g, "たべていた")
+    .replace(/思います/g, "おもいます")
     .replace(/本当に/g, "ほんとに")
     .replace(/理想的/g, "りそうてき")
-    .replace(/休める/g, "やすめる");
+    .replace(/休める/g, "やすめる")
+    .replace(/一つ/g, "ひとつ")
+    .replace(/長く/g, "ながく")
+    .replace(/続けられる/g, "つづけられる")
+    .replace(/立派/g, "りっぱ");
 }
 
 function replaceCommonVariants(text: string) {
