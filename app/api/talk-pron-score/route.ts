@@ -836,15 +836,23 @@ export async function POST(req: Request) {
       answerJp
     );
 
-    const feedback = makeDetailedFeedback(
-      judged.score,
+    const debug = {
       answerJp,
+      answerYomi,
       transcript,
-      judged.expectedReading,
-      judged.actualReading,
-      slow,
-      judged.adoptedExpectedYomi
-    );
+      expectedReading: judged.expectedReading,
+      actualReading: judged.actualReading,
+      expectedEqActual: judged.expectedReading === judged.actualReading,
+      surfaceScore: judged.surfaceScore,
+      answerSurfaceScore: scoreByDistance(
+        normalizeForSurfaceMatch(transcript),
+        normalizeForSurfaceMatch(answerJp)
+      ),
+      slowPenalty: slow.penalty,
+      slowCps: slow.cps,
+      slowOvertimeSec: slow.overtimeSec,
+      flowPenalty: analyzeSpeechFlow(transcript, judged.actualReading).penalty,
+    };
 
     return Response.json({
       transcript: judged.displayTranscript,
@@ -853,17 +861,7 @@ export async function POST(req: Request) {
       score: judged.score,
       feedback,
       model: TRANSCRIBE_MODEL,
+      debug,
     });
-  } catch (error) {
-    console.error("talk-pron-score error:", error);
-    const message = error instanceof Error ? error.message : String(error);
-
-    return Response.json(
-      {
-        error: `[서버 내부 오류] ${message || "말하기 점수를 계산하지 못했습니다."
-          }`,
-      },
-      { status: 500 }
-    );
   }
 }
