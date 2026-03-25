@@ -2820,15 +2820,16 @@ export default function TalkPage() {
                 />
 
                 <div className="mt-5 rounded-2xl bg-green-50 px-5 py-5">
-                  <p className="text-lg font-semibold text-green-700">
+                  <p className="text-2xl font-bold text-green-700">
                     🎉 발음 100점!
                   </p>
+
                   <p className="mt-2 text-2xl font-bold text-green-700">
                     🎁 말문 포인트 +1
                   </p>
 
-                  <p className="mt-1 text-lg font-semibold text-gray-700">
-                    🔥 이번 보상 포함 오늘 누적 {talkPoint + 1}점
+                  <p className="mt-4 text-[28px] font-extrabold leading-tight text-red-600">
+                    🔥 이번 보상 포함 오늘 누적 {talkPoint}점
                   </p>
                 </div>
 
