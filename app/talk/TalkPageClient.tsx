@@ -1830,8 +1830,6 @@ export default function TalkPage() {
     setCompletionNextSubValue(null);
     resetPronunciationState();
     setDailyStateLoaded(false);
-    setSpokenSentenceCount(0);
-    clearTalkLocalStateForToday();
   };
 
   if (loading || !dailyStateLoaded) {
