@@ -846,23 +846,17 @@ export async function POST(req: Request) {
       judged.adoptedExpectedYomi
     );
 
-    console.log("DEBUG_SCORE", {
-      answerJp,
-      answerYomi,
-      transcript,
-      expectedReading: judged.expectedReading,
-      actualReading: judged.actualReading,
-      expectedEqActual: judged.expectedReading === judged.actualReading,
-      surfaceScore: judged.surfaceScore,
-      answerSurfaceScore: scoreByDistance(
-        normalizeForSurfaceMatch(transcript),
-        normalizeForSurfaceMatch(answerJp)
-      ),
-      slowPenalty: slow.penalty,
-      slowCps: slow.cps,
-      slowOvertimeSec: slow.overtimeSec,
-      flowPenalty: analyzeSpeechFlow(transcript, judged.actualReading).penalty,
+    return Response.json({
+      transcript: judged.displayTranscript,
+      rawTranscript: transcript,
+      displayAsAnswer: judged.displayAsAnswer,
+      score: judged.score,
+      feedback,
+      model: TRANSCRIBE_MODEL,
     });
+  } catch (error) {
+    console.error("talk-pron-score error:", error);
+    const message = error instanceof Error ? error.message : String(error);
 
     return Response.json(
       {
