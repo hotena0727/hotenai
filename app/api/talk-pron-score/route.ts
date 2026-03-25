@@ -220,12 +220,14 @@ function replaceCommonVariants(text: string) {
 function normalizeKnownWordsToReading(text: string) {
   return String(text || "")
     .normalize("NFKC")
-    .replace(/夜/g, "よる")
     .replace(/お菓子/g, "おかし")
-    .replace(/後で/g, "あとで")
-    .replace(/方/g, "ほう")
     .replace(/食べていた/g, "たべていた")
-    .replace(/思います/g, "おもいます");
+    .replace(/思います/g, "おもいます")
+    .replace(/食べ/g, "たべ")
+    .replace(/思い/g, "おもい")
+    .replace(/後で/g, "あとで")
+    .replace(/夜/g, "よる")
+    .replace(/方/g, "ほう");
 }
 
 function toReadingLike(text: string) {
