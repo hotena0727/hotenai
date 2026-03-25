@@ -429,6 +429,8 @@ export default function TalkPage() {
   const waveformAnimRef = useRef<number | null>(null);
   const recordAutoStopTimerRef = useRef<number | null>(null);
 
+  const quizStartSectionRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     try {
       const todayKey = todayKST();
@@ -1271,6 +1273,13 @@ export default function TalkPage() {
     setSelectedSub(completionNextSubValue);
     setCompletionModalOpen(false);
     setFinishMessage("");
+
+    window.setTimeout(() => {
+      quizStartSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
   };
 
   const handleBackToSelectFromCompletion = () => {
@@ -1937,7 +1946,7 @@ export default function TalkPage() {
   return (
     <main className="min-h-screen bg-white px-4 py-6 text-gray-900">
       <div className="mx-auto w-full max-w-3xl">
-        <section className="mt-4">
+        <section ref={quizStartSectionRef} className="mt-4">
           <h1 className="text-3xl font-bold">🗣️ 일본어회화</h1>
           {!isPaidPlan(userPlan) && freeExpired ? (
             <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
