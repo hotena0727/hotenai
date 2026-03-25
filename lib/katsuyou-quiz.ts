@@ -109,6 +109,18 @@ function normalizeKrFormText(text: string): string {
     .replace(/새롭웠다/g, "새로웠다")
     .replace(/새롭웠습니다/g, "새로웠습니다")
 
+    .replace(/밉어서/g, "미워서")
+    .replace(/밉었다/g, "미웠다")
+    .replace(/밉었습니다/g, "미웠습니다")
+
+    .replace(/아름답어서/g, "아름다워서")
+    .replace(/아름답었다/g, "아름다웠다")
+    .replace(/아름답었습니다/g, "아름다웠습니다")
+
+    .replace(/그립어서/g, "그리워서")
+    .replace(/그립었다/g, "그리웠다")
+    .replace(/그립었습니다/g, "그리웠습니다")
+
     .replace(/달었다/g, "달았다")
     .replace(/달었습니다/g, "달았습니다")
     .replace(/짧었다/g, "짧았다")
@@ -302,6 +314,9 @@ function woForms(root: string) {
     성가시: { past: "성가셨다", polite: "성가십니다", te: "성가셔" },
     건방지: { past: "건방졌다", polite: "건방집니다", te: "건방져" },
     야무지: { past: "야무졌다", polite: "야무집니다", te: "야무져" },
+    밉: { past: "미웠다", polite: "밉습니다", te: "미워" },
+    아름답: { past: "아름다웠다", polite: "아름답습니다", te: "아름다워" },
+    그립: { past: "그리웠다", polite: "그립습니다", te: "그리워" },
   };
 
   if (map[root]) return map[root];
@@ -959,7 +974,7 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     te_form_a: "엉터리고",
     te_form_b: "엉터리라서",
   },
-    自由: {
+  自由: {
     plain_present: "자유롭다",
     polite_present: "자유롭습니다",
     plain_negative: "자유롭지 않다",
@@ -971,7 +986,7 @@ const NA_KR_OVERRIDE: Record<string, NaKrOverride> = {
     te_form_a: "자유롭고",
     te_form_b: "자유로워서",
   },
-    無理: {
+  無理: {
     plain_present: "무리다",
     polite_present: "무리입니다",
     plain_negative: "무리가 아니다",
