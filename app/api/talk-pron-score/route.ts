@@ -460,18 +460,8 @@ function estimateSlowSpeechPenalty(
 
   let penalty = 0;
 
-  // 1) 권장 시간 초과 감점: 기준보다 늦으면 바로 체감되게
   if (overtimeSec > 0) {
     penalty += Math.ceil(overtimeSec) * 8;
-  }
-
-  // 2) 너무 느린 말속도는 추가 감점
-  if (cps < 1.2) {
-    penalty += 12;
-  } else if (cps < 1.5) {
-    penalty += 8;
-  } else if (cps < 1.8) {
-    penalty += 4;
   }
 
   return {
@@ -548,7 +538,7 @@ function similarityScoreWithYomiPriority(
     const totalPenalty = flow.penalty + slow.penalty;
 
     return {
-      score: Math.max(0, Math.min(100, 100 - totalPenalty)),
+      score: Math.max(0, 100 - totalPenalty),
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
