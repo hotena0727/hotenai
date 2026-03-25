@@ -2738,7 +2738,11 @@ export default function TalkPage() {
                 ) : pronChecked ? (
                   <div className="mt-4 space-y-5">
                     <div>
-                      <p className="mt-3 text-[32px] leading-tight text-gray-800">
+                      <p
+                        lang="ja"
+                        style={JA_FONT_STYLE}
+                        className="mt-3 text-[32px] leading-tight text-gray-800"
+                      >
                         {pronTranscript || "-"}
                       </p>
                     </div>
