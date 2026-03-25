@@ -26,7 +26,7 @@ function normalizeJapaneseVariantSurface(text: string) {
     .replace(/ほんとう/g, "本当")
     .replace(/いっしょ/g, "一緒")
     .replace(/すし/g, "寿司")
-    .replace(/ほぞん/g, "保存");
+    .replace(/あとで/g, "後で");
 }
 
 function normalizeForSurfaceMatch(text: string) {
