@@ -204,6 +204,15 @@ function normalizeJapaneseCountersToReading(text: string) {
     .replace(/1年|一年/g, "いちねん");
 }
 
+function normalizeKnownWordsToReading(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/夜/g, "よる")
+    .replace(/お菓子/g, "おかし")
+    .replace(/食べていた/g, "たべていた")
+    .replace(/思います/g, "おもいます");
+}
+
 function replaceCommonVariants(text: string) {
   return normJpForReading(text)
     .replace(/ふいんき/g, "ふんいき")
@@ -217,12 +226,11 @@ function replaceCommonVariants(text: string) {
     .replace(/ゆーちゅぶ/g, "ゆーちゅーぶ");
 }
 
-const SPECIAL_CASE_YOMI =
-  "はい、よるにおかしをよくたべていたので、そのせいだとおもいます。";
-
 function toReadingLike(text: string) {
   return replaceCommonVariants(
-    normalizeJapaneseCountersToReading(text)
+    normalizeJapaneseCountersToReading(
+      normalizeKnownWordsToReading(text)
+    )
   );
 }
 
@@ -541,29 +549,6 @@ function similarityScoreWithYomiPriority(
     answerJp
   );
 
-  const normalizedSpecialYomi = normalizeForSurfaceMatch(SPECIAL_CASE_YOMI);
-  const normalizedCurrentYomi = normalizeForSurfaceMatch(answerYomi);
-  const normalizedTranscriptSurface = normalizeForSurfaceMatch(transcript);
-
-  if (normalizedCurrentYomi === normalizedSpecialYomi) {
-    const specialSurfaceScore = scoreByDistance(
-      normalizedTranscriptSurface,
-      normalizeForSurfaceMatch("はい、夜にお菓子をよく食べていたので、そのせいだと思います。")
-    );
-
-    if (specialSurfaceScore >= 85) {
-      return {
-        score: 100,
-        expectedReading,
-        actualReading: expectedReading,
-        adoptedExpectedYomi: true,
-        surfaceScore: specialSurfaceScore,
-        displayTranscript,
-        displayAsAnswer,
-      };
-    }
-  }
-
   if (
     expectedReading === actualReading &&
     scoreByDistance(
@@ -571,8 +556,10 @@ function similarityScoreWithYomiPriority(
       normalizeForSurfaceMatch(answerJp)
     ) >= 85
   ) {
+    const totalPenalty = flow.penalty + slow.penalty;
+
     return {
-      score: 100,
+      score: Math.max(0, 100 - totalPenalty),
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
