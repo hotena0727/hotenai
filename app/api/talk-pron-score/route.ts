@@ -753,9 +753,16 @@ export async function POST(req: Request) {
 
     const prompt = [
       "다음 일본어 음성을 전사하세요.",
+      "절대로 번역하지 말고, 들린 일본어를 그대로 전사하세요.",
+      "출력은 반드시 일본어로만 하세요. 한국어, 영어 번역은 하지 마세요.",
       "가능하면 히라가나 중심으로 전사하세요.",
+      `정답 문장 후보: ${answerJp}`,
+      answerYomi ? `정답 읽기 후보: ${answerYomi}` : "",
+      "음성이 정답 문장 후보와 비슷하게 들리면, 그 문장에 가까운 일본어 표기로 전사하세요.",
       "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     const fd = new FormData();
     fd.append("file", new Blob([audioArrayBuffer], { type: "audio/wav" }), name);
