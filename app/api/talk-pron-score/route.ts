@@ -204,15 +204,6 @@ function normalizeJapaneseCountersToReading(text: string) {
     .replace(/1年|一年/g, "いちねん");
 }
 
-function normalizeKnownWordsToReading(text: string) {
-  return String(text || "")
-    .normalize("NFKC")
-    .replace(/夜/g, "よる")
-    .replace(/お菓子/g, "おかし")
-    .replace(/食べていた/g, "たべていた")
-    .replace(/思います/g, "おもいます");
-}
-
 function replaceCommonVariants(text: string) {
   return normJpForReading(text)
     .replace(/ふいんき/g, "ふんいき")
@@ -228,9 +219,7 @@ function replaceCommonVariants(text: string) {
 
 function toReadingLike(text: string) {
   return replaceCommonVariants(
-    normalizeJapaneseCountersToReading(
-      normalizeKnownWordsToReading(text)
-    )
+    normalizeJapaneseCountersToReading(text)
   );
 }
 
@@ -549,17 +538,16 @@ function similarityScoreWithYomiPriority(
     answerJp
   );
 
-  if (
-    expectedReading === actualReading &&
-    scoreByDistance(
-      normalizeForSurfaceMatch(transcript),
-      normalizeForSurfaceMatch(answerJp)
-    ) >= 85
-  ) {
-    const totalPenalty = flow.penalty + slow.penalty;
+  if (expectedReading === actualReading) {
+    const overtimeOnlyPenalty = Math.max(
+      0,
+      Math.ceil(slow.overtimeSec) * 3
+    );
+
+    const totalPenalty = flow.penalty + overtimeOnlyPenalty;
 
     return {
-      score: Math.max(0, 100 - totalPenalty),
+      score: Math.max(95, 100 - totalPenalty),
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
@@ -865,6 +853,23 @@ export async function POST(req: Request) {
       score: judged.score,
       feedback,
       model: TRANSCRIBE_MODEL,
+      debug: {
+        answerJp,
+        answerYomi,
+        transcript,
+        expectedReading: judged.expectedReading,
+        actualReading: judged.actualReading,
+        expectedEqActual: judged.expectedReading === judged.actualReading,
+        surfaceScore: judged.surfaceScore,
+        answerSurfaceScore: scoreByDistance(
+          normalizeForSurfaceMatch(transcript),
+          normalizeForSurfaceMatch(answerJp)
+        ),
+        slowPenalty: slow.penalty,
+        slowCps: slow.cps,
+        slowOvertimeSec: slow.overtimeSec,
+        flowPenalty: analyzeSpeechFlow(transcript, judged.actualReading).penalty,
+      },
     });
   } catch (error) {
     console.error("talk-pron-score error:", error);
