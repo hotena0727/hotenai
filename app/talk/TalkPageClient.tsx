@@ -329,6 +329,9 @@ export default function TalkPage() {
   const searchParams = useSearchParams();
   const [spokenCountDateKey, setSpokenCountDateKey] = useState(todayKST());
 
+  const [talkPoint, setTalkPoint] = useState(0);
+  const [talkPointDateKey, setTalkPointDateKey] = useState(todayKST());
+
   const [allRows, setAllRows] = useState<TalkCsvRow[]>([]);
   const [questions, setQuestions] = useState<TalkCsvRow[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("select");
@@ -448,6 +451,30 @@ export default function TalkPage() {
 
   useEffect(() => {
     try {
+      const todayKey = todayKST();
+      setTalkPointDateKey(todayKey);
+
+      const todayPoint = window.localStorage.getItem(`talk-point:${todayKey}`);
+      if (todayPoint) {
+        const parsed = Number(todayPoint);
+        if (Number.isFinite(parsed)) {
+          setTalkPoint(parsed);
+        }
+      }
+    } catch { }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        `talk-point:${talkPointDateKey}`,
+        String(talkPoint)
+      );
+    } catch { }
+  }, [talkPoint, talkPointDateKey]);
+
+  useEffect(() => {
+    try {
       window.localStorage.setItem(
         `talk-spoken-count:${spokenCountDateKey}`,
         String(spokenSentenceCount)
@@ -472,23 +499,37 @@ export default function TalkPage() {
       if (todayKey !== spokenCountDateKey) {
         setSpokenCountDateKey(todayKey);
 
+        let nextSpoken = 0;
         try {
           const stored = window.localStorage.getItem(
             `talk-spoken-count:${todayKey}`
           );
-
           if (stored) {
             const parsed = Number(stored);
             if (Number.isFinite(parsed) && parsed >= 0) {
-              setSpokenSentenceCount(parsed);
-              return;
+              nextSpoken = parsed;
             }
           }
-        } catch {
-          // noop
-        }
+        } catch { }
 
-        setSpokenSentenceCount(0);
+        setSpokenSentenceCount(nextSpoken);
+      }
+
+      if (todayKey !== talkPointDateKey) {
+        setTalkPointDateKey(todayKey);
+
+        let nextPoint = 0;
+        try {
+          const stored = window.localStorage.getItem(`talk-point:${todayKey}`);
+          if (stored) {
+            const parsed = Number(stored);
+            if (Number.isFinite(parsed) && parsed >= 0) {
+              nextPoint = parsed;
+            }
+          }
+        } catch { }
+
+        setTalkPoint(nextPoint);
       }
     };
 
@@ -503,7 +544,7 @@ export default function TalkPage() {
       window.removeEventListener("focus", checkDateChange);
       document.removeEventListener("visibilitychange", checkDateChange);
     };
-  }, [spokenCountDateKey]);
+  }, [spokenCountDateKey, talkPointDateKey]);
 
   const resetPronunciationState = () => {
     if (recordedAudioUrl) {
@@ -1789,6 +1830,7 @@ export default function TalkPage() {
     }
 
     setPronError("");
+    setTalkPoint((prev) => prev + 1);
     playSfx("reward");
     await handleNext();
   };
@@ -2783,6 +2825,10 @@ export default function TalkPage() {
                   </p>
                   <p className="mt-2 text-2xl font-bold text-green-700">
                     🎁 말문 포인트 +1
+                  </p>
+
+                  <p className="mt-1 text-lg font-semibold text-gray-700">
+                    🔥 이번 보상 포함 오늘 누적 {talkPoint + 1}점
                   </p>
                 </div>
 
