@@ -209,7 +209,10 @@ function replaceCommonVariants(text: string) {
     .replace(/を/g, "お")
     .replace(/にほん/g, "にっぽん")
     .replace(/こんにちわ/g, "こんにちは")
-    .replace(/わたしわ/g, "わたしは");
+    .replace(/わたしわ/g, "わたしは")
+    .replace(/youtube/g, "ゆーちゅーぶ")
+    .replace(/ユーチューブ/g, "ゆーちゅーぶ")
+    .replace(/ゆうちゅうぶ/g, "ゆーちゅーぶ");
 }
 
 function toReadingLike(text: string) {
