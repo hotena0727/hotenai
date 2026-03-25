@@ -217,9 +217,24 @@ function replaceCommonVariants(text: string) {
     .replace(/ゆーちゅぶ/g, "ゆーちゅーぶ");
 }
 
+function normalizeKnownWordsToReading(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/お菓子/g, "おかし")
+    .replace(/食べていた/g, "たべていた")
+    .replace(/思います/g, "おもいます")
+    .replace(/食べ/g, "たべ")
+    .replace(/思い/g, "おもい")
+    .replace(/後で/g, "あとで")
+    .replace(/夜/g, "よる")
+    .replace(/方/g, "ほう");
+}
+
 function toReadingLike(text: string) {
   return replaceCommonVariants(
-    normalizeJapaneseCountersToReading(text)
+    normalizeJapaneseCountersToReading(
+      normalizeKnownWordsToReading(text)
+    )
   );
 }
 
