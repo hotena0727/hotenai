@@ -13,15 +13,6 @@ function stripPunctuation(text: string) {
     .replace(/[、。．，,！？!？?「」『』（）()\[\]{}…~"'`´]/g, "");
 }
 
-function normalizeKnownWordsToReading(text: string) {
-  return String(text || "")
-    .normalize("NFKC")
-    .replace(/夜/g, "よる")
-    .replace(/お菓子/g, "おかし")
-    .replace(/食べていた/g, "たべていた")
-    .replace(/思います/g, "おもいます");
-}
-
 function normalizeJapaneseVariantSurface(text: string) {
   return String(text || "")
     .normalize("NFKC")
@@ -226,12 +217,21 @@ function replaceCommonVariants(text: string) {
     .replace(/ゆーちゅぶ/g, "ゆーちゅーぶ");
 }
 
+function normalizeKnownWordsToReading(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/夜/g, "よる")
+    .replace(/お菓子/g, "おかし")
+    .replace(/後で/g, "あとで")
+    .replace(/方/g, "ほう")
+    .replace(/食べていた/g, "たべていた")
+    .replace(/思います/g, "おもいます");
+}
+
 function toReadingLike(text: string) {
   return replaceCommonVariants(
     normalizeJapaneseCountersToReading(
-      normJpForReading(
-        normalizeKnownWordsToReading(text)
-      )
+      normalizeKnownWordsToReading(text)
     )
   );
 }
