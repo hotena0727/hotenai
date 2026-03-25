@@ -383,7 +383,7 @@ function buildActualReadingWithYomiPriority(
     const normalizedTranscriptSurface = normalizeForSurfaceMatch(transcript);
 
     const isSameSurface =
-      normalizedAnswerSurface === normalizedTranscriptSurface;
+      rawSurfaceScore >= 95;
 
     const endingMismatch = isSameSurface
       ? false
