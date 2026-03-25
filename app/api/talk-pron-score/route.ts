@@ -13,6 +13,15 @@ function stripPunctuation(text: string) {
     .replace(/[、。．，,！？!？?「」『』（）()\[\]{}…~"'`´]/g, "");
 }
 
+function normalizeKnownWordsToReading(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/夜/g, "よる")
+    .replace(/お菓子/g, "おかし")
+    .replace(/食べていた/g, "たべていた")
+    .replace(/思います/g, "おもいます");
+}
+
 function normalizeJapaneseVariantSurface(text: string) {
   return String(text || "")
     .normalize("NFKC")
@@ -219,7 +228,11 @@ function replaceCommonVariants(text: string) {
 
 function toReadingLike(text: string) {
   return replaceCommonVariants(
-    normalizeJapaneseCountersToReading(text)
+    normalizeJapaneseCountersToReading(
+      normJpForReading(
+        normalizeKnownWordsToReading(text)
+      )
+    )
   );
 }
 
@@ -383,7 +396,7 @@ function buildActualReadingWithYomiPriority(
     const normalizedTranscriptSurface = normalizeForSurfaceMatch(transcript);
 
     const isSameSurface =
-      rawSurfaceScore >= 95;
+      normalizedAnswerSurface === normalizedTranscriptSurface;
 
     const endingMismatch = isSameSurface
       ? false
