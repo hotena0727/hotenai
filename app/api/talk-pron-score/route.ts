@@ -280,7 +280,7 @@ function analyzeSpeechFlow(rawTranscript: string, _normalizedReading: string) {
 
   const fillerCount = countOccurrences(
     raw,
-    /(えっと|ええと|あの|その|うーん|えーと|なんか)/g
+    /(えっと|ええと|うーん|えーと)/g
   );
 
   const rawTokens = raw
@@ -853,23 +853,6 @@ export async function POST(req: Request) {
       score: judged.score,
       feedback,
       model: TRANSCRIBE_MODEL,
-      debug: {
-        answerJp,
-        answerYomi,
-        transcript,
-        expectedReading: judged.expectedReading,
-        actualReading: judged.actualReading,
-        expectedEqActual: judged.expectedReading === judged.actualReading,
-        surfaceScore: judged.surfaceScore,
-        answerSurfaceScore: scoreByDistance(
-          normalizeForSurfaceMatch(transcript),
-          normalizeForSurfaceMatch(answerJp)
-        ),
-        slowPenalty: slow.penalty,
-        slowCps: slow.cps,
-        slowOvertimeSec: slow.overtimeSec,
-        flowPenalty: analyzeSpeechFlow(transcript, judged.actualReading).penalty,
-      },
     });
   } catch (error) {
     console.error("talk-pron-score error:", error);
