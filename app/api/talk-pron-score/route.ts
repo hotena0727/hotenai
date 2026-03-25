@@ -211,8 +211,9 @@ function replaceCommonVariants(text: string) {
     .replace(/こんにちわ/g, "こんにちは")
     .replace(/わたしわ/g, "わたしは")
     .replace(/youtube/g, "ゆーちゅーぶ")
-    .replace(/ユーチューブ/g, "ゆーちゅーぶ")
-    .replace(/ゆうちゅうぶ/g, "ゆーちゅーぶ");
+    .replace(/ゆうちゅうぶ/g, "ゆーちゅーぶ")
+    .replace(/ゆーつーぶ/g, "ゆーちゅーぶ")
+    .replace(/ゆーちゅぶ/g, "ゆーちゅーぶ");
 }
 
 function toReadingLike(text: string) {
