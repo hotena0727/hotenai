@@ -545,8 +545,10 @@ function similarityScoreWithYomiPriority(
       normalizeForSurfaceMatch(answerJp)
     ) >= 85
   ) {
+    const totalPenalty = flow.penalty + slow.penalty;
+
     return {
-      score: 100,
+      score: Math.max(0, Math.min(100, 100 - totalPenalty)),
       expectedReading,
       actualReading,
       adoptedExpectedYomi,
