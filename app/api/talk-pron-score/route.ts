@@ -27,7 +27,8 @@ function normalizeJapaneseVariantSurface(text: string) {
     .replace(/いっしょ/g, "一緒")
     .replace(/すし/g, "寿司")
     .replace(/ほう/g, "方")
-    .replace(/あとで/g, "後で");
+    .replace(/あとで/g, "後で")
+    .replace(/つかいます/g, "使います");
 }
 
 function normalizeForSurfaceMatch(text: string) {
@@ -391,7 +392,7 @@ function buildActualReadingWithYomiPriority(
 
     const shouldAdoptExpectedYomi =
       hasKanji(transcript) &&
-      rawSurfaceScore >= 82 &&
+      rawSurfaceScore >= 90 &&
       !hasCriticalMismatch &&
       !endingMismatch;
 
