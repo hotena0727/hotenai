@@ -217,7 +217,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/一つ/g, "ひとつ")
     .replace(/長く/g, "ながく")
     .replace(/続けられる/g, "つづけられる")
-    .replace(/立派/g, "りっぱ");
+    .replace(/立派/g, "りっぱ")
+    .replace(/私も/g, "わたしも");
 }
 
 function replaceCommonVariants(text: string) {
@@ -231,7 +232,8 @@ function replaceCommonVariants(text: string) {
     .replace(/ゆうちゅうぶ/g, "ゆーちゅーぶ")
     .replace(/ゆーつーぶ/g, "ゆーちゅーぶ")
     .replace(/ゆーちゅぶ/g, "ゆーちゅーぶ")
-    .replace(/のち/g, "あと");
+    .replace(/のち/g, "あと")
+    .replace(/25/g, "にじゅうご");
 }
 
 function toReadingLike(text: string) {
