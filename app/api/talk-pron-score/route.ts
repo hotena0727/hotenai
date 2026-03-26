@@ -218,7 +218,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/長く/g, "ながく")
     .replace(/続けられる/g, "つづけられる")
     .replace(/立派/g, "りっぱ")
-    .replace(/私も/g, "わたしも");
+    .replace(/私も/g, "わたしも")
+    .replace(/お会い/g, "おあい")
+    .replace(/嬉しかった/g, "うれしかった");
 }
 
 function replaceCommonVariants(text: string) {
