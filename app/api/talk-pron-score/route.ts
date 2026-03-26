@@ -230,7 +230,8 @@ function replaceCommonVariants(text: string) {
     .replace(/youtube/g, "ゆーちゅーぶ")
     .replace(/ゆうちゅうぶ/g, "ゆーちゅーぶ")
     .replace(/ゆーつーぶ/g, "ゆーちゅーぶ")
-    .replace(/ゆーちゅぶ/g, "ゆーちゅーぶ");
+    .replace(/ゆーちゅぶ/g, "ゆーちゅーぶ")
+    .replace(/のち/g, "あと");
 }
 
 function toReadingLike(text: string) {
