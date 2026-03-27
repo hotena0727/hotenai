@@ -1607,3 +1607,64 @@ export function buildKatsuyouQuiz({
 
   return questions;
 }
+
+export function buildKatsuyouReviewQuiz({
+  rows,
+  targets,
+}: {
+  rows: KatsuyouRow[];
+  targets: Array<{
+    item_key: string;
+    form_key: string;
+    qtype: string;
+  }>;
+}): KatsuyouQuestion[] {
+  const questions: KatsuyouQuestion[] = [];
+
+  for (const target of targets) {
+    const row = rows.find(
+      (r) => String(r.id ?? "").trim() === String(target.item_key).trim()
+    );
+    if (!row) continue;
+
+    const forms = buildFormsForRow(row);
+    if (!forms.length) continue;
+
+    const pickedForm = forms.find(
+      (form) =>
+        String(form.formKey || "").trim() === String(target.form_key).trim() &&
+        String(form.qtype || "").trim() === String(target.qtype).trim()
+    );
+
+    if (!pickedForm) continue;
+
+    const choices = buildChoicesForForm(
+      pickedForm,
+      forms,
+      pickedForm.qtype as KatsuyouQType
+    );
+
+    if (choices.length < 4) continue;
+
+    questions.push({
+      item_key: String(row.id ?? ""),
+      pos: row.pos,
+      qtype: pickedForm.qtype as KatsuyouQType,
+      formKey: pickedForm.formKey,
+      prompt:
+        pickedForm.qtype === "kr2jp"
+          ? pickedForm.promptKr
+          : pickedForm.answerJp,
+      choices,
+      correct_text:
+        pickedForm.qtype === "kr2jp"
+          ? pickedForm.answerJp
+          : pickedForm.promptKr,
+      jp_word: pickedForm.baseJp,
+      kr_word: pickedForm.baseKr,
+      reading: pickedForm.reading,
+    });
+  }
+
+  return questions;
+}

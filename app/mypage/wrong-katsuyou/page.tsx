@@ -313,16 +313,22 @@ export default function WrongKatsuyouPage() {
       return;
     }
 
-    const selectedItemKeys = Array.from(
+    const selectedReviewTargets = Array.from(
       new Set(
         filteredItems
           .filter((item) => selectedKeys.includes(makeSelectionKey(item)))
-          .map((item) => String(item.item_key || "").trim())
+          .map((item) =>
+            [
+              String(item.item_key || "").trim(),
+              String(item.form_key || "").trim(),
+              String(item.qtype || "").trim(),
+            ].join("|||")
+          )
           .filter(Boolean)
       )
     );
 
-    if (selectedItemKeys.length === 0) {
+    if (selectedReviewTargets.length === 0) {
       alert("복습할 문제를 찾지 못했습니다.");
       return;
     }
@@ -337,11 +343,11 @@ export default function WrongKatsuyouPage() {
         ? ""
         : String(selectedQType || "").trim();
 
-    const qids = encodeURIComponent(selectedItemKeys.join(","));
+    const targets = encodeURIComponent(selectedReviewTargets.join(","));
     const pos = encodeURIComponent(targetPos);
     const qtype = encodeURIComponent(targetQType);
 
-    window.location.href = `/katsuyou?review=1&qids=${qids}&pos=${pos}&qtype=${qtype}`;
+    window.location.href = `/katsuyou?review=1&targets=${targets}&pos=${pos}&qtype=${qtype}`;
   };
 
   if (loading) {
@@ -567,8 +573,12 @@ export default function WrongKatsuyouPage() {
                     </label>
 
                     <a
-                      href={`/katsuyou?review=1&qids=${encodeURIComponent(
-                        item.item_key
+                      href={`/katsuyou?review=1&targets=${encodeURIComponent(
+                        [
+                          String(item.item_key || "").trim(),
+                          String(item.form_key || "").trim(),
+                          String(item.qtype || "").trim(),
+                        ].join("|||")
                       )}&pos=${encodeURIComponent(item.pos || "")}&qtype=${encodeURIComponent(
                         item.qtype || ""
                       )}`}

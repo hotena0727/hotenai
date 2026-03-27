@@ -12,7 +12,10 @@ import type {
   KatsuyouRow,
 } from "@/app/types/katsuyou";
 import { loadKatsuyouRows } from "@/lib/katsuyou-loader";
-import { buildKatsuyouQuiz } from "@/lib/katsuyou-quiz";
+import {
+  buildKatsuyouQuiz,
+  buildKatsuyouReviewQuiz,
+} from "@/lib/katsuyou-quiz";
 import { buildKatsuyouAttemptPayload } from "@/lib/katsuyou-payload";
 import { hasPlan, isPaidPlan, type PlanCode } from "@/lib/plans";
 import {
@@ -106,6 +109,13 @@ export default function KatsuyouPage() {
 
   const [reviewMode, setReviewMode] = useState(false);
   const [reviewQids, setReviewQids] = useState<string[]>([]);
+  const [reviewTargets, setReviewTargets] = useState<
+    Array<{
+      item_key: string;
+      form_key: string;
+      qtype: string;
+    }>
+  >([]);
   const [reviewPos, setReviewPos] = useState("");
   const [reviewQType, setReviewQType] = useState("");
   const [reviewReady, setReviewReady] = useState(false);
@@ -267,15 +277,34 @@ export default function KatsuyouPage() {
 
     const params = new URLSearchParams(window.location.search);
     const review = params.get("review") === "1";
+
     const qids = (params.get("qids") || "")
       .split(",")
       .map((v) => v.trim())
       .filter(Boolean);
+
+    const targets = (params.get("targets") || "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean)
+      .map((token) => {
+        const [item_key, form_key, qtype] = token.split("|||");
+        return {
+          item_key: String(item_key || "").trim(),
+          form_key: String(form_key || "").trim(),
+          qtype: String(qtype || "").trim(),
+        };
+      })
+      .filter(
+        (item) => item.item_key && item.form_key && item.qtype
+      );
+
     const pos = params.get("pos") || "";
     const qtype = params.get("qtype") || "";
 
     setReviewMode(review);
     setReviewQids(qids);
+    setReviewTargets(targets);
     setReviewPos(pos);
     setReviewQType(qtype);
     setReviewReady(true);
@@ -551,6 +580,45 @@ export default function KatsuyouPage() {
 
   const generateReviewQuiz = () => {
     try {
+      if (reviewTargets.length > 0) {
+        const quiz = buildKatsuyouReviewQuiz({
+          rows,
+          targets: reviewTargets,
+        });
+
+        if (!quiz.length) {
+          setQuestions([]);
+          setTodayRewardMessage("");
+          return;
+        }
+
+        const firstPos = quiz[0]?.pos;
+        const firstQType = quiz[0]?.qtype;
+
+        setQuestions(quiz);
+        setAnswers({});
+        setSubmitted(false);
+        setScore(0);
+        setAudioError("");
+        setAudioLoadingKey("");
+        setTodayRewardMessage("");
+
+        if (
+          firstPos === "i_adj" ||
+          firstPos === "na_adj" ||
+          firstPos === "verb"
+        ) {
+          setSelectedPos(firstPos);
+        }
+
+        if (firstQType === "kr2jp" || firstQType === "jp2kr") {
+          setSelectedQType(firstQType);
+        }
+
+        return;
+      }
+
+      // 구버전 qids 호환
       const filteredRows = rows.filter((row) => {
         const rowId = String(row.id || "").trim();
         return reviewQids.includes(rowId);
@@ -685,6 +753,7 @@ export default function KatsuyouPage() {
     selectedQType,
     reviewMode,
     reviewQids.join(","),
+    reviewTargets.map((t) => `${t.item_key}|${t.form_key}|${t.qtype}`).join(","),
     reviewPos,
     reviewQType,
   ]);
