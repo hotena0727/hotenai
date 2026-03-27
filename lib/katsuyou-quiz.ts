@@ -1631,45 +1631,81 @@ export function buildKatsuyouReviewQuiz({
     if (!forms.length) continue;
 
     const targetFormKey = String(target.form_key || "").trim();
-    const targetQType = String(target.qtype || "").trim();
+    const targetQType = String(target.qtype || "").trim() as KatsuyouQType;
 
-    const pickedForm =
-      forms.find(
-        (form) =>
-          String(form.formKey || "").trim() === targetFormKey &&
-          String(form.qtype || "").trim() === targetQType
-      ) ||
-      forms.find(
-        (form) => String(form.formKey || "").trim() === targetFormKey
+    // 1) 먼저 formKey로 원본 form 찾기
+    const baseForm = forms.find(
+      (form) => String(form.formKey || "").trim() === targetFormKey
+    );
+
+    if (!baseForm) continue;
+
+    // 2) 저장된 qtype 기준으로 문제/정답 방향을 다시 구성
+    const prompt =
+      targetQType === "kr2jp" ? baseForm.promptKr : baseForm.answerJp;
+
+    const correctText =
+      targetQType === "kr2jp" ? baseForm.answerJp : baseForm.promptKr;
+
+    if (!prompt || !correctText) continue;
+
+    // 3) 선택지도 저장된 qtype 기준으로 다시 생성
+    const siblingPool = forms.filter(
+      (form) => String(form.formKey || "").trim() !== targetFormKey
+    );
+
+    let choices: string[] = [];
+
+    if (targetQType === "kr2jp") {
+      const wrongs = shuffleArray(
+        uniqueStrings(
+          siblingPool
+            .map((form) => form.answerJp)
+            .filter((v) => v && v !== correctText)
+        )
+      ).slice(0, 3);
+
+      choices = shuffleArray(uniqueStrings([correctText, ...wrongs]));
+    } else {
+      const wrongs = shuffleArray(
+        uniqueStrings(
+          siblingPool
+            .map((form) => form.promptKr)
+            .filter((v) => v && v !== correctText)
+        )
+      ).slice(0, 3);
+
+      choices = shuffleArray(uniqueStrings([correctText, ...wrongs]));
+    }
+
+    if (choices.length < 4) {
+      const fallbackChoices = buildChoicesForForm(
+        {
+          ...baseForm,
+          qtype: targetQType,
+        },
+        forms,
+        targetQType
       );
 
-    if (!pickedForm) continue;
-
-    const choices = buildChoicesForForm(
-      pickedForm,
-      forms,
-      pickedForm.qtype as KatsuyouQType
-    );
+      if (fallbackChoices.length >= 4) {
+        choices = fallbackChoices;
+      }
+    }
 
     if (choices.length < 4) continue;
 
     questions.push({
       item_key: String(row.id ?? ""),
       pos: row.pos,
-      qtype: pickedForm.qtype as KatsuyouQType,
-      formKey: pickedForm.formKey,
-      prompt:
-        pickedForm.qtype === "kr2jp"
-          ? pickedForm.promptKr
-          : pickedForm.answerJp,
+      qtype: targetQType,
+      formKey: baseForm.formKey,
+      prompt,
       choices,
-      correct_text:
-        pickedForm.qtype === "kr2jp"
-          ? pickedForm.answerJp
-          : pickedForm.promptKr,
-      jp_word: pickedForm.baseJp,
-      kr_word: pickedForm.baseKr,
-      reading: pickedForm.reading,
+      correct_text: correctText,
+      jp_word: baseForm.baseJp,
+      kr_word: baseForm.baseKr,
+      reading: baseForm.reading,
     });
   }
 
