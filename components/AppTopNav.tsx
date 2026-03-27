@@ -278,7 +278,7 @@ export default function AppTopNav() {
       </div>
 
       {pathname.startsWith("/mypage") ? (
-        <FeedbackFloatingButton contactHref="https://hotena.com/" />
+        <FeedbackFloatingButton />
       ) : null}
     </>
   );
