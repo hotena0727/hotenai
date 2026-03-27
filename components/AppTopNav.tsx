@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getPlanTheme, hasPlan, normalizePlan, type PlanCode } from "@/lib/plans";
+import FeedbackFloatingButton from "@/components/FeedbackFloatingButton";
 
 type ActiveKey =
   | "home"
@@ -182,46 +183,46 @@ export default function AppTopNav() {
     () =>
       [
         menuSettings.show_home &&
-          hasMenuAccess(profile.plan, menuSettings.home_min_plan) && {
-            key: "home" as ActiveKey,
-            href: "/",
-            label: "홈",
-          },
+        hasMenuAccess(profile.plan, menuSettings.home_min_plan) && {
+          key: "home" as ActiveKey,
+          href: "/",
+          label: "홈",
+        },
 
         menuSettings.show_word &&
-          hasMenuAccess(profile.plan, menuSettings.word_min_plan) && {
-            key: "word" as ActiveKey,
-            href: "/word",
-            label: "단어",
-          },
+        hasMenuAccess(profile.plan, menuSettings.word_min_plan) && {
+          key: "word" as ActiveKey,
+          href: "/word",
+          label: "단어",
+        },
 
         menuSettings.show_kanji &&
-          hasMenuAccess(profile.plan, menuSettings.kanji_min_plan) && {
-            key: "kanji" as ActiveKey,
-            href: "/kanji",
-            label: "한자",
-          },
+        hasMenuAccess(profile.plan, menuSettings.kanji_min_plan) && {
+          key: "kanji" as ActiveKey,
+          href: "/kanji",
+          label: "한자",
+        },
 
         menuSettings.show_katsuyou &&
-          hasMenuAccess(profile.plan, menuSettings.katsuyou_min_plan) && {
-            key: "katsuyou" as ActiveKey,
-            href: "/katsuyou",
-            label: "활용",
-          },
+        hasMenuAccess(profile.plan, menuSettings.katsuyou_min_plan) && {
+          key: "katsuyou" as ActiveKey,
+          href: "/katsuyou",
+          label: "활용",
+        },
 
         menuSettings.show_talk &&
-          hasMenuAccess(profile.plan, menuSettings.talk_min_plan) && {
-            key: "talk" as ActiveKey,
-            href: "/talk",
-            label: "회화",
-          },
+        hasMenuAccess(profile.plan, menuSettings.talk_min_plan) && {
+          key: "talk" as ActiveKey,
+          href: "/talk",
+          label: "회화",
+        },
 
         menuSettings.show_mypage &&
-          hasMenuAccess(profile.plan, menuSettings.mypage_min_plan) && {
-            key: "mypage" as ActiveKey,
-            href: "/mypage",
-            label: "MY",
-          },
+        hasMenuAccess(profile.plan, menuSettings.mypage_min_plan) && {
+          key: "mypage" as ActiveKey,
+          href: "/mypage",
+          label: "MY",
+        },
       ].filter(Boolean) as Array<{
         key: ActiveKey;
         href: string;
@@ -245,34 +246,40 @@ export default function AppTopNav() {
     hasMenuAccess(profile.plan, menuSettings.admin_min_plan);
 
   return (
-    <div className={theme.nav}>
-      <div className="mx-auto max-w-3xl px-4">
-        <nav className="flex items-center gap-3">
-          <div
-            className="grid min-w-0 flex-1 items-stretch"
-            style={{
-              gridTemplateColumns: `repeat(${Math.max(visibleMenus.length, 1)}, minmax(0, 1fr))`,
-            }}
-          >
-            {visibleMenus.map((menu) => (
-              <a key={menu.key} href={menu.href} className={linkClass(menu.key)}>
-                {menu.label}
-              </a>
-            ))}
-          </div>
-
-          {showAdmin ? (
-            <a
-              href="/admin"
-              className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm transition hover:opacity-90 ${theme.badge}`}
-              aria-label="관리자"
-              title="관리자"
+    <>
+      <div className={theme.nav}>
+        <div className="mx-auto max-w-3xl px-4">
+          <nav className="flex items-center gap-3">
+            <div
+              className="grid min-w-0 flex-1 items-stretch"
+              style={{
+                gridTemplateColumns: `repeat(${Math.max(visibleMenus.length, 1)}, minmax(0, 1fr))`,
+              }}
             >
-              ⚙️
-            </a>
-          ) : null}
-        </nav>
+              {visibleMenus.map((menu) => (
+                <a key={menu.key} href={menu.href} className={linkClass(menu.key)}>
+                  {menu.label}
+                </a>
+              ))}
+            </div>
+
+            {showAdmin ? (
+              <a
+                href="/admin"
+                className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm transition hover:opacity-90 ${theme.badge}`}
+                aria-label="관리자"
+                title="관리자"
+              >
+                ⚙️
+              </a>
+            ) : null}
+          </nav>
+        </div>
       </div>
-    </div>
+
+      {pathname.startsWith("/mypage") ? (
+        <FeedbackFloatingButton contactHref="https://hotena.com/" />
+      ) : null}
+    </>
   );
 }
