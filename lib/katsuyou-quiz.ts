@@ -201,7 +201,11 @@ function normalizeKrFormText(text: string): string {
 
     .replace(/무리습니다/g, "무리입니다")
     .replace(/무리었다/g, "무리였다")
-    .replace(/무리었습니다/g, "무리였습니다");
+    .replace(/무리었습니다/g, "무리였습니다")
+
+    .replace(/덥었다/g, "더웠다")
+    .replace(/덥었습니다/g, "더웠습니다")
+    .replace(/덥어서/g, "더워서");
 }
 
 /* =========================
@@ -317,6 +321,7 @@ function woForms(root: string) {
     밉: { past: "미웠다", polite: "밉습니다", te: "미워" },
     아름답: { past: "아름다웠다", polite: "아름답습니다", te: "아름다워" },
     그립: { past: "그리웠다", polite: "그립습니다", te: "그리워" },
+    덥: { past: "더웠다", polite: "덥습니다", te: "더워" },
   };
 
   if (map[root]) return map[root];
@@ -570,6 +575,12 @@ const KR_OVERRIDE_FORMS: Record<string, Partial<KrForms>> = {
     polite_past: "고통스러웠습니다",
     te_form_a: "고통스럽고",
     te_form_b: "고통스러워서",
+  },
+  덥: {
+    plain_past: "더웠다",
+    polite_past: "더웠습니다",
+    te_form_a: "덥고",
+    te_form_b: "더워서",
   },
 };
 
