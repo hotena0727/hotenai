@@ -1630,11 +1630,18 @@ export function buildKatsuyouReviewQuiz({
     const forms = buildFormsForRow(row);
     if (!forms.length) continue;
 
-    const pickedForm = forms.find(
-      (form) =>
-        String(form.formKey || "").trim() === String(target.form_key).trim() &&
-        String(form.qtype || "").trim() === String(target.qtype).trim()
-    );
+    const targetFormKey = String(target.form_key || "").trim();
+    const targetQType = String(target.qtype || "").trim();
+
+    const pickedForm =
+      forms.find(
+        (form) =>
+          String(form.formKey || "").trim() === targetFormKey &&
+          String(form.qtype || "").trim() === targetQType
+      ) ||
+      forms.find(
+        (form) => String(form.formKey || "").trim() === targetFormKey
+      );
 
     if (!pickedForm) continue;
 
