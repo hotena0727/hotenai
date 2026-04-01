@@ -927,16 +927,26 @@ export default function MyPage() {
 
           {installGuideOpen ? (
             <div className="border-t border-sky-200 bg-white/70 px-5 py-4 text-sm leading-6 text-slate-700">
-              <div className="font-semibold text-slate-900">
-                브라우저별 안내
-              </div>
+              {/* 1) 설치 안내 */}
+              <div className="font-semibold text-slate-900">설치 방법</div>
               <div className="mt-2">
-                • <span className="font-semibold">iPhone / Safari</span>: 아래
-                공유 버튼 → 홈 화면에 추가
-                <br />• <span className="font-semibold">Android / Chrome</span>:
-                브라우저 메뉴 → 홈 화면에 추가 또는 앱 설치
-                <br />• <span className="font-semibold">삼성 인터넷</span>:
-                브라우저 메뉴 → 홈 화면에 추가
+                • <span className="font-semibold">iPhone / Safari</span>: 아래 공유 버튼 → 홈 화면에 추가
+                <br />• <span className="font-semibold">Android / Chrome</span>: 브라우저 메뉴 → 홈 화면에 추가 또는 앱 설치
+                <br />• <span className="font-semibold">삼성 인터넷</span>: 브라우저 메뉴 → 홈 화면에 추가
+              </div>
+
+              {/* 2) 알림 켜기 안내 */}
+              <div className="mt-4 font-semibold text-slate-900">알림 받는 방법</div>
+              <div className="mt-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
+                <p className="font-semibold">iPhone은 “홈 화면에 추가한 앱”에서만 알림 설정이 가능합니다.</p>
+                <p className="mt-1">
+                  홈 화면에 추가한 앱으로 접속한 뒤{" "}
+                  <span className="font-bold">마이페이지 → 알림</span>에서{" "}
+                  <span className="font-bold">[알림 켜기]</span>를 눌러 주세요.
+                </p>
+                <p className="mt-1 text-rose-600">
+                  (사파리 탭으로 접속하면 “푸시 미지원”으로 표시될 수 있어요.)
+                </p>
               </div>
             </div>
           ) : null}
