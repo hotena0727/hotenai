@@ -930,9 +930,9 @@ export default function MyPage() {
               {/* 1) 설치 안내 */}
               <div className="font-semibold text-slate-900">설치 방법</div>
               <div className="mt-2">
-                • <span className="font-semibold">iPhone / Safari</span>: 아래 공유 버튼 → 홈 화면에 추가
+                • <span className="font-semibold">삼성 인터넷</span>: 브라우저 메뉴 → 홈 화면에 추가
+                <br />• <span className="font-semibold">iPhone / Safari</span>: 아래 공유 버튼 → 홈 화면에 추가
                 <br />• <span className="font-semibold">Android / Chrome</span>: 브라우저 메뉴 → 홈 화면에 추가 또는 앱 설치
-                <br />• <span className="font-semibold">삼성 인터넷</span>: 브라우저 메뉴 → 홈 화면에 추가
               </div>
 
               {/* 2) 알림 켜기 안내 */}
