@@ -938,9 +938,9 @@ export default function MyPage() {
               {/* 2) 알림 켜기 안내 */}
               <div className="mt-4 font-semibold text-slate-900">알림 받는 방법</div>
               <div className="mt-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
-                <p className="font-semibold">“홈 화면에 추가한 앱”에서만 알림 설정이 가능합니다.</p>
+                <p className="font-semibold">'홈 화면에 추가한 앱'에서만 알림 설정이 가능합니다.</p>
                 <p className="mt-1">
-                  홈 화면에 추가한 앱으로 접속한 뒤{" "}
+                  반드시 홈 화면에 추가한 앱으로 접속한 뒤{" "}
                   <span className="font-bold">마이페이지 → 알림 탭</span>에서{" "}
                   <span className="font-bold">[알림 켜기]</span>를 눌러 주세요.
                 </p>
