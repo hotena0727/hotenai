@@ -426,7 +426,7 @@ export default function AdminPage() {
 
   const [pushTitle, setPushTitle] = useState("하테나 알림");
   const [pushBody, setPushBody] = useState("오늘 15분만 같이 달려요. 🔥");
-  const [pushUrl, setPushUrl] = useState("https://hotenai.vercel.app/");
+  const [pushUrl, setPushUrl] = useState("https://www.hotenai.com");
   const [pushMode, setPushMode] = useState<"test" | "all" | "selected">("test");
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMessage, setPushMessage] = useState("");
