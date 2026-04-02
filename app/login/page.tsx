@@ -1,15 +1,39 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+function isInAppBrowser() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /KAKAOTALK|NAVER|FBAN|FBAV|Instagram|Line|wv/i.test(ua);
+}
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [isInApp, setIsInApp] = useState(false);
+
+  useEffect(() => {
+    setIsInApp(isInAppBrowser());
+  }, []);
+
+  const guideMessage = useMemo(() => {
+    if (!isInApp) return "";
+    return "카카오톡·네이버 앱·기타 앱 내 브라우저에서는 Google 로그인이 제한될 수 있습니다. 우측 메뉴에서 크롬 또는 기본 브라우저로 열어 로그인해 주세요.";
+  }, [isInApp]);
 
   const handleGoogleLogin = async () => {
-    setLoading(true);
     setMessage("");
+
+    if (isInApp) {
+      setMessage(
+        "현재 앱 내 브라우저에서는 Google 로그인이 차단될 수 있습니다. 크롬 또는 기본 브라우저로 열어 다시 시도해 주세요."
+      );
+      return;
+    }
+
+    setLoading(true);
 
     const redirectTo =
       typeof window !== "undefined"
@@ -78,6 +102,17 @@ export default function LoginPage() {
             <p className="mt-1 text-xs text-gray-500">
               Google 인증 후 자동으로 하테나일본어로 돌아옵니다.
             </p>
+
+            <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-6 text-gray-600">
+              카카오톡·네이버 앱 브라우저에서는 Google 로그인이 제한될 수 있습니다.
+              이런 경우 크롬 또는 기본 브라우저로 열어 로그인해 주세요.
+            </div>
+
+            {isInApp ? (
+              <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm leading-6 text-yellow-800">
+                {guideMessage}
+              </div>
+            ) : null}
 
             <button
               type="button"
