@@ -709,7 +709,7 @@ export default function AdminPage() {
           setShowCoursesSection(Boolean(pageRow?.show_courses_section));
         }
 
-        const allAttempts = await fetchAllAttempts(user.id, 300);
+        const allAttempts = await fetchRecentAttemptsForAdmin(3000);
         setAttempts(allAttempts);
       } catch (error) {
         console.error(error);
