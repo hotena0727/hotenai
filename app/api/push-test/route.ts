@@ -17,6 +17,67 @@ function normalizeEnv(value?: string | null) {
   return (value ?? "").trim().replace(/^["']|["']$/g, "");
 }
 
+async function requireAdmin(req: NextRequest) {
+  const supabaseUrl = normalizeEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const anonKey = normalizeEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const serviceRoleKey = normalizeEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!supabaseUrl) {
+    return { ok: false as const, status: 500, message: "NEXT_PUBLIC_SUPABASE_URL 가 비어 있습니다." };
+  }
+
+  if (!anonKey) {
+    return { ok: false as const, status: 500, message: "NEXT_PUBLIC_SUPABASE_ANON_KEY 가 비어 있습니다." };
+  }
+
+  if (!serviceRoleKey) {
+    return { ok: false as const, status: 500, message: "SUPABASE_SERVICE_ROLE_KEY 가 비어 있습니다." };
+  }
+
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length).trim()
+    : "";
+
+  if (!token) {
+    return { ok: false as const, status: 401, message: "인증 토큰이 없습니다." };
+  }
+
+  const authClient = createClient(supabaseUrl, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const { data: authData, error: authError } = await authClient.auth.getUser(token);
+
+  if (authError || !authData.user) {
+    return { ok: false as const, status: 401, message: "로그인 사용자를 확인하지 못했습니다." };
+  }
+
+  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const { data: profileRow, error: profileError } = await adminClient
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", authData.user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    return { ok: false as const, status: 500, message: "관리자 권한을 확인하지 못했습니다." };
+  }
+
+  if (!profileRow?.is_admin) {
+    return { ok: false as const, status: 403, message: "관리자만 테스트 푸시를 보낼 수 있습니다." };
+  }
+
+  return {
+    ok: true as const,
+    supabaseUrl,
+    serviceRoleKey,
+  };
+}
+
 function isVapidPrivateKeyLikelyValid(key: string) {
   try {
     const normalized = key.replace(/-/g, "+").replace(/_/g, "/");
@@ -42,8 +103,10 @@ function rowToSubscription(row: PushRow) {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabaseUrl = normalizeEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
-    const serviceRoleKey = normalizeEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const auth = await requireAdmin(req);
+    if (!auth.ok) {
+      return NextResponse.json({ ok: false, error: auth.message }, { status: auth.status });
+    }
 
     const vapidSubject =
       normalizeEnv(process.env.VAPID_SUBJECT) ||
@@ -51,20 +114,6 @@ export async function POST(req: NextRequest) {
 
     const vapidPublicKey = normalizeEnv(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
     const vapidPrivateKey = normalizeEnv(process.env.VAPID_PRIVATE_KEY);
-
-    if (!supabaseUrl) {
-      return NextResponse.json(
-        { ok: false, error: "NEXT_PUBLIC_SUPABASE_URL 가 비어 있습니다." },
-        { status: 500 }
-      );
-    }
-
-    if (!serviceRoleKey) {
-      return NextResponse.json(
-        { ok: false, error: "SUPABASE_SERVICE_ROLE_KEY 가 비어 있습니다." },
-        { status: 500 }
-      );
-    }
 
     if (!vapidSubject || !vapidPublicKey || !vapidPrivateKey) {
       return NextResponse.json(
@@ -88,7 +137,7 @@ export async function POST(req: NextRequest) {
 
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
-    const admin = createClient(supabaseUrl, serviceRoleKey, {
+    const admin = createClient(auth.supabaseUrl, auth.serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 

@@ -371,7 +371,6 @@ export default function MyPage() {
   const [noticeRefreshing, setNoticeRefreshing] = useState(false);
   const [noticeEnabling, setNoticeEnabling] = useState(false);
   const [noticeDisabling, setNoticeDisabling] = useState(false);
-  const [noticeTesting, setNoticeTesting] = useState(false);
   const [noticeError, setNoticeError] = useState("");
   const [noticeMessage, setNoticeMessage] = useState("");
   const [noticeStatus, setNoticeStatus] = useState<NoticeStatus>({
@@ -690,42 +689,6 @@ export default function MyPage() {
       setNoticeError("알림 구독 해제에 실패했습니다.");
     } finally {
       setNoticeDisabling(false);
-    }
-  };
-
-  const handleSendTestPush = async () => {
-    try {
-      setNoticeTesting(true);
-      setNoticeError("");
-      setNoticeMessage("");
-
-      const res = await fetch("/api/push-test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "하테나 테스트",
-          body: "실제 웹 푸시 테스트입니다.",
-        }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || !data?.ok) {
-        throw new Error(String(data?.error || "테스트 푸시 발송 실패"));
-      }
-
-      setNoticeMessage(
-        `테스트 푸시를 보냈습니다. (${data.successCount || 0}건)`
-      );
-    } catch (error) {
-      console.error(error);
-      setNoticeError(
-        error instanceof Error
-          ? error.message
-          : "테스트 푸시 발송에 실패했습니다."
-      );
-    } finally {
-      setNoticeTesting(false);
     }
   };
 
@@ -1810,15 +1773,6 @@ export default function MyPage() {
                 className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
               >
                 {noticeDisabling ? "해제 중..." : "알림 끄기"}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSendTestPush}
-                disabled={noticeTesting}
-                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-800 disabled:opacity-60"
-              >
-                {noticeTesting ? "테스트 발송 중..." : "테스트 알림 보내기"}
               </button>
             </div>
           </div>
