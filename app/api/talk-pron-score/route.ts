@@ -56,22 +56,6 @@ function hasEndingMismatch(expectedReading: string, transcriptReading: string) {
   return false;
 }
 
-function isImplausiblyShortUtterance(
-  durationMs: number,
-  answerYomi: string,
-  answerJp: string
-) {
-  if (!durationMs) return false;
-
-  const recommendedSec = getRecommendedSeconds(answerYomi, answerJp);
-  const actualSec = durationMs / 1000;
-
-  // 권장 시간의 35%보다 짧으면 비정상적으로 짧다고 판단
-  const minPlausibleSec = Math.max(0.9, recommendedSec * 0.35);
-
-  return actualSec < minPlausibleSec;
-}
-
 function normJp(text: string) {
   return kataToHira(stripPunctuation(text)).toLowerCase();
 }
@@ -583,6 +567,34 @@ function similarityScoreWithYomiPriority(
   );
 
   if (expectedReading === actualReading) {
+    const actualSec = durationMs / 1000;
+    const recommendedSec = getRecommendedSeconds(answerYomi, answerJp);
+
+    const transcriptSurface = normalizeForSurfaceMatch(transcript);
+    const answerSurface = normalizeForSurfaceMatch(answerJp);
+
+    // 1) 너무 짧은 녹음인데 완전일치면, 실제 정답 발화보다
+    //    짧은 소리 + STT 과보정일 가능성이 큼
+    const isTooShortForPerfect =
+      actualSec > 0 && actualSec < Math.max(1.8, recommendedSec * 0.45);
+
+    // 2) transcript가 지나치게 짧거나 비어 있는 쪽인데 완전일치면 수상
+    const isSuspiciouslyShortTranscript =
+      transcriptSurface.length > 0 &&
+      transcriptSurface.length < Math.max(4, Math.floor(answerSurface.length * 0.35));
+
+    if (isTooShortForPerfect || isSuspiciouslyShortTranscript) {
+      return {
+        score: 0,
+        expectedReading,
+        actualReading,
+        adoptedExpectedYomi,
+        surfaceScore,
+        displayTranscript,
+        displayAsAnswer,
+      };
+    }
+
     const overtimeOnlyPenalty = Math.max(
       0,
       Math.ceil(slow.overtimeSec) * 3
@@ -802,10 +814,7 @@ export async function POST(req: Request) {
       "가능하면 히라가나 중심으로 전사하세요.",
       `정답 문장 후보: ${answerJp}`,
       answerYomi ? `정답 읽기 후보: ${answerYomi}` : "",
-      "정답 문장 후보와 정답 읽기 후보는 참고만 하세요.",
-      "실제로 들린 음성만 전사하세요.",
-      "불확실한 경우 정답 문장 후보에 맞춰 추측하지 마세요.",
-      "기침, 한숨, 헛기침, 의미 없는 소리만 들리면 빈 문자열 또는 아주 짧은 소리로만 전사하세요.",
+      "음성이 정답 문장 후보와 비슷하게 들리면, 그 문장에 가까운 일본어 표기로 전사하세요.",
       "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
     ]
       .filter(Boolean)
@@ -866,13 +875,6 @@ export async function POST(req: Request) {
       return buildSilentResponse(
         TRANSCRIBE_MODEL,
         "💡 음성이 제대로 인식되지 않았어요. 조금 더 또렷하게 다시 말해 보세요."
-      );
-    }
-
-    if (isImplausiblyShortUtterance(durationMs, answerYomi, answerJp)) {
-      return buildSilentResponse(
-        TRANSCRIBE_MODEL,
-        "💡 너무 짧은 소리만 들어갔어요. 문장을 끝까지 또렷하게 말해 보세요."
       );
     }
 
