@@ -469,7 +469,7 @@ function estimateSlowSpeechPenalty(
     };
   }
 
-  const seconds = durationMs / 1000;
+  const seconds = durationMs / 1800;
   if (seconds <= 0) {
     return {
       penalty: 0,
@@ -786,10 +786,7 @@ export async function POST(req: Request) {
       "가능하면 히라가나 중심으로 전사하세요.",
       `정답 문장 후보: ${answerJp}`,
       answerYomi ? `정답 읽기 후보: ${answerYomi}` : "",
-      "정답 문장 후보와 정답 읽기 후보는 참고만 하세요.",
-      "실제로 들린 음성만 전사하세요.",
-      "기침, 한숨, 헛기침, 의미 없는 소리만 들리면 빈 문자열로 두거나 아주 짧게만 전사하세요.",
-      "불확실한 경우 정답 문장 후보에 맞춰 추측하지 마세요.",
+      "음성이 정답 문장 후보와 비슷하게 들리면, 그 문장에 가까운 일본어 표기로 전사하세요.",
       "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
     ]
       .filter(Boolean)
