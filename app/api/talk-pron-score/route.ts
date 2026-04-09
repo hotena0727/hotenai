@@ -567,34 +567,6 @@ function similarityScoreWithYomiPriority(
   );
 
   if (expectedReading === actualReading) {
-    const actualSec = durationMs / 1000;
-    const recommendedSec = getRecommendedSeconds(answerYomi, answerJp);
-
-    const transcriptSurface = normalizeForSurfaceMatch(transcript);
-    const answerSurface = normalizeForSurfaceMatch(answerJp);
-
-    // 1) 너무 짧은 녹음인데 완전일치면, 실제 정답 발화보다
-    //    짧은 소리 + STT 과보정일 가능성이 큼
-    const isTooShortForPerfect =
-      actualSec > 0 && actualSec < Math.max(1.8, recommendedSec * 0.45);
-
-    // 2) transcript가 지나치게 짧거나 비어 있는 쪽인데 완전일치면 수상
-    const isSuspiciouslyShortTranscript =
-      transcriptSurface.length > 0 &&
-      transcriptSurface.length < Math.max(4, Math.floor(answerSurface.length * 0.35));
-
-    if (isTooShortForPerfect || isSuspiciouslyShortTranscript) {
-      return {
-        score: 0,
-        expectedReading,
-        actualReading,
-        adoptedExpectedYomi,
-        surfaceScore,
-        displayTranscript,
-        displayAsAnswer,
-      };
-    }
-
     const overtimeOnlyPenalty = Math.max(
       0,
       Math.ceil(slow.overtimeSec) * 3
@@ -815,8 +787,13 @@ export async function POST(req: Request) {
       `정답 문장 후보: ${answerJp}`,
       answerYomi ? `정답 읽기 후보: ${answerYomi}` : "",
       "음성이 정답 문장 후보와 비슷하게 들리면, 그 문장에 가까운 일본어 표기로 전사하세요.",
+      "단, 기침, 헛기침, 목을 가다듬는 소리, 한숨, 짧은 감탄 소리는 정답 후보로 보정하지 마세요.",
+      "예: えへん、んー、うーん、えー、あー 같은 소리는 실제 들린 짧은 소리 그대로만 전사하세요.",
+      "의미 없는 소리나 비언어 발성은 문장으로 확장하지 마세요.",
       "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
     ]
+      .filter(Boolean)
+      .join("\n");
       .filter(Boolean)
       .join("\n");
 
