@@ -794,8 +794,6 @@ export async function POST(req: Request) {
     ]
       .filter(Boolean)
       .join("\n");
-      .filter(Boolean)
-      .join("\n");
 
     const fd = new FormData();
     fd.append("file", new Blob([audioArrayBuffer], { type: "audio/wav" }), name);
