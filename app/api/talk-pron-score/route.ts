@@ -779,7 +779,21 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = [
+    const plainPrompt = [
+      "다음 일본어 음성을 전사하세요.",
+      "절대로 번역하지 말고, 들린 일본어를 그대로 전사하세요.",
+      "출력은 반드시 일본어로만 하세요. 한국어, 영어 번역은 하지 마세요.",
+      "가능하면 히라가나 중심으로 전사하세요.",
+      "실제로 들린 음성만 전사하세요.",
+      "기침, 헛기침, 목을 가다듬는 소리, 한숨, 짧은 감탄 소리는 실제 들린 짧은 소리 그대로 전사하세요.",
+      "예: えへん、んー、うーん、えー、あー",
+      "의미 없는 소리나 비언어 발성은 문장으로 확장하지 마세요.",
+      "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const guidedPrompt = [
       "다음 일본어 음성을 전사하세요.",
       "절대로 번역하지 말고, 들린 일본어를 그대로 전사하세요.",
       "출력은 반드시 일본어로만 하세요. 한국어, 영어 번역은 하지 마세요.",
@@ -787,13 +801,12 @@ export async function POST(req: Request) {
       `정답 문장 후보: ${answerJp}`,
       answerYomi ? `정답 읽기 후보: ${answerYomi}` : "",
       "음성이 정답 문장 후보와 비슷하게 들리면, 그 문장에 가까운 일본어 표기로 전사하세요.",
-      "단, 기침, 헛기침, 목을 가다듬는 소리, 한숨, 짧은 감탄 소리는 정답 후보로 보정하지 마세요.",
-      "예: えへん、んー、うーん、えー、あー 같은 소리는 실제 들린 짧은 소리 그대로만 전사하세요.",
-      "의미 없는 소리나 비언어 발성은 문장으로 확장하지 마세요.",
       "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
     ]
       .filter(Boolean)
       .join("\n");
+
+    const prompt = durationMs < 2500 ? plainPrompt : guidedPrompt;
 
     const fd = new FormData();
     fd.append("file", new Blob([audioArrayBuffer], { type: "audio/wav" }), name);
@@ -892,6 +905,7 @@ export async function POST(req: Request) {
       slowPenalty: slow.penalty,
       slowCps: slow.cps,
       slowOvertimeSec: slow.overtimeSec,
+      promptMode: durationMs < 2500 ? "plain" : "guided",
       flowPenalty: analyzeSpeechFlow(transcript, judged.actualReading).penalty,
     };
 
