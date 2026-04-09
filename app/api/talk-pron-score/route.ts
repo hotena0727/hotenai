@@ -56,6 +56,22 @@ function hasEndingMismatch(expectedReading: string, transcriptReading: string) {
   return false;
 }
 
+function isImplausiblyShortUtterance(
+  durationMs: number,
+  answerYomi: string,
+  answerJp: string
+) {
+  if (!durationMs) return false;
+
+  const recommendedSec = getRecommendedSeconds(answerYomi, answerJp);
+  const actualSec = durationMs / 1000;
+
+  // 권장 시간의 35%보다 짧으면 비정상적으로 짧다고 판단
+  const minPlausibleSec = Math.max(0.9, recommendedSec * 0.35);
+
+  return actualSec < minPlausibleSec;
+}
+
 function normJp(text: string) {
   return kataToHira(stripPunctuation(text)).toLowerCase();
 }
@@ -469,7 +485,7 @@ function estimateSlowSpeechPenalty(
     };
   }
 
-  const seconds = durationMs / 1800;
+  const seconds = durationMs / 1000;
   if (seconds <= 0) {
     return {
       penalty: 0,
@@ -847,6 +863,13 @@ export async function POST(req: Request) {
       return buildSilentResponse(
         TRANSCRIBE_MODEL,
         "💡 음성이 제대로 인식되지 않았어요. 조금 더 또렷하게 다시 말해 보세요."
+      );
+    }
+
+    if (isImplausiblyShortUtterance(durationMs, answerYomi, answerJp)) {
+      return buildSilentResponse(
+        TRANSCRIBE_MODEL,
+        "💡 너무 짧은 소리만 들어갔어요. 문장을 끝까지 또렷하게 말해 보세요."
       );
     }
 
