@@ -1,7 +1,7 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 function isInAppBrowser() {
   if (typeof navigator === "undefined") return false;
@@ -18,17 +18,12 @@ export default function LoginPage() {
     setIsInApp(isInAppBrowser());
   }, []);
 
-  const guideMessage = useMemo(() => {
-    if (!isInApp) return "";
-    return "카카오톡·네이버 앱·기타 앱 내 브라우저에서는 Google 로그인이 제한될 수 있습니다. 우측 메뉴에서 크롬 또는 기본 브라우저로 열어 로그인해 주세요.";
-  }, [isInApp]);
-
   const handleGoogleLogin = async () => {
     setMessage("");
 
     if (isInApp) {
       setMessage(
-        "현재 앱 내 브라우저에서는 Google 로그인이 차단될 수 있습니다. 크롬 또는 기본 브라우저로 열어 다시 시도해 주세요."
+        "현재 앱 내 브라우저에서는 Google 로그인이 제한될 수 있습니다. 크롬 또는 기본 브라우저로 열어 다시 시도해 주세요."
       );
       return;
     }
@@ -48,10 +43,9 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setMessage("로그인 중 오류가 발생했습니다.");
       console.error(error);
+      setMessage("로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
       setLoading(false);
-      return;
     }
   };
 
@@ -97,20 +91,13 @@ export default function LoginPage() {
         <div className="mx-auto mt-5 max-w-3xl">
           <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             <p className="text-sm font-semibold text-gray-700">
-              Google 계정으로 안전하게 로그인할 수 있어요.
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              Google 인증 후 자동으로 하테나일본어로 돌아옵니다.
+              Google 계정으로 로그인
             </p>
 
-            <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-6 text-gray-600">
-              카카오톡·네이버 앱 브라우저에서는 Google 로그인이 제한될 수 있습니다.
-              이런 경우 크롬 또는 기본 브라우저로 열어 로그인해 주세요.
-            </div>
-
-            {isInApp ? (
+            {isInApp && !message ? (
               <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm leading-6 text-yellow-800">
-                {guideMessage}
+                카카오톡·네이버 앱 브라우저에서는 Google 로그인이 제한될 수 있습니다.
+                크롬 또는 기본 브라우저로 열어 로그인해 주세요.
               </div>
             ) : null}
 
