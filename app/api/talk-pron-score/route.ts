@@ -294,6 +294,7 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/聞き取れません/g, "ききとれません")
     .replace(/聞き取り/g, "ききとり")
     .replace(/頭/g, "あたま")
+    .replace(/出てきません/g, "でてきません")
 
     // 기타
     .replace(/ぐらいします/g, "ぐらいします");
