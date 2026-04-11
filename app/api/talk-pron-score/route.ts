@@ -238,8 +238,16 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/人気/g, "にんき")
     .replace(/見る/g, "みる")
     .replace(/名前/g, "なまえ")
+    .replace(/お腹が空いていた/g, "おなかがすいていた")
+    .replace(/お腹が空いてる/g, "おなかがすいてる")
     .replace(/お腹が空いて/g, "おなかがすいて")
+
+    .replace(/予定が空いていた/g, "よていがあいていた")
+    .replace(/予定が空いてる/g, "よていがあいてる")
     .replace(/予定が空いて/g, "よていがあいて")
+
+    .replace(/時間が空いていた/g, "じかんがあいていた")
+    .replace(/時間が空いてる/g, "じかんがあいてる")
     .replace(/時間が空いて/g, "じかんがあいて")
     .replace(/助かります/g, "たすかります");
 }
