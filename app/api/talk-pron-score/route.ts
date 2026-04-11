@@ -833,6 +833,13 @@ function normalizeTranscriptForDisplay(
     normalized = normalized.replace(/名前/g, "なまえ");
   }
 
+  if (answerSurface.includes("ふだん")) {
+  normalized = normalized.replace(/普段/g, "ふだん");
+}
+
+if (answerSurface.includes("会わない")) {
+  normalized = normalized.replace(/合わない/g, "会わない");
+}
   return normalized;
 }
 
