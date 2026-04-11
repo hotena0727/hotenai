@@ -243,6 +243,7 @@ function replaceCommonVariants(text: string) {
     .replace(/ゆーつーぶ/g, "ゆーちゅーぶ")
     .replace(/ゆーちゅぶ/g, "ゆーちゅーぶ")
     .replace(/のち/g, "あと")
+    .replace(/ています/g, "てます")
     .replace(/25/g, "にじゅうご");
 }
 
