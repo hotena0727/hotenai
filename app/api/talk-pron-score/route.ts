@@ -586,24 +586,28 @@ function similarityScoreWithYomiPriority(
     answerJp
   );
 
-  if (expectedReading === actualReading) {
-    const overtimeOnlyPenalty = Math.max(
-      0,
-      Math.ceil(slow.overtimeSec) * 3
-    );
+  const hasHeDeMismatch =
+  (answerJp.includes("へ") && transcript.includes("で")) ||
+  (answerJp.includes("で") && transcript.includes("へ"));
 
-    const totalPenalty = flow.penalty + overtimeOnlyPenalty;
+if (expectedReading === actualReading && !hasHeDeMismatch) {
+  const overtimeOnlyPenalty = Math.max(
+    0,
+    Math.ceil(slow.overtimeSec) * 3
+  );
 
-    return {
-      score: Math.max(95, 100 - totalPenalty),
-      expectedReading,
-      actualReading,
-      adoptedExpectedYomi,
-      surfaceScore,
-      displayTranscript,
-      displayAsAnswer,
-    };
-  }
+  const totalPenalty = flow.penalty + overtimeOnlyPenalty;
+
+  return {
+    score: Math.max(95, 100 - totalPenalty),
+    expectedReading,
+    actualReading,
+    adoptedExpectedYomi,
+    surfaceScore,
+    displayTranscript,
+    displayAsAnswer,
+  };
+}
 
   const bb = bigrams(expectedReading);
   if (bb.size > 0) {
