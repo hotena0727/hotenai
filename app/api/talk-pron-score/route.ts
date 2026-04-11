@@ -383,9 +383,13 @@ function normalizeYomiDigits(text: string) {
 }
 
 function buildExpectedReading(answerJp: string, answerYomi: string) {
-  return toReadingLike(
-    answerYomi ? normalizeYomiDigits(answerYomi) : answerJp
-  );
+  const normalizedYomi = String(answerYomi || "").trim();
+
+  if (normalizedYomi) {
+    return toReadingLike(normalizeYomiDigits(normalizedYomi));
+  }
+
+  return toReadingLike(answerJp);
 }
 
 /**
@@ -748,8 +752,6 @@ export async function POST(req: Request) {
     const inputFile = form.get("file");
     const answerJp = String(form.get("answer_jp") || "").trim();
     const answerYomi = String(form.get("answer_yomi") || "").trim();
-    console.log("[DEBUG answerJp]", answerJp);
-    console.log("[DEBUG answerYomi]", answerYomi);
     const durationMs = Number(form.get("duration_ms") || 0);
 
     if (
