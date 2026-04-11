@@ -346,6 +346,17 @@ function buildActualReadingWithYomiPriority(
   const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
   const transcriptReading = toReadingLike(transcript);
 
+  const isSameSurface =
+    normalizeForSurfaceMatch(transcript) === normalizeForSurfaceMatch(answerJp);
+
+  if (isSameSurface) {
+    return {
+      actualReading: buildExpectedReading(answerJp, answerYomi),
+      adoptedExpectedYomi: true,
+      surfaceScore: rawSurfaceScore,
+    };
+  }
+
   return {
     actualReading: transcriptReading,
     adoptedExpectedYomi: false,
