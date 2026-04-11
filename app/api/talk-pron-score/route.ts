@@ -380,21 +380,19 @@ function hasCriticalTokenMismatch(answerJp: string, transcript: string) {
 }
 
 function hasSimpleParticleMismatch(answerJp: string, transcript: string) {
-  const answer = String(answerJp || "").normalize("NFKC");
-  const actual = String(transcript || "").normalize("NFKC");
+  const answer = normalizeForSurfaceMatch(answerJp);
+  const actual = normalizeForSurfaceMatch(transcript);
 
-  const pairs: Array<[string, string]> = [
-    ["へ", "で"],
-    ["で", "へ"],
-  ];
+  const jpChar = "[一-龯ぁ-んァ-ン々ー]";
+  const hePattern = new RegExp(`${jpChar}へ${jpChar}`);
+  const dePattern = new RegExp(`${jpChar}で${jpChar}`);
 
-  return pairs.some(([expectedParticle, wrongParticle]) => {
-    return (
-      answer.includes(expectedParticle) &&
-      !answer.includes(wrongParticle) &&
-      actual.includes(wrongParticle)
-    );
-  });
+  const answerHasHe = hePattern.test(answer);
+  const answerHasDe = dePattern.test(answer);
+  const actualHasHe = hePattern.test(actual);
+  const actualHasDe = dePattern.test(actual);
+
+  return (answerHasHe && actualHasDe) || (answerHasDe && actualHasHe);
 }
 
 /**
@@ -586,28 +584,24 @@ function similarityScoreWithYomiPriority(
     answerJp
   );
 
-  const hasHeDeMismatch =
-  (answerJp.includes("へ") && transcript.includes("で")) ||
-  (answerJp.includes("で") && transcript.includes("へ"));
+  if (expectedReading === actualReading) {
+    const overtimeOnlyPenalty = Math.max(
+      0,
+      Math.ceil(slow.overtimeSec) * 3
+    );
 
-if (expectedReading === actualReading && !hasHeDeMismatch) {
-  const overtimeOnlyPenalty = Math.max(
-    0,
-    Math.ceil(slow.overtimeSec) * 3
-  );
+    const totalPenalty = flow.penalty + overtimeOnlyPenalty;
 
-  const totalPenalty = flow.penalty + overtimeOnlyPenalty;
-
-  return {
-    score: Math.max(95, 100 - totalPenalty),
-    expectedReading,
-    actualReading,
-    adoptedExpectedYomi,
-    surfaceScore,
-    displayTranscript,
-    displayAsAnswer,
-  };
-}
+    return {
+      score: Math.max(95, 100 - totalPenalty),
+      expectedReading,
+      actualReading,
+      adoptedExpectedYomi,
+      surfaceScore,
+      displayTranscript,
+      displayAsAnswer,
+    };
+  }
 
   const bb = bigrams(expectedReading);
   if (bb.size > 0) {
