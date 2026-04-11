@@ -315,6 +315,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/甘すぎない/g, "あますぎない")
     .replace(/良ければ/g, "よければ")
     .replace(/良い/g, "よい")
+    .replace(/少し/g, "すこし")
+    .replace(/見てから/g, "みてから")
+    .replace(/見て/g, "みて")
 
     // 고유명사/표기 흔들림
     .replace(/日本/g, "にっぽん")
