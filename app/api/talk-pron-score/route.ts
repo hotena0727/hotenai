@@ -953,7 +953,7 @@ export async function POST(req: Request) {
       .filter(Boolean)
       .join(\"\\n\");
 
-const guidedPrompt = [
+    const guidedPrompt = [
       "다음 일본어 음성을 전사하세요.",
       "절대로 번역하지 말고, 들린 일본어를 일본어로만 전사하세요.",
       "출력은 반드시 일본어만 사용하세요. 한국어와 영어는 쓰지 마세요.",
@@ -969,6 +969,8 @@ const guidedPrompt = [
     ]
       .filter(Boolean)
       .join(\"\\n\");
+        .filter(Boolean)
+        .join(\"\\n\");
 
     const prompt = durationMs < 2500 ? plainPrompt : guidedPrompt;
 
