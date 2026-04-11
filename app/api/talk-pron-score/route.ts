@@ -281,6 +281,14 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/半岸/g, "はんがん")
     .replace(/半間/g, "はんがん")
 
+    // 감정/상태
+    .replace(/大変ですけど/g, "たいへんですけど")
+    .replace(/大変/g, "たいへん")
+    .replace(/少しずつ/g, "すこしずつ")
+    .replace(/増える/g, "ふえる")
+    .replace(/嬉しいです/g, "うれしいです")
+    .replace(/嬉しい/g, "うれしい")
+
     // 기타
     .replace(/ぐらいします/g, "ぐらいします");
 }
