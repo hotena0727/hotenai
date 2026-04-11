@@ -308,7 +308,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/驚く/g, "おどろく")
     // 기타
     .replace(/ぐらいします/g, "ぐらいします")
-    .replace(/^いえ(?=[、。,\s]|$)/g, "いいえ");
+    .replace(/^いえ(?=[、。,\s]|$)/g, "いいえ")
+    .replace(/ほんとに/g, "ほんとうに");
 }
 
 function replaceCommonVariants(text: string) {
