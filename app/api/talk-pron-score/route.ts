@@ -352,8 +352,19 @@ function analyzeSpeechFlow(rawTranscript: string, _normalizedReading: string) {
   };
 }
 
+function normalizeYomiDigits(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/4にん/g, "よにん")
+    .replace(/3にん/g, "さんにん")
+    .replace(/2にん/g, "ふたり")
+    .replace(/1にん/g, "ひとり");
+}
+
 function buildExpectedReading(answerJp: string, answerYomi: string) {
-  return toReadingLike(answerYomi || answerJp);
+  return toReadingLike(
+    answerYomi ? normalizeYomiDigits(answerYomi) : answerJp
+  );
 }
 
 /**
