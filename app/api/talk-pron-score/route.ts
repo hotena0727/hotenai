@@ -223,6 +223,11 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/街/g, "まち")
     .replace(/歩いて/g, "あるいて")
     .replace(/週/g, "しゅう")
+    .replace(/ぐらいします/g, "ぐらいします")
+    .replace(/最近/g, "さいきん")
+    .replace(/聞いています/g, "きいています")
+    .replace(/聞いてます/g, "きいてます")
+    .replace(/聞いて/g, "きいて")
     .replace(/ぐらいします/g, "ぐらいします");
 }
 
