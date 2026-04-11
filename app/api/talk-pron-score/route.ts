@@ -475,7 +475,11 @@ function similarityScoreWithYomiPriority(
     buildActualReadingWithYomiPriority(transcript, answerJp, answerYomi);
 
   const displayAsAnswer = false;
-  const displayTranscript = normalizeTranscriptForDisplay(transcript);
+  const displayTranscript = normalizeTranscriptForDisplay(
+    transcript,
+    answerJp,
+    answerYomi
+  );
 
   if (!expectedReading || !actualReading) {
     return {
