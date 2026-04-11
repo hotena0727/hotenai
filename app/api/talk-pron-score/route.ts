@@ -217,9 +217,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/本では/g, "ほんでは")
     .replace(/楽しい/g, "たのしい")
     .replace(/ハンガン/g, "はんがん")
-    .replace(/半岸/g, "はんがん")
-    .replace(/半間/g, "はんがん")
-    .replace(/散歩する/g, "さんぽする");
+    .replace(/町/g, "まち")
+    .replace(/街/g, "まち")
+    .replace(/歩いて/g, "あるいて");
 }
 
 function replaceCommonVariants(text: string) {
