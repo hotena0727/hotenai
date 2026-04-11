@@ -951,7 +951,7 @@ export async function POST(req: Request) {
       "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
     ]
       .filter(Boolean)
-      .join(\"\\n\");
+      .join("\n");
 
     const guidedPrompt = [
       "다음 일본어 음성을 전사하세요.",
@@ -968,9 +968,7 @@ export async function POST(req: Request) {
       "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
     ]
       .filter(Boolean)
-      .join(\"\\n\");
-        .filter(Boolean)
-        .join(\"\\n\");
+      .join("\n");
 
     const prompt = durationMs < 2500 ? plainPrompt : guidedPrompt;
 
