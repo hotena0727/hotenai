@@ -293,6 +293,7 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/細かい/g, "こまかい")
     .replace(/聞き取れません/g, "ききとれません")
     .replace(/聞き取り/g, "ききとり")
+    .replace(/頭/g, "あたま")
 
     // 기타
     .replace(/ぐらいします/g, "ぐらいします");
