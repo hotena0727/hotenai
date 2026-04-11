@@ -300,6 +300,10 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/分かります/g, "わかります")
     .replace(/引っかかります/g, "ひっかかります")
     .replace(/引っかかる/g, "ひっかかる")
+    .replace(/辛い/g, "つらい")
+    .replace(/頑張っている/g, "がんばっている")
+    .replace(/頑張ってる/g, "がんばってる")
+    .replace(/頑張る/g, "がんばる")
 
     // 고유명사/표기 흔들림
     .replace(/日本/g, "にっぽん")
