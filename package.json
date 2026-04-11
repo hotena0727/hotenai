@@ -14,6 +14,8 @@
     "csv-stringify": "^6.6.0",
     "jszip": "^3.10.1",
     "kuromoji": "^0.1.2",
+    "kuroshiro": "^1.2.0",
+    "kuroshiro-analyzer-kuromoji": "^1.1.0",
     "next": "16.1.6",
     "openai": "^6.27.0",
     "papaparse": "^5.5.3",
