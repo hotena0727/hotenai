@@ -469,9 +469,13 @@ function buildActualReadingWithYomiPriority(
   const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
   const transcriptReading = toReadingLike(transcript);
 
-  const isSameSurface =
-    normalizeForSurfaceMatch(transcript) === normalizeForSurfaceMatch(answerJp);
+  const normalizedTranscriptSurface = normalizeForSurfaceMatch(transcript);
+  const normalizedAnswerSurface = normalizeForSurfaceMatch(answerJp);
 
+  const isSameSurface =
+    normalizedTranscriptSurface === normalizedAnswerSurface;
+
+  // 1) 완전히 같으면 기존처럼 정답 yomi 채택
   if (isSameSurface) {
     return {
       actualReading: buildExpectedReading(answerJp, answerYomi),
@@ -480,6 +484,20 @@ function buildActualReadingWithYomiPriority(
     };
   }
 
+  // 2) 거의 같은 문장인데 STT 표기만 흔들린 경우
+  //    채점용만 정답 yomi 쪽으로 붙여준다.
+  //    너무 후해지지 않도록 threshold는 높게 시작.
+  const HIGH_SURFACE_THRESHOLD = 92;
+
+  if (rawSurfaceScore >= HIGH_SURFACE_THRESHOLD) {
+    return {
+      actualReading: buildExpectedReading(answerJp, answerYomi),
+      adoptedExpectedYomi: true,
+      surfaceScore: rawSurfaceScore,
+    };
+  }
+
+  // 3) 그 외에는 기존처럼 transcript 기반 reading 사용
   return {
     actualReading: transcriptReading,
     adoptedExpectedYomi: false,
