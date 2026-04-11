@@ -189,75 +189,100 @@ function normalizeJapaneseCountersToReading(text: string) {
 function normalizeKnownWordsToReading(text: string) {
   return String(text || "")
     .normalize("NFKC")
-    .replace(/思っていた/g, "おもっていた")
+
+    // 감탄/말끝
+    .replace(/なあ/g, "な")
+
+    // 생각/판단
     .replace(/思っていたより/g, "おもっていたより")
-    .replace(/味が/g, "あじが")
+    .replace(/思っていた/g, "おもっていた")
+    .replace(/思いました/g, "おもいました")
+    .replace(/思います/g, "おもいます")
+
+    // 맛/음식
     .replace(/美味しいですね/g, "おいしいですね")
     .replace(/美味しい/g, "おいしい")
-    .replace(/美味しい/g, "おいしい")
-    .replace(/夜/g, "よる")
+    .replace(/味が/g, "あじが")
     .replace(/お菓子/g, "おかし")
     .replace(/食べていた/g, "たべていた")
-    .replace(/思います/g, "おもいます")
-    .replace(/思いました/g, "おもいました")
+    .replace(/お腹が空いていた/g, "おなかがすいていた")
+    .replace(/お腹が空いてる/g, "おなかがすいてる")
+    .replace(/お腹が空いて/g, "おなかがすいて")
+
+    // 일정/시간
+    .replace(/予定が空いていた/g, "よていがあいていた")
+    .replace(/予定が空いてる/g, "よていがあいてる")
+    .replace(/予定が空いて/g, "よていがあいて")
+    .replace(/時間が空いていた/g, "じかんがあいていた")
+    .replace(/時間が空いてる/g, "じかんがあいてる")
+    .replace(/時間が空いて/g, "じかんがあいて")
+
+    // 듣기
+    .replace(/聞いています/g, "きいています")
+    .replace(/聞いてます/g, "きいてます")
+    .replace(/聞いていた/g, "きいていた")
+    .replace(/聞いてる/g, "きいてる")
+    .replace(/聞いて/g, "きいて")
+    .replace(/聴いています/g, "きいています")
+    .replace(/聴いてます/g, "きいてます")
+    .replace(/聴いていた/g, "きいていた")
+    .replace(/聴いてる/g, "きいてる")
+    .replace(/聴いて/g, "きいて")
+
+    // 이동/행동
+    .replace(/取りに行きます/g, "とりにいきます")
+    .replace(/歩いて/g, "あるいて")
+    .replace(/待てば/g, "まてば")
+    .replace(/待って/g, "まって")
+    .replace(/待った/g, "まった")
+    .replace(/待つ/g, "まつ")
+
+    // 회화 표현
+    .replace(/決まったら/g, "きまったら")
+    .replace(/声かけます/g, "こえかけます")
+    .replace(/助かります/g, "たすかります")
+    .replace(/気に入っています/g, "きにいっています")
     .replace(/本当に/g, "ほんとに")
+    .replace(/何でも/g, "なんでも")
+    .replace(/なにでも/g, "なんでも")
+    .replace(/特に/g, "とくに")
+    .replace(/楽しい/g, "たのしい")
+    .replace(/好き/g, "すき")
+    .replace(/分かる/g, "わかる")
+
+    // 장소/도시
+    .replace(/町/g, "まち")
+    .replace(/街/g, "まち")
+    .replace(/名前/g, "なまえ")
+    .replace(/人気/g, "にんき")
+    .replace(/見る/g, "みる")
+
+    // 일반 어휘
+    .replace(/夜/g, "よる")
     .replace(/理想的/g, "りそうてき")
     .replace(/休める/g, "やすめる")
     .replace(/一つ/g, "ひとつ")
+    .replace(/一番/g, "いちばん")
     .replace(/長く/g, "ながく")
     .replace(/続けられる/g, "つづけられる")
     .replace(/立派/g, "りっぱ")
     .replace(/私も/g, "わたしも")
     .replace(/お会い/g, "おあい")
     .replace(/嬉しかった/g, "うれしかった")
-    .replace(/取りに行きます/g, "とりにいきます")
     .replace(/今のところ/g, "いまのところ")
-    .replace(/一番/g, "いちばん")
-    .replace(/気に入っています/g, "きにいっています")
+    .replace(/最近/g, "さいきん")
+    .replace(/週/g, "しゅう")
+
+    // 고유명사/표기 흔들림
     .replace(/日本/g, "にっぽん")
     .replace(/文化/g, "ぶんか")
-    .replace(/分かる/g, "わかる")
-    .replace(/何でも/g, "なんでも")
-    .replace(/なにでも/g, "なんでも")
-    .replace(/好き/g, "すき")
-    .replace(/特に/g, "とくに")
     .replace(/本では/g, "ほんでは")
-    .replace(/楽しい/g, "たのしい")
     .replace(/ハンガン/g, "はんがん")
     .replace(/半岸/g, "はんがん")
     .replace(/半間/g, "はんがん")
-    .replace(/町/g, "まち")
-    .replace(/街/g, "まち")
-    .replace(/歩いて/g, "あるいて")
-    .replace(/週/g, "しゅう")
-    .replace(/ぐらいします/g, "ぐらいします")
-    .replace(/最近/g, "さいきん")
-    .replace(/聞いています/g, "きいています")
-    .replace(/聞いてます/g, "きいてます")
-    .replace(/聞いて/g, "きいて")
-    .replace(/ぐらいします/g, "ぐらいします")
-    .replace(/待つ/g, "まつ")
-    .replace(/待てば/g, "まてば")
-    .replace(/待って/g, "まって")
-    .replace(/待った/g, "まった")
-    .replace(/決まったら/g, "きまったら")
-    .replace(/声かけます/g, "こえかけます")
-    .replace(/人気/g, "にんき")
-    .replace(/見る/g, "みる")
-    .replace(/名前/g, "なまえ")
-    .replace(/お腹が空いていた/g, "おなかがすいていた")
-    .replace(/お腹が空いてる/g, "おなかがすいてる")
-    .replace(/お腹が空いて/g, "おなかがすいて")
 
-    .replace(/予定が空いていた/g, "よていがあいていた")
-    .replace(/予定が空いてる/g, "よていがあいてる")
-    .replace(/予定が空いて/g, "よていがあいて")
-
-    .replace(/時間が空いていた/g, "じかんがあいていた")
-    .replace(/時間が空いてる/g, "じかんがあいてる")
-    .replace(/時間が空いて/g, "じかんがあいて")
-    .replace(/助かります/g, "たすかります")
-    .replace(/なあ/g, "な");
+    // 기타
+    .replace(/ぐらいします/g, "ぐらいします");
 }
 
 function replaceCommonVariants(text: string) {
