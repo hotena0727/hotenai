@@ -318,6 +318,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/少し/g, "すこし")
     .replace(/見てから/g, "みてから")
     .replace(/見て/g, "みて")
+    .replace(/飲みやすくて/g, "のみやすくて")
+    .replace(/飲みやすい/g, "のみやすい")
+    .replace(/飲む/g, "のむ")
 
     // 고유명사/표기 흔들림
     .replace(/日本/g, "にっぽん")
