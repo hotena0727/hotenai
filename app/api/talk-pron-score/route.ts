@@ -189,6 +189,9 @@ function normalizeJapaneseCountersToReading(text: string) {
 function normalizeKnownWordsToReading(text: string) {
   return String(text || "")
     .normalize("NFKC")
+    .replace(/思っていた/g, "おもっていた")
+    .replace(/味/g, "あじ")
+    .replace(/美味しい/g, "おいしい")
     .replace(/夜/g, "よる")
     .replace(/お菓子/g, "おかし")
     .replace(/食べていた/g, "たべていた")
