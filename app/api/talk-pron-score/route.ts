@@ -228,7 +228,11 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/聞いています/g, "きいています")
     .replace(/聞いてます/g, "きいてます")
     .replace(/聞いて/g, "きいて")
-    .replace(/ぐらいします/g, "ぐらいします");
+    .replace(/ぐらいします/g, "ぐらいします")
+    .replace(/待つ/g, "まつ")
+    .replace(/待てば/g, "まてば")
+    .replace(/待って/g, "まって")
+    .replace(/待った/g, "まった");
 }
 
 function replaceCommonVariants(text: string) {
