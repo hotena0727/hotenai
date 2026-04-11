@@ -321,7 +321,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/寝付けない/g, "ねつけない")
     .replace(/ぐらいします/g, "ぐらいします")
     .replace(/私/g, "わたし")
-    .replace(/慌ててしまう/g, "あわててしまう");
+    .replace(/慌ててしまう/g, "あわててしまう")
+    .replace(/確かに/g, "たしかに");
 }
 
 function replaceCommonVariants(text: string) {
