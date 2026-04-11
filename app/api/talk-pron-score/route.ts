@@ -338,7 +338,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/慌ててしまう/g, "あわててしまう")
     .replace(/確かに/g, "たしかに")
     .replace(/急いで/g, "いそいで")
-    .replace(/出ますよね/g, "でますよね");
+    .replace(/出ますよね/g, "でますよね")
+    .replace(/何時頃/g, "なんじごろ")
+    ;
 }
 
 function replaceCommonVariants(text: string) {
