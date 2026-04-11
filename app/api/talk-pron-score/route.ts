@@ -452,6 +452,30 @@ function normalizeYomiDigits(text: string) {
     .replace(/1にん/g, "ひとり");
 }
 
+function hasCriticalParticleMismatch(expected: string, actual: string) {
+  const particles = new Set(["は", "が", "を", "に", "へ", "で", "と", "も", "の", "や", "か"]);
+
+  const exp = Array.from(expected);
+  const act = Array.from(actual);
+  const max = Math.max(exp.length, act.length);
+
+  for (let i = 0; i < max; i += 1) {
+    const e = exp[i] ?? "";
+    const a = act[i] ?? "";
+
+    if (e === a) continue;
+
+    const eIsParticle = particles.has(e);
+    const aIsParticle = particles.has(a);
+
+    if (eIsParticle || aIsParticle) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function buildExpectedReading(answerJp: string, answerYomi: string) {
   const normalizedYomi = String(answerYomi || "").trim();
 
@@ -492,7 +516,12 @@ function buildActualReadingWithYomiPriority(
   const isSameSurface =
     normalizedTranscriptSurface === normalizedAnswerSurface;
 
-  // 1) 완전히 같으면 기존처럼 정답 yomi 채택
+  const readingScore = scoreByDistance(transcriptReading, expectedReading);
+  const hasParticleMismatch = hasCriticalParticleMismatch(
+    expectedReading,
+    transcriptReading
+  );
+
   if (isSameSurface) {
     return {
       actualReading: expectedReading,
@@ -501,17 +530,14 @@ function buildActualReadingWithYomiPriority(
     };
   }
 
-  // 2) 거의 같은 문장인데 STT 표기만 흔들린 경우
-  //    채점용만 정답 yomi 쪽으로 붙여준다.
-  //    너무 후해지지 않도록 threshold는 높게 시작.
   const HIGH_SURFACE_THRESHOLD = 90;
   const HIGH_READING_THRESHOLD = 93;
-
-  const readingScore = scoreByDistance(transcriptReading, expectedReading);
+  const VERY_HIGH_READING_THRESHOLD = 97;
 
   if (
     rawSurfaceScore >= HIGH_SURFACE_THRESHOLD &&
-    readingScore >= HIGH_READING_THRESHOLD
+    readingScore >= HIGH_READING_THRESHOLD &&
+    !hasParticleMismatch
   ) {
     return {
       actualReading: expectedReading,
@@ -520,7 +546,17 @@ function buildActualReadingWithYomiPriority(
     };
   }
 
-  // 3) 그 외에는 기존처럼 transcript 기반 reading 사용
+  if (
+    readingScore >= VERY_HIGH_READING_THRESHOLD &&
+    !hasParticleMismatch
+  ) {
+    return {
+      actualReading: expectedReading,
+      adoptedExpectedYomi: true,
+      surfaceScore: rawSurfaceScore,
+    };
+  }
+
   return {
     actualReading: transcriptReading,
     adoptedExpectedYomi: false,
