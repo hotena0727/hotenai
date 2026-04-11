@@ -635,7 +635,7 @@ function normalizeTranscriptForDisplay(
   answerJp: string,
   answerYomi: string
 ) {
-  const normalized = String(text || "").normalize("NFKC");
+  let normalized = String(text || "").normalize("NFKC");
   const answerSurface = String(answerJp || "").normalize("NFKC");
   const answerReading = String(answerYomi || "").normalize("NFKC");
 
@@ -643,7 +643,14 @@ function normalizeTranscriptForDisplay(
     answerSurface.includes("ホンデ") || answerReading.includes("ほんで");
 
   if (shouldFixHongdae) {
-    return normalized.replace(/本では/g, "ホンデは");
+    normalized = normalized.replace(/本では/g, "ホンデは");
+  }
+
+  const shouldFixHangang =
+    answerSurface.includes("ハンガン") || answerReading.includes("はんがん");
+
+  if (shouldFixHangang) {
+    normalized = normalized.replace(/半間/g, "ハンガン");
   }
 
   return normalized;
