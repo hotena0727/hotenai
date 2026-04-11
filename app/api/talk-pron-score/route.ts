@@ -213,7 +213,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/何でも/g, "なんでも")
     .replace(/なにでも/g, "なんでも")
     .replace(/好き/g, "すき")
-    .replace(/特に/g, "とくに");
+    .replace(/特に/g, "とくに")
+    .replace(/本では/g, "ほんでは")
+    .replace(/楽しい/g, "たのしい");
 }
 
 function replaceCommonVariants(text: string) {
