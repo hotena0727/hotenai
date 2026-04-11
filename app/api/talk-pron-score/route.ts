@@ -199,6 +199,7 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/お菓子/g, "おかし")
     .replace(/食べていた/g, "たべていた")
     .replace(/思います/g, "おもいます")
+    .replace(/思いました/g, "おもいました")
     .replace(/本当に/g, "ほんとに")
     .replace(/理想的/g, "りそうてき")
     .replace(/休める/g, "やすめる")
