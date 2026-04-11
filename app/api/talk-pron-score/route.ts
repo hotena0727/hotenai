@@ -308,6 +308,7 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/全然合わない/g, "ぜんぜんあわない")
     .replace(/驚きました/g, "おどろきました")
     .replace(/驚く/g, "おどろく")
+    .replace(/場所/g, "ばしょ")
     // 기타
     .replace(/ぐらいします/g, "ぐらいします")
     .replace(/^いえ(?=[、。,\s]|$)/g, "いいえ")
