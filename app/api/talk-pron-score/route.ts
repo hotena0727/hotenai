@@ -312,7 +312,11 @@ function normalizeKnownWordsToReading(text: string) {
     // 기타
     .replace(/ぐらいします/g, "ぐらいします")
     .replace(/^いえ(?=[、。,\s]|$)/g, "いいえ")
-    .replace(/ほんとに/g, "ほんとうに");
+    .replace(/ほんとに/g, "ほんとうに")
+    .replace(/何も/g, "なにも")
+    .replace(/週末/g, "しゅうまつ")
+    .replace(/逆に/g, "ぎゃくに")
+    .replace(/贅沢/g, "ぜいたく");
 }
 
 function replaceCommonVariants(text: string) {
