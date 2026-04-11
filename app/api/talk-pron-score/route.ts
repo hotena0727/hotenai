@@ -296,6 +296,12 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/頭/g, "あたま")
     .replace(/出てきません/g, "でてきません")
 
+    .replace(/少しは/g, "すこしは")
+    .replace(/速い/g, "はやい")
+    .replace(/早い/g, "はやい")
+    .replace(/難しいです/g, "むずかしいです")
+    .replace(/難しい/g, "むずかしい")
+
     // 기타
     .replace(/ぐらいします/g, "ぐらいします");
 }
