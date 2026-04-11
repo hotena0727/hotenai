@@ -234,7 +234,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/待って/g, "まって")
     .replace(/待った/g, "まった")
     .replace(/決まったら/g, "きまったら")
-    .replace(/声かけます/g, "こえかけます");
+    .replace(/声かけます/g, "こえかけます")
+    .replace(/人気/g, "にんき")
+    .replace(/見る/g, "みる");
 }
 
 function replaceCommonVariants(text: string) {
