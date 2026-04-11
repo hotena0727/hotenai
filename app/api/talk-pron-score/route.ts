@@ -1,43 +1,5 @@
 export const runtime = "nodejs";
 
-import Kuroshiro from "kuroshiro";
-import KuromojiAnalyzer from "kuroshiro-analyzer-kuromoji";
-
-const kuroshiro = new Kuroshiro();
-
-let kuroshiroReady: Promise<void> | null = null;
-
-function ensureKuroshiro() {
-  if (!kuroshiroReady) {
-    kuroshiroReady = kuroshiro.init(
-      new KuromojiAnalyzer({})
-    );
-  }
-  return kuroshiroReady;
-}
-
-async function toAutoReading(text: string) {
-  const src = String(text || "").trim();
-  if (!src) return "";
-
-  await ensureKuroshiro();
-
-  const hira = await kuroshiro.convert(src, {
-    to: "hiragana",
-    mode: "normal",
-  });
-
-  return replaceCommonVariants(
-    normalizeJapaneseCountersToReading(
-      normalizeRangeExpressionsToReading(
-        normalizeKnownWordsToReading(
-          normJpForReading(hira)
-        )
-      )
-    )
-  );
-}
-
 function kataToHira(text: string) {
   return text.replace(/[ァ-ン]/g, (ch) =>
     String.fromCharCode(ch.charCodeAt(0) - 0x60)
@@ -418,7 +380,7 @@ function buildExpectedReading(answerJp: string, answerYomi: string) {
  * - transcript를 읽기 형태로 변환해서 정답 yomi와 직접 비교
  * - 정답 yomi를 actualReading으로 강제채택하지 않음
  */
-async function buildActualReadingWithYomiPriority(
+function buildActualReadingWithYomiPriority(
   transcript: string,
   answerJp: string,
   answerYomi: string
@@ -432,14 +394,7 @@ async function buildActualReadingWithYomiPriority(
   }
 
   const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
-
-  const scoringTranscript = normalizeTranscriptForDisplay(
-    transcript,
-    answerJp,
-    answerYomi
-  );
-
-  const transcriptReading = await toAutoReading(scoringTranscript);
+  const transcriptReading = toReadingLike(transcript);
 
   const isSameSurface =
     normalizeForSurfaceMatch(transcript) === normalizeForSurfaceMatch(answerJp);
@@ -548,7 +503,7 @@ function calcAudioRmsFromInt16Pcm(buffer: ArrayBuffer) {
   return Math.sqrt(sumSq / count);
 }
 
-async function similarityScoreWithYomiPriority(
+function similarityScoreWithYomiPriority(
   transcript: string,
   answerJp: string,
   answerYomi: string,
@@ -559,7 +514,7 @@ async function similarityScoreWithYomiPriority(
   const expectedReading = buildExpectedReading(answerJp, answerYomi);
 
   const { actualReading, adoptedExpectedYomi, surfaceScore } =
-    await buildActualReadingWithYomiPriority(transcript, answerJp, answerYomi);
+    buildActualReadingWithYomiPriority(transcript, answerJp, answerYomi);
 
   const displayAsAnswer = false;
   const displayTranscript = normalizeTranscriptForDisplay(
@@ -915,7 +870,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const judged = await similarityScoreWithYomiPriority(
+    const judged = similarityScoreWithYomiPriority(
       transcript,
       answerJp,
       answerYomi,
