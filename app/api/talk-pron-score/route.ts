@@ -383,16 +383,12 @@ function hasSimpleParticleMismatch(answerJp: string, transcript: string) {
   const answer = normalizeForSurfaceMatch(answerJp);
   const actual = normalizeForSurfaceMatch(transcript);
 
-  const jpChar = "[一-龯ぁ-んァ-ン々ー]";
-  const hePattern = new RegExp(`${jpChar}へ${jpChar}`);
-  const dePattern = new RegExp(`${jpChar}で${jpChar}`);
+  const answerHasHeGo = answer.includes("へ行");
+  const answerHasDeGo = answer.includes("で行");
+  const actualHasHeGo = actual.includes("へ行");
+  const actualHasDeGo = actual.includes("で行");
 
-  const answerHasHe = hePattern.test(answer);
-  const answerHasDe = dePattern.test(answer);
-  const actualHasHe = hePattern.test(actual);
-  const actualHasDe = dePattern.test(actual);
-
-  return (answerHasHe && actualHasDe) || (answerHasDe && actualHasHe);
+  return (answerHasHeGo && actualHasDeGo) || (answerHasDeGo && actualHasHeGo);
 }
 
 /**
