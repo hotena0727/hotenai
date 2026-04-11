@@ -215,7 +215,10 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/好き/g, "すき")
     .replace(/特に/g, "とくに")
     .replace(/本では/g, "ほんでは")
-    .replace(/楽しい/g, "たのしい");
+    .replace(/楽しい/g, "たのしい")
+    .replace(/ハンガン/g, "はんがん")
+    .replace(/半岸/g, "はんがん")
+    .replace(/半間/g, "はんがん");
 }
 
 function replaceCommonVariants(text: string) {
