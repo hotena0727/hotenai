@@ -317,6 +317,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/週/g, "しゅう")
 
     // 기타
+    .replace(/疲れていても/g, "つかれていても")
+    .replace(/寝付けない/g, "ねつけない")
     .replace(/ぐらいします/g, "ぐらいします");
 }
 
@@ -502,12 +504,14 @@ function buildActualReadingWithYomiPriority(
   // 2) 거의 같은 문장인데 STT 표기만 흔들린 경우
   //    채점용만 정답 yomi 쪽으로 붙여준다.
   //    너무 후해지지 않도록 threshold는 높게 시작.
-  const HIGH_SURFACE_THRESHOLD = 92;
+  const HIGH_SURFACE_THRESHOLD = 90;
+  const HIGH_READING_THRESHOLD = 93;
+
   const readingScore = scoreByDistance(transcriptReading, expectedReading);
 
   if (
     rawSurfaceScore >= HIGH_SURFACE_THRESHOLD &&
-    readingScore >= 96
+    readingScore >= HIGH_READING_THRESHOLD
   ) {
     return {
       actualReading: expectedReading,
