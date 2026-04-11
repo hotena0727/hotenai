@@ -36,25 +36,7 @@ function normalizeForSurfaceMatch(text: string) {
     .replace(/[、。．，,！？!？?「」『』（）()\[\]{}…~"'`´]/g, "");
 }
 
-function hasEndingMismatch(expectedReading: string, transcriptReading: string) {
-  const a = String(expectedReading || "");
-  const b = String(transcriptReading || "");
 
-  if (!a || !b) return false;
-
-  const tailLens = [4, 3, 2];
-
-  for (const len of tailLens) {
-    if (a.length >= len && b.length >= len) {
-      const aTail = a.slice(-len);
-      const bTail = b.slice(-len);
-      if (aTail !== bTail) return true;
-      return false;
-    }
-  }
-
-  return false;
-}
 
 function normJp(text: string) {
   return kataToHira(stripPunctuation(text)).toLowerCase();
@@ -337,74 +319,22 @@ function analyzeSpeechFlow(rawTranscript: string, _normalizedReading: string) {
   };
 }
 
-function hasKanji(text: string) {
-  return /[一-龯々〆ヵヶ]/.test(text);
-}
-
 function buildExpectedReading(answerJp: string, answerYomi: string) {
   return toReadingLike(answerYomi || answerJp);
-}
-
-function normalizeNumericJapanese(text: string) {
-  return String(text || "")
-    .normalize("NFKC")
-    .replace(/か月/g, "ヶ月")
-    .replace(/ケ月/g, "ヶ月")
-    .replace(/ヵ月/g, "ヶ月")
-    .replace(/カ月/g, "ヶ月");
-}
-
-function extractCriticalTokens(text: string) {
-  const s = normalizeNumericJapanese(text);
-
-  const matches =
-    s.match(
-      /(\d+ヶ月|\d+月|\d+年|\d+回|\d+日|\d+時間|\d+分|\d+人|\d+つ|\d+個|\d+本|\d+枚|\d+歳|[一二三四五六七八九十百千万]+ヶ月|[一二三四五六七八九十百千万]+月|[一二三四五六七八九十百千万]+年|[一二三四五六七八九十百千万]+回|[一二三四五六七八九十百千万]+日|[一二三四五六七八九十百千万]+時間|[一二三四五六七八九十百千万]+分|[一二三四五六七八九十百千万]+人|[一二三四五六七八九十百千万]+つ|[一二三四五六七八九十百千万]+個|[一二三四五六七八九十百千万]+本|[一二三四五六七八九十百千万]+枚|[一二三四五六七八九十百千万]+歳)/g
-    ) || [];
-
-  return matches;
-}
-
-function hasCriticalTokenMismatch(answerJp: string, transcript: string) {
-  const a = extractCriticalTokens(answerJp);
-  const b = extractCriticalTokens(transcript);
-
-  if (a.length === 0 || b.length === 0) return false;
-  if (a.length !== b.length) return true;
-
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return true;
-  }
-
-  return false;
-}
-
-function hasSimpleParticleMismatch(answerJp: string, transcript: string) {
-  const answer = normalizeForSurfaceMatch(answerJp);
-  const actual = normalizeForSurfaceMatch(transcript);
-
-  const answerHasHeGo = answer.includes("へ行");
-  const answerHasDeGo = answer.includes("で行");
-  const actualHasHeGo = actual.includes("へ行");
-  const actualHasDeGo = actual.includes("で行");
-
-  return (answerHasHeGo && actualHasDeGo) || (answerHasDeGo && actualHasHeGo);
 }
 
 /**
  * 핵심:
  * - 채점 = reading 기준
  * - 표시 = transcript 그대로
- * - 한자/히라가나 차이만 무시
- * - 단, 숫자/기간 같은 핵심 토큰이 다르면 yomi 강제채택 금지
+ * - transcript를 읽기 형태로 변환해서 정답 yomi와 직접 비교
+ * - 정답 yomi를 actualReading으로 강제채택하지 않음
  */
 function buildActualReadingWithYomiPriority(
   transcript: string,
   answerJp: string,
   answerYomi: string
 ) {
-  const expectedReading = buildExpectedReading(answerJp, answerYomi);
-
   if (!transcript) {
     return {
       actualReading: "",
@@ -415,38 +345,6 @@ function buildActualReadingWithYomiPriority(
 
   const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
   const transcriptReading = toReadingLike(transcript);
-
-  if (answerYomi) {
-    const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
-    const hasParticleMismatch = hasSimpleParticleMismatch(answerJp, transcript);
-
-    const normalizedAnswerSurface = normalizeForSurfaceMatch(answerJp);
-    const normalizedTranscriptSurface = normalizeForSurfaceMatch(transcript);
-
-    const isSameSurface =
-      normalizedAnswerSurface === normalizedTranscriptSurface;
-
-    const endingMismatch = isSameSurface
-      ? false
-      : hasEndingMismatch(expectedReading, transcriptReading);
-
-    const shouldAdoptExpectedYomi =
-      !hasCriticalMismatch &&
-      !hasParticleMismatch &&
-      !endingMismatch &&
-      (
-        (hasKanji(transcript) && rawSurfaceScore >= 88) ||
-        (!hasKanji(transcript) && scoreByDistance(transcriptReading, expectedReading) >= 96)
-      );
-
-    return {
-      actualReading: shouldAdoptExpectedYomi
-        ? expectedReading
-        : transcriptReading,
-      adoptedExpectedYomi: shouldAdoptExpectedYomi,
-      surfaceScore: rawSurfaceScore,
-    };
-  }
 
   return {
     actualReading: transcriptReading,
