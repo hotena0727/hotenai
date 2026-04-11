@@ -199,6 +199,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/思いました/g, "おもいました")
     .replace(/思います/g, "おもいます")
     .replace(/思っても/g, "おもっても")
+    .replace(/言ってもらえる/g, "いってもらえる")
+    .replace(/言ってもらう/g, "いってもらう")
+    .replace(/言う/g, "いう")
 
     // 맛/음식
     .replace(/美味しいですね/g, "おいしいですね")
