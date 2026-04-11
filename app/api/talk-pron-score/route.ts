@@ -211,6 +211,7 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/文化/g, "ぶんか")
     .replace(/分かる/g, "わかる")
     .replace(/何でも/g, "なんでも")
+    .replace(/なにでも/g, "なんでも")
     .replace(/好き/g, "すき")
     .replace(/特に/g, "とくに");
 }
