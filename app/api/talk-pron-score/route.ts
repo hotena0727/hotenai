@@ -198,6 +198,7 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/思っていた/g, "おもっていた")
     .replace(/思いました/g, "おもいました")
     .replace(/思います/g, "おもいます")
+    .replace(/思っても/g, "おもっても")
 
     // 맛/음식
     .replace(/美味しいですね/g, "おいしいですね")
@@ -228,6 +229,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/聴いていた/g, "きいていた")
     .replace(/聴いてる/g, "きいてる")
     .replace(/聴いて/g, "きいて")
+    .replace(/聞き取れません/g, "ききとれません")
+    .replace(/聞き取り/g, "ききとり")
 
     // 이동/행동
     .replace(/取りに行きます/g, "とりにいきます")
@@ -236,6 +239,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/待って/g, "まって")
     .replace(/待った/g, "まった")
     .replace(/待つ/g, "まつ")
+    .replace(/見る/g, "みる")
+    .replace(/出てきません/g, "でてきません")
 
     // 회화 표현
     .replace(/決まったら/g, "きまったら")
@@ -243,19 +248,21 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/助かります/g, "たすかります")
     .replace(/気に入っています/g, "きにいっています")
     .replace(/本当に/g, "ほんとに")
+    .replace(/ほんとに/g, "ほんとうに")
     .replace(/何でも/g, "なんでも")
     .replace(/なにでも/g, "なんでも")
     .replace(/特に/g, "とくに")
     .replace(/楽しい/g, "たのしい")
     .replace(/好き/g, "すき")
     .replace(/分かる/g, "わかる")
+    .replace(/^いえ(?=[、。,\s]|$)/g, "いいえ")
 
     // 장소/도시
     .replace(/町/g, "まち")
     .replace(/街/g, "まち")
     .replace(/名前/g, "なまえ")
     .replace(/人気/g, "にんき")
-    .replace(/見る/g, "みる")
+    .replace(/場所/g, "ばしょ")
 
     // 일반 어휘
     .replace(/夜/g, "よる")
@@ -269,9 +276,21 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/私も/g, "わたしも")
     .replace(/お会い/g, "おあい")
     .replace(/嬉しかった/g, "うれしかった")
+    .replace(/嬉しいです/g, "うれしいです")
+    .replace(/嬉しい/g, "うれしい")
+    .replace(/羨ましい/g, "うらやましい")
+    .replace(/欲しい/g, "ほしい")
     .replace(/今のところ/g, "いまのところ")
     .replace(/最近/g, "さいきん")
-    .replace(/週/g, "しゅう")
+    .replace(/細かい/g, "こまかい")
+    .replace(/頭/g, "あたま")
+    .replace(/少しずつ/g, "すこしずつ")
+    .replace(/少しは/g, "すこしは")
+    .replace(/増える/g, "ふえる")
+    .replace(/速い/g, "はやい")
+    .replace(/早い/g, "はやい")
+    .replace(/難しいです/g, "むずかしいです")
+    .replace(/難しい/g, "むずかしい")
 
     // 고유명사/표기 흔들림
     .replace(/日本/g, "にっぽん")
@@ -281,44 +300,22 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/半岸/g, "はんがん")
     .replace(/半間/g, "はんがん")
 
-    // 감정/상태
-    .replace(/大変ですけど/g, "たいへんですけど")
-    .replace(/大変/g, "たいへん")
-    .replace(/少しずつ/g, "すこしずつ")
-    .replace(/増える/g, "ふえる")
-    .replace(/嬉しいです/g, "うれしいです")
-    .replace(/嬉しい/g, "うれしい")
-    .replace(/羨ましい/g, "うらやましい")
-    .replace(/欲しい/g, "ほしい")
-
-    .replace(/思っても/g, "おもっても")
-    .replace(/細かい/g, "こまかい")
-    .replace(/聞き取れません/g, "ききとれません")
-    .replace(/聞き取り/g, "ききとり")
-    .replace(/頭/g, "あたま")
-    .replace(/出てきません/g, "でてきません")
-
-    .replace(/少しは/g, "すこしは")
-    .replace(/速い/g, "はやい")
-    .replace(/早い/g, "はやい")
-    .replace(/難しいです/g, "むずかしいです")
-    .replace(/難しい/g, "むずかしい")
-
+    // 특정 회화 케이스
     .replace(/普段/g, "ふだん")
     .replace(/全然合わない/g, "ぜんぜんあわない")
     .replace(/驚きました/g, "おどろきました")
     .replace(/驚く/g, "おどろく")
-    .replace(/場所/g, "ばしょ")
-    // 기타
-    .replace(/ぐらいします/g, "ぐらいします")
-    .replace(/^いえ(?=[、。,\s]|$)/g, "いいえ")
-    .replace(/ほんとに/g, "ほんとうに")
     .replace(/何も/g, "なにも")
     .replace(/週末/g, "しゅうまつ")
+    .replace(/しゅう末/g, "しゅうまつ")
     .replace(/逆に/g, "ぎゃくに")
     .replace(/贅沢/g, "ぜいたく")
+
+    // 단독 週는 가장 뒤
     .replace(/週/g, "しゅう")
-    .replace(/週末/g, "しゅうまつ");
+
+    // 기타
+    .replace(/ぐらいします/g, "ぐらいします");
 }
 
 function replaceCommonVariants(text: string) {
