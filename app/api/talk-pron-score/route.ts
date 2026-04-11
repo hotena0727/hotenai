@@ -379,6 +379,24 @@ function hasCriticalTokenMismatch(answerJp: string, transcript: string) {
   return false;
 }
 
+function hasSimpleParticleMismatch(answerJp: string, transcript: string) {
+  const answer = String(answerJp || "").normalize("NFKC");
+  const actual = String(transcript || "").normalize("NFKC");
+
+  const pairs: Array<[string, string]> = [
+    ["へ", "で"],
+    ["で", "へ"],
+  ];
+
+  return pairs.some(([expectedParticle, wrongParticle]) => {
+    return (
+      answer.includes(expectedParticle) &&
+      !answer.includes(wrongParticle) &&
+      actual.includes(wrongParticle)
+    );
+  });
+}
+
 /**
  * 핵심:
  * - 채점 = reading 기준
@@ -406,6 +424,7 @@ function buildActualReadingWithYomiPriority(
 
   if (answerYomi) {
     const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
+    const hasParticleMismatch = hasSimpleParticleMismatch(answerJp, transcript);
 
     const normalizedAnswerSurface = normalizeForSurfaceMatch(answerJp);
     const normalizedTranscriptSurface = normalizeForSurfaceMatch(transcript);
@@ -419,6 +438,7 @@ function buildActualReadingWithYomiPriority(
 
     const shouldAdoptExpectedYomi =
       !hasCriticalMismatch &&
+      !hasParticleMismatch &&
       !endingMismatch &&
       (
         (hasKanji(transcript) && rawSurfaceScore >= 88) ||
