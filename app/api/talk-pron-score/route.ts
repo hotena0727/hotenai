@@ -302,6 +302,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/難しいです/g, "むずかしいです")
     .replace(/難しい/g, "むずかしい")
 
+    .replace(/普段/g, "ふだん")
+
     // 기타
     .replace(/ぐらいします/g, "ぐらいします");
 }
