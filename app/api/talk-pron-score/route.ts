@@ -274,6 +274,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/続けられる/g, "つづけられる")
     .replace(/立派/g, "りっぱ")
     .replace(/私も/g, "わたしも")
+    .replace(/私は/g, "わたしは")
+    .replace(/顔に出る/g, "かおにでる")
     .replace(/お会い/g, "おあい")
     .replace(/嬉しかった/g, "うれしかった")
     .replace(/嬉しいです/g, "うれしいです")
