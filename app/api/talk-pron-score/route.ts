@@ -352,12 +352,7 @@ function buildActualReadingWithYomiPriority(
   }
 
   const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
-  const scoringTranscript = normalizeTranscriptForScoring(
-    transcript,
-    answerJp,
-    answerYomi
-  );
-  const transcriptReading = toReadingLike(scoringTranscript);
+  const transcriptReading = toReadingLike(transcript);
 
   const isSameSurface =
     normalizeForSurfaceMatch(transcript) === normalizeForSurfaceMatch(answerJp);
@@ -655,37 +650,7 @@ function normalizeTranscriptForDisplay(
     answerSurface.includes("ハンガン") || answerReading.includes("はんがん");
 
   if (shouldFixHangang) {
-    normalized = normalized
-      .replace(/半間/g, "ハンガン")
-      .replace(/半岸/g, "ハンガン");
-  }
-
-  return normalized;
-}
-
-function normalizeTranscriptForScoring(
-  text: string,
-  answerJp: string,
-  answerYomi: string
-) {
-  let normalized = String(text || "").normalize("NFKC");
-  const answerSurface = String(answerJp || "").normalize("NFKC");
-  const answerReading = String(answerYomi || "").normalize("NFKC");
-
-  const shouldFixHongdae =
-    answerSurface.includes("ホンデ") || answerReading.includes("ほんで");
-
-  if (shouldFixHongdae) {
-    normalized = normalized.replace(/本では/g, "ホンデは");
-  }
-
-  const shouldFixHangang =
-    answerSurface.includes("ハンガン") || answerReading.includes("はんがん");
-
-  if (shouldFixHangang) {
-    normalized = normalized
-      .replace(/半間/g, "ハンガン")
-      .replace(/半岸/g, "ハンガン");
+    normalized = normalized.replace(/半間/g, "ハンガン");
   }
 
   return normalized;
