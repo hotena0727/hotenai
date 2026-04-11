@@ -241,6 +241,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/待つ/g, "まつ")
     .replace(/見る/g, "みる")
     .replace(/出てきません/g, "でてきません")
+    .replace(/行きたい/g, "いきたい")
+    .replace(/行きます/g, "いきます")
+    .replace(/行く/g, "いく")
 
     // 회화 표현
     .replace(/決まったら/g, "きまったら")
