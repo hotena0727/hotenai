@@ -210,8 +210,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/日本/g, "にっぽん")
     .replace(/文化/g, "ぶんか")
     .replace(/分かる/g, "わかる")
-    ;
-  ;
+    .replace(/何でも/g, "なんでも")
+    .replace(/好き/g, "すき")
+    .replace(/特に/g, "とくに");
 }
 
 function replaceCommonVariants(text: string) {
