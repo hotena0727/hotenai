@@ -217,9 +217,13 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/本では/g, "ほんでは")
     .replace(/楽しい/g, "たのしい")
     .replace(/ハンガン/g, "はんがん")
+    .replace(/半岸/g, "はんがん")
+    .replace(/半間/g, "はんがん")
     .replace(/町/g, "まち")
     .replace(/街/g, "まち")
-    .replace(/歩いて/g, "あるいて");
+    .replace(/歩いて/g, "あるいて")
+    .replace(/週/g, "しゅう")
+    .replace(/ぐらいします/g, "ぐらいします");
 }
 
 function replaceCommonVariants(text: string) {
@@ -237,10 +241,21 @@ function replaceCommonVariants(text: string) {
     .replace(/25/g, "にじゅうご");
 }
 
+function normalizeRangeExpressionsToReading(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/2[〜~～\-−ー、,]\s*3回/g, "にさんかい")
+    .replace(/2[〜~～\-−ー、,]\s*3かい/g, "にさんかい")
+    .replace(/2[〜~～\-−ー、,]\s*3日/g, "にさんにち")
+    .replace(/2[〜~～\-−ー、,]\s*3人/g, "にさんにん");
+}
+
 function toReadingLike(text: string) {
   return replaceCommonVariants(
     normalizeJapaneseCountersToReading(
-      normalizeKnownWordsToReading(text)
+      normalizeRangeExpressionsToReading(
+        normalizeKnownWordsToReading(text)
+      )
     )
   );
 }
