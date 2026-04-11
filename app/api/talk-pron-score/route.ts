@@ -316,7 +316,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/何も/g, "なにも")
     .replace(/週末/g, "しゅうまつ")
     .replace(/逆に/g, "ぎゃくに")
-    .replace(/贅沢/g, "ぜいたく");
+    .replace(/贅沢/g, "ぜいたく")
+    .replace(/週/g, "しゅう")
+    .replace(/週末/g, "しゅうまつ");
 }
 
 function replaceCommonVariants(text: string) {
