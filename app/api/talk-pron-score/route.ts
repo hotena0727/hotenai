@@ -379,18 +379,6 @@ function hasCriticalTokenMismatch(answerJp: string, transcript: string) {
   return false;
 }
 
-function hasSimpleParticleMismatch(answerJp: string, transcript: string) {
-  const answer = normalizeForSurfaceMatch(answerJp);
-  const actual = normalizeForSurfaceMatch(transcript);
-
-  const answerHasHeGo = answer.includes("へ行");
-  const answerHasDeGo = answer.includes("で行");
-  const actualHasHeGo = actual.includes("へ行");
-  const actualHasDeGo = actual.includes("で行");
-
-  return (answerHasHeGo && actualHasDeGo) || (answerHasDeGo && actualHasHeGo);
-}
-
 /**
  * 핵심:
  * - 채점 = reading 기준
@@ -418,7 +406,6 @@ function buildActualReadingWithYomiPriority(
 
   if (answerYomi) {
     const hasCriticalMismatch = hasCriticalTokenMismatch(answerJp, transcript);
-    const hasParticleMismatch = hasSimpleParticleMismatch(answerJp, transcript);
 
     const normalizedAnswerSurface = normalizeForSurfaceMatch(answerJp);
     const normalizedTranscriptSurface = normalizeForSurfaceMatch(transcript);
@@ -432,7 +419,6 @@ function buildActualReadingWithYomiPriority(
 
     const shouldAdoptExpectedYomi =
       !hasCriticalMismatch &&
-      !hasParticleMismatch &&
       !endingMismatch &&
       (
         (hasKanji(transcript) && rawSurfaceScore >= 88) ||
@@ -814,7 +800,8 @@ export async function POST(req: Request) {
       "가능하면 히라가나 중심으로 전사하세요.",
       `정답 문장 후보: ${answerJp}`,
       answerYomi ? `정답 읽기 후보: ${answerYomi}` : "",
-      "음성이 정답 문장 후보와 비슷하게 들리면, 그 문장에 가까운 일본어 표기로 전사하세요.",
+      "정답 문장 후보는 참고하지 말고, 실제 들린 음성을 그대로 전사하세요.",
+      "특히 조사(は/が/を/に/へ/で/と/も)는 절대로 보정하지 말고 들린 그대로 적으세요.",
       "들리지 않거나 확실하지 않으면 추측하지 말고 짧게 전사하세요.",
     ]
       .filter(Boolean)
