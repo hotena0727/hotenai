@@ -255,7 +255,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/時間が空いていた/g, "じかんがあいていた")
     .replace(/時間が空いてる/g, "じかんがあいてる")
     .replace(/時間が空いて/g, "じかんがあいて")
-    .replace(/助かります/g, "たすかります");
+    .replace(/助かります/g, "たすかります")
+    .replace(/なあ/g, "な");
 }
 
 function replaceCommonVariants(text: string) {
