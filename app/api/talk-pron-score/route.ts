@@ -654,7 +654,9 @@ function normalizeTranscriptForDisplay(
     answerSurface.includes("ハンガン") || answerReading.includes("はんがん");
 
   if (shouldFixHangang) {
-    normalized = normalized.replace(/半間/g, "ハンガン");
+    normalized = normalized
+      .replace(/半間/g, "ハンガン")
+      .replace(/半岸/g, "ハンガン");
   }
 
   return normalized;
