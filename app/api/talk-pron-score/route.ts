@@ -475,7 +475,7 @@ function similarityScoreWithYomiPriority(
     buildActualReadingWithYomiPriority(transcript, answerJp, answerYomi);
 
   const displayAsAnswer = false;
-  const displayTranscript = transcript;
+  const displayTranscript = normalizeTranscriptForDisplay(transcript);
 
   if (!expectedReading || !actualReading) {
     return {
@@ -624,6 +624,25 @@ function makeDetailedFeedback(
     expectedSnippet: "",
     actualSnippet: "",
   };
+}
+
+function normalizeTranscriptForDisplay(
+  text: string,
+  answerJp: string,
+  answerYomi: string
+) {
+  const normalized = String(text || "").normalize("NFKC");
+  const answerSurface = String(answerJp || "").normalize("NFKC");
+  const answerReading = String(answerYomi || "").normalize("NFKC");
+
+  const shouldFixHongdae =
+    answerSurface.includes("ホンデ") || answerReading.includes("ほんで");
+
+  if (shouldFixHongdae) {
+    return normalized.replace(/本では/g, "ホンデは");
+  }
+
+  return normalized;
 }
 
 function buildSilentResponse(model: string, suggestion: string) {
