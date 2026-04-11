@@ -449,9 +449,9 @@ function buildExpectedReading(answerJp: string, answerYomi: string) {
 /**
  * 핵심:
  * - 채점 = reading 기준
- * - 표시 = transcript 그대로
+ * - 표시 = transcript 원문을 바탕으로 하되, 정답 표기와 거의 같으면 answerJp 우선 표시
  * - transcript를 읽기 형태로 변환해서 정답 yomi와 직접 비교
- * - 정답 yomi를 actualReading으로 강제채택하지 않음
+ * - 정답 yomi를 actualReading으로 무조건 강제채택하지는 않음
  */
 function buildActualReadingWithYomiPriority(
   transcript: string,
@@ -754,6 +754,15 @@ function normalizeTranscriptForDisplay(
   const answerSurface = String(answerJp || "").normalize("NFKC");
   const answerReading = String(answerYomi || "").normalize("NFKC");
 
+  const sameSurface =
+    normalizeForSurfaceMatch(normalized) === normalizeForSurfaceMatch(answerSurface);
+
+  // 가장 중요:
+  // 표면상 같으면 사용자에게는 정답 표기 그대로 보여준다.
+  if (sameSurface && answerSurface) {
+    return answerSurface;
+  }
+
   const shouldFixHongdae =
     answerSurface.includes("ホンデ") || answerReading.includes("ほんで");
 
@@ -768,6 +777,31 @@ function normalizeTranscriptForDisplay(
     normalized = normalized
       .replace(/半間/g, "ハンガン")
       .replace(/半岸/g, "ハンガン");
+  }
+
+  // 정답 표기를 참고해서 표시만 조금 더 자연스럽게 맞춤
+  if (answerSurface.includes("おいしい")) {
+    normalized = normalized.replace(/美味しい/g, "おいしい");
+  }
+
+  if (answerSurface.includes("うれしい")) {
+    normalized = normalized.replace(/嬉しい/g, "うれしい");
+  }
+
+  if (answerSurface.includes("わかった")) {
+    normalized = normalized.replace(/分かった/g, "わかった");
+  }
+
+  if (answerSurface.includes("わかって")) {
+    normalized = normalized.replace(/分かって/g, "わかって");
+  }
+
+  if (answerSurface.includes("あたま")) {
+    normalized = normalized.replace(/頭/g, "あたま");
+  }
+
+  if (answerSurface.includes("なまえ")) {
+    normalized = normalized.replace(/名前/g, "なまえ");
   }
 
   return normalized;
