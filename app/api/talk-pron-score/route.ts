@@ -289,6 +289,11 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/嬉しいです/g, "うれしいです")
     .replace(/嬉しい/g, "うれしい")
 
+    .replace(/思っても/g, "おもっても")
+    .replace(/細かい/g, "こまかい")
+    .replace(/聞き取れません/g, "ききとれません")
+    .replace(/聞き取り/g, "ききとり")
+
     // 기타
     .replace(/ぐらいします/g, "ぐらいします");
 }
