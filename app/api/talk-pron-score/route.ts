@@ -468,6 +468,7 @@ function buildActualReadingWithYomiPriority(
 
   const rawSurfaceScore = surfaceSimilarity(transcript, answerJp);
   const transcriptReading = toReadingLike(transcript);
+  const expectedReading = buildExpectedReading(answerJp, answerYomi);
 
   const normalizedTranscriptSurface = normalizeForSurfaceMatch(transcript);
   const normalizedAnswerSurface = normalizeForSurfaceMatch(answerJp);
@@ -478,7 +479,7 @@ function buildActualReadingWithYomiPriority(
   // 1) 완전히 같으면 기존처럼 정답 yomi 채택
   if (isSameSurface) {
     return {
-      actualReading: buildExpectedReading(answerJp, answerYomi),
+      actualReading: expectedReading,
       adoptedExpectedYomi: true,
       surfaceScore: rawSurfaceScore,
     };
@@ -488,10 +489,14 @@ function buildActualReadingWithYomiPriority(
   //    채점용만 정답 yomi 쪽으로 붙여준다.
   //    너무 후해지지 않도록 threshold는 높게 시작.
   const HIGH_SURFACE_THRESHOLD = 92;
+  const readingScore = scoreByDistance(transcriptReading, expectedReading);
 
-  if (rawSurfaceScore >= HIGH_SURFACE_THRESHOLD) {
+  if (
+    rawSurfaceScore >= HIGH_SURFACE_THRESHOLD &&
+    readingScore >= 96
+  ) {
     return {
-      actualReading: buildExpectedReading(answerJp, answerYomi),
+      actualReading: expectedReading,
       adoptedExpectedYomi: true,
       surfaceScore: rawSurfaceScore,
     };
