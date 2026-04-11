@@ -249,6 +249,7 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/気に入っています/g, "きにいっています")
     .replace(/本当に/g, "ほんとに")
     .replace(/ほんとに/g, "ほんとうに")
+    .replace(/本当そう/g, "ほんとそう")
     .replace(/何でも/g, "なんでも")
     .replace(/なにでも/g, "なんでも")
     .replace(/特に/g, "とくに")
@@ -297,6 +298,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/寝たい/g, "ねたい")
     .replace(/寝られない/g, "ねられない")
     .replace(/分かります/g, "わかります")
+    .replace(/引っかかります/g, "ひっかかります")
+    .replace(/引っかかる/g, "ひっかかる")
 
     // 고유명사/표기 흔들림
     .replace(/日本/g, "にっぽん")
