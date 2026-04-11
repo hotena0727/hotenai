@@ -288,6 +288,7 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/増える/g, "ふえる")
     .replace(/嬉しいです/g, "うれしいです")
     .replace(/嬉しい/g, "うれしい")
+    .replace(/羨ましい/g, "うらやましい")
 
     .replace(/思っても/g, "おもっても")
     .replace(/細かい/g, "こまかい")
@@ -834,12 +835,12 @@ function normalizeTranscriptForDisplay(
   }
 
   if (answerSurface.includes("ふだん")) {
-  normalized = normalized.replace(/普段/g, "ふだん");
-}
+    normalized = normalized.replace(/普段/g, "ふだん");
+  }
 
-if (answerSurface.includes("会わない")) {
-  normalized = normalized.replace(/合わない/g, "会わない");
-}
+  if (answerSurface.includes("会わない")) {
+    normalized = normalized.replace(/合わない/g, "会わない");
+  }
   return normalized;
 }
 
