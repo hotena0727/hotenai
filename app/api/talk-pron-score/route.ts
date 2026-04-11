@@ -342,6 +342,8 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/急いで/g, "いそいで")
     .replace(/出ますよね/g, "でますよね")
     .replace(/何時頃/g, "なんじごろ")
+    .replace(/その時/g, "そのとき")
+    .replace(/お願いします/g, "おねがいします")
     ;
 }
 
