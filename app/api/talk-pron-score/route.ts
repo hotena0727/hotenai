@@ -207,7 +207,11 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/今のところ/g, "いまのところ")
     .replace(/一番/g, "いちばん")
     .replace(/気に入っています/g, "きにいっています")
+    .replace(/日本/g, "にっぽん")
+    .replace(/文化/g, "ぶんか")
+    .replace(/分かる/g, "わかる")
     ;
+  ;
 }
 
 function replaceCommonVariants(text: string) {
