@@ -319,7 +319,9 @@ function normalizeKnownWordsToReading(text: string) {
     // 기타
     .replace(/疲れていても/g, "つかれていても")
     .replace(/寝付けない/g, "ねつけない")
-    .replace(/ぐらいします/g, "ぐらいします");
+    .replace(/ぐらいします/g, "ぐらいします")
+    .replace(/私/g, "わたし")
+    .replace(/慌ててしまう/g, "あわててしまう");
 }
 
 function replaceCommonVariants(text: string) {
