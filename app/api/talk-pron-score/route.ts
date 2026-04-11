@@ -239,6 +239,7 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/見る/g, "みる")
     .replace(/名前/g, "なまえ")
     .replace(/お腹/g, "おなか")
+    .replace(/空いていた/g, "すいていた")
     .replace(/助かります/g, "たすかります");
 }
 
