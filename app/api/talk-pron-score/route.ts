@@ -312,6 +312,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/頑張る/g, "がんばる")
     .replace(/その方/g, "そのほう")
     .replace(/良さそう/g, "よさそう")
+    .replace(/甘すぎない/g, "あますぎない")
+    .replace(/良ければ/g, "よければ")
+    .replace(/良い/g, "よい")
 
     // 고유명사/표기 흔들림
     .replace(/日本/g, "にっぽん")
