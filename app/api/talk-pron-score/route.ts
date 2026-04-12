@@ -356,6 +356,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/何時頃/g, "なんじごろ")
     .replace(/その時/g, "そのとき")
     .replace(/お願いします/g, "おねがいします")
+    .replace(/次/g, "つぎ")
+    .replace(/来たい/g, "きたい")
+    .replace(/期待/g, "きたい")
     ;
 }
 
@@ -704,11 +707,15 @@ function similarityScoreWithYomiPriority(
     buildActualReadingWithYomiPriority(transcript, answerJp, answerYomi);
 
   const displayAsAnswer = false;
-  const displayTranscript = normalizeTranscriptForDisplay(
+  const normalizedDisplayTranscript = normalizeTranscriptForDisplay(
     transcript,
     answerJp,
     answerYomi
   );
+
+  const displayTranscript = adoptedExpectedYomi
+    ? answerJp
+    : normalizedDisplayTranscript;
 
   if (!expectedReading || !actualReading) {
     return {
