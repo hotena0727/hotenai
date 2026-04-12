@@ -361,6 +361,10 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/期待/g, "きたい")
     .replace(/他/g, "ほか")
     .replace(/今度/g, "こんど")
+    .replace(/言ってもらえて/g, "いってもらえて")
+    .replace(/言ってもらえる/g, "いってもらえる")
+    .replace(/言ってもらう/g, "いってもらう")
+    .replace(/言う/g, "いう")
     ;
 }
 
