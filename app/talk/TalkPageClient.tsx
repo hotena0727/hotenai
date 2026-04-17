@@ -1707,7 +1707,7 @@ export default function TalkPage() {
         user_email: user.email ?? "",
         level: currentQuestion?.level || "N3",
         pos_mode: reviewMode
-          ? "회화 · 오답 복습"
+          ? `회화오답복습 · ${getTagLabel(selectedTag)} · ${displaySub}`
           : `회화 · ${getTagLabel(selectedTag)} · ${displaySub}`,
         quiz_len: questions.length,
         score,

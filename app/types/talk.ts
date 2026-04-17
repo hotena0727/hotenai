@@ -1,4 +1,5 @@
 export type TalkCsvRow = {
+  item_key?: string;
   qid: string;
   level: string;
   tag: string;
@@ -24,6 +25,9 @@ export type TalkCsvRow = {
 };
 
 export type TalkWrongItem = {
+  app?: "talk";
+  qtype?: "choice";
+  item_key?: string;
   qid: string;
   selected: string;
   correct: string;

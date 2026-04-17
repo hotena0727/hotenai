@@ -1175,7 +1175,9 @@ export default function WordPage() {
         user_id: user.id,
         user_email: user.email ?? "",
         level: selectedLevel,
-        pos_mode: `단어 · ${selectedPosGroup} · ${selectedQType}`,
+        pos_mode: isReviewMode
+          ? `단어오답복습 · ${selectedPosGroup} · ${selectedQType}`
+          : `단어 · ${selectedPosGroup} · ${selectedQType}`,
         quiz_len: currentQuestions.length,
         score: nextScore,
         wrongList,

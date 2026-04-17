@@ -159,11 +159,18 @@ function makePolitePresent(baseKr: string): string {
     돌려주: "돌려줍니다",
     꺼내: "꺼냅니다",
     넣: "넣습니다",
-
+    길: "깁니다",
   };
   if (special[root]) return special[root];
 
   const last = lastChar(root);
+  const s = splitSyllable(last);
+
+  // ㄹ 불규칙: 길다 → 깁니다
+  if (s && s.jong === 8) {
+    return `${replaceLast(root, makeSyllable(s.cho, s.jung, 17))}니다`;
+  }
+
   if (hasBatchim(last)) return `${root}습니다`;
 
   return `${addBieupBatchim(root)}니다`;
@@ -386,6 +393,7 @@ function makePassive(baseKr: string): string {
     보다: "보여지다",
     만들다: "만들어지다",
     열다: "열리다",
+    닫다: "닫히다", 
     세우다: "세워지다",
     조사하다: "조사되다",
     넣다: "넣어지다",
@@ -417,7 +425,8 @@ function makePassive(baseKr: string): string {
   if (descriptive[baseKr]) return descriptive[baseKr];
 
   if (isHadaVerb(baseKr)) return `${stemForHada(baseKr)}되다`;
-  return `${stripDa(baseKr)}되다`;
+  // 기본값은 비워두는 편이 안전
+  return "";
 }
 
 function makeCausative(baseKr: string): string {

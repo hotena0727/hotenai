@@ -5,7 +5,8 @@ import { fetchAttemptsByPrefix, type QuizAttemptRow } from "@/lib/attempts";
 import { supabase } from "@/lib/supabase";
 
 const JA_FONT_STYLE = {
-  fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
+  fontFamily:
+    '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
 } as const;
 
 type KanjiWrongItem = {
@@ -121,7 +122,7 @@ export default function WrongKanjiPage() {
           return;
         }
 
-        const rows = await fetchAttemptsByPrefix(user.id, "한자", 50);
+        const rows = await fetchAttemptsByPrefix(user.id, "한자", 300);
         setAttempts(rows);
       } catch (error) {
         console.error(error);
@@ -135,9 +136,17 @@ export default function WrongKanjiPage() {
   }, []);
 
   const flattened = useMemo<FlattenedWrongItem[]>(() => {
-    const rows: FlattenedWrongItem[] = [];
+    const normalAttempts = attempts.filter((attempt) =>
+      String(attempt.pos_mode || "").startsWith("한자 ·")
+    );
 
-    for (const attempt of attempts) {
+    const reviewAttempts = attempts.filter((attempt) =>
+      String(attempt.pos_mode || "").startsWith("한자오답복습 ·")
+    );
+
+    const wrongCandidateMap = new Map<string, FlattenedWrongItem>();
+
+    for (const attempt of normalAttempts) {
       const wrongs = Array.isArray(attempt.wrong_list)
         ? (attempt.wrong_list as KanjiWrongItem[])
         : [];
@@ -145,23 +154,79 @@ export default function WrongKanjiPage() {
       for (const item of wrongs) {
         if (item.app !== "kanji") continue;
 
-        rows.push({
+        const key = `${item.app}|${item.qtype}|${item.item_key}`;
+        const prev = wrongCandidateMap.get(key);
+
+        const nextItem: FlattenedWrongItem = {
           ...item,
           attempt_id: attempt.id,
           created_at: attempt.created_at,
           pos_mode: attempt.pos_mode,
           score: attempt.score,
           quiz_len: attempt.quiz_len,
-        });
+        };
+
+        if (!prev) {
+          wrongCandidateMap.set(key, nextItem);
+          continue;
+        }
+
+        const prevTime = prev.created_at ? new Date(prev.created_at).getTime() : 0;
+        const nextTime = attempt.created_at ? new Date(attempt.created_at).getTime() : 0;
+
+        if (nextTime >= prevTime) {
+          wrongCandidateMap.set(key, nextItem);
+        }
       }
     }
 
-    return rows;
+    const reviewCorrectCountMap = new Map<string, number>();
+
+    for (const attempt of reviewAttempts) {
+      const questionKeys = Array.isArray(attempt.question_keys)
+        ? attempt.question_keys.map((v) => String(v || "").trim()).filter(Boolean)
+        : [];
+
+      const wrongs = Array.isArray(attempt.wrong_list)
+        ? (attempt.wrong_list as KanjiWrongItem[])
+        : [];
+
+      const wrongKeySet = new Set(
+        wrongs
+          .filter((item) => item.app === "kanji")
+          .map((item) => `${item.app}|${item.qtype}|${item.item_key}`)
+      );
+
+      for (const questionKey of questionKeys) {
+        for (const qtype of ["reading", "meaning", "kr2jp"] as const) {
+          const fullKey = `kanji|${qtype}|${questionKey}`;
+
+          if (!wrongCandidateMap.has(fullKey)) continue;
+          if (wrongKeySet.has(fullKey)) continue;
+
+          reviewCorrectCountMap.set(
+            fullKey,
+            (reviewCorrectCountMap.get(fullKey) || 0) + 1
+          );
+        }
+      }
+    }
+
+    return Array.from(wrongCandidateMap.entries())
+      .filter(([key]) => (reviewCorrectCountMap.get(key) || 0) < 2)
+      .map(([, item]) => item)
+      .sort((a, b) => {
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return bTime - aTime;
+      });
   }, [attempts]);
 
   const qtypeOptions = useMemo(() => {
     const values = Array.from(
-      new Set(flattened.map((item) => String(item.qtype || "").trim()).filter(Boolean))
+      new Set(
+        flattened.map((item) => String(item.qtype || "").trim()).filter(Boolean)
+      )
     );
     return ["전체", ...values];
   }, [flattened]);
@@ -173,7 +238,11 @@ export default function WrongKanjiPage() {
         : flattened.filter((item) => (item.qtype || "") === selectedQType);
 
     const values = Array.from(
-      new Set(filteredByQType.map((item) => String(item.level || "").trim()).filter(Boolean))
+      new Set(
+        filteredByQType
+          .map((item) => String(item.level || "").trim())
+          .filter(Boolean)
+      )
     );
     return ["전체", ...values];
   }, [flattened, selectedQType]);
@@ -182,8 +251,10 @@ export default function WrongKanjiPage() {
     const q = searchText.trim().toLowerCase();
 
     return flattened.filter((item) => {
-      const qtypeOk = selectedQType === "전체" || (item.qtype || "") === selectedQType;
-      const levelOk = selectedLevel === "전체" || (item.level || "") === selectedLevel;
+      const qtypeOk =
+        selectedQType === "전체" || (item.qtype || "") === selectedQType;
+      const levelOk =
+        selectedLevel === "전체" || (item.level || "") === selectedLevel;
 
       const haystack = [
         item.jp_word || "",
@@ -227,9 +298,13 @@ export default function WrongKanjiPage() {
       return;
     }
 
-    const itemKeys = filteredItems
-      .filter((item) => selectedKeys.includes(makeSelectionKey(item)))
-      .map((item) => item.item_key);
+    const selectedItems = filteredItems.filter((item) =>
+      selectedKeys.includes(makeSelectionKey(item))
+    );
+
+    const itemKeys = Array.from(
+      new Set(selectedItems.map((item) => item.item_key).filter(Boolean))
+    );
 
     if (itemKeys.length === 0) {
       alert("복습할 문제를 찾지 못했습니다.");
@@ -237,10 +312,22 @@ export default function WrongKanjiPage() {
     }
 
     const qids = encodeURIComponent(itemKeys.join(","));
-    const qtype = encodeURIComponent(selectedQType === "전체" ? "" : selectedQType);
-    const level = encodeURIComponent(selectedLevel === "전체" ? "" : selectedLevel);
 
-    window.location.href = `/kanji?review=1&qids=${qids}&qtype=${qtype}&level=${level}`;
+    let qtype = "";
+    const qtypeSet = new Set(selectedItems.map((item) => item.qtype).filter(Boolean));
+    if (qtypeSet.size === 1) {
+      qtype = Array.from(qtypeSet)[0] || "";
+    }
+
+    let level = "";
+    const levelSet = new Set(selectedItems.map((item) => item.level).filter(Boolean));
+    if (levelSet.size === 1) {
+      level = Array.from(levelSet)[0] || "";
+    }
+
+    window.location.href = `/kanji?review=1&qids=${qids}&qtype=${encodeURIComponent(
+      qtype
+    )}&level=${encodeURIComponent(level)}`;
   };
 
   if (loading) {
@@ -400,7 +487,9 @@ export default function WrongKanjiPage() {
           </div>
 
           <div className="mt-5 border-t border-gray-100 pt-5">
-            <label className="block text-sm font-semibold text-gray-700">검색</label>
+            <label className="block text-sm font-semibold text-gray-700">
+              검색
+            </label>
             <input
               type="text"
               value={searchText}
@@ -416,7 +505,9 @@ export default function WrongKanjiPage() {
 
         {flattened.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <p className="text-lg font-semibold text-gray-900">좋아요. 저장된 한자 오답이 아직 없습니다.</p>
+            <p className="text-lg font-semibold text-gray-900">
+              좋아요. 저장된 한자 오답이 아직 없습니다.
+            </p>
             <p className="mt-2 text-sm text-gray-600">
               한자 문제를 풀고 다시 오면, 헷갈린 문제들이 여기에 정리됩니다.
             </p>
@@ -429,7 +520,9 @@ export default function WrongKanjiPage() {
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <p className="text-lg font-semibold text-gray-900">현재 필터 조건에 맞는 오답이 없습니다.</p>
+            <p className="text-lg font-semibold text-gray-900">
+              현재 필터 조건에 맞는 오답이 없습니다.
+            </p>
             <p className="mt-2 text-sm text-gray-600">
               레벨이나 문제 유형을 넓혀 다시 확인해보세요.
             </p>
@@ -441,7 +534,7 @@ export default function WrongKanjiPage() {
 
               return (
                 <div
-                  key={`${item.attempt_id}-${item.item_key}-${idx}`}
+                  key={`${item.item_key}-${item.qtype}-${idx}`}
                   className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
@@ -484,7 +577,10 @@ export default function WrongKanjiPage() {
                       {item.jp_word || "-"}
                     </p>
                     <p className="mt-2 text-sm text-gray-600">
-                      읽기: <span lang="ja" style={JA_FONT_STYLE}>{item.reading || "-"}</span>
+                      읽기:{" "}
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.reading || "-"}
+                      </span>
                     </p>
                     <p className="mt-1 text-sm text-gray-600">
                       뜻: {item.meaning_kr || "-"}
@@ -494,14 +590,18 @@ export default function WrongKanjiPage() {
                   <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
                     <p className="text-sm font-medium text-red-700">내가 고른 답</p>
                     <p className="mt-1 text-sm text-gray-800">
-                      <span lang="ja" style={JA_FONT_STYLE}>{item.selected || "-"}</span>
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.selected || "-"}
+                      </span>
                     </p>
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
                     <p className="text-sm font-medium text-green-700">정답</p>
                     <p className="mt-1 text-sm text-gray-800">
-                      <span lang="ja" style={JA_FONT_STYLE}>{item.correct || "-"}</span>
+                      <span lang="ja" style={JA_FONT_STYLE}>
+                        {item.correct || "-"}
+                      </span>
                     </p>
                   </div>
                 </div>

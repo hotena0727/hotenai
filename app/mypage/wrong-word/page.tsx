@@ -176,7 +176,7 @@ export default function WrongWordPage() {
           return;
         }
 
-        const rows = await fetchAttemptsByPrefix(user.id, "단어", 50);
+        const rows = await fetchAttemptsByPrefix(user.id, "단어", 300);
         setAttempts(rows);
       } catch (error) {
         console.error(error);
@@ -190,9 +190,17 @@ export default function WrongWordPage() {
   }, []);
 
   const flattened = useMemo<FlattenedWrongItem[]>(() => {
-    const rows: FlattenedWrongItem[] = [];
+    const normalAttempts = attempts.filter((attempt) =>
+      String(attempt.pos_mode || "").startsWith("단어 ·")
+    );
 
-    for (const attempt of attempts) {
+    const reviewAttempts = attempts.filter((attempt) =>
+      String(attempt.pos_mode || "").startsWith("단어오답복습 ·")
+    );
+
+    const wrongCandidateMap = new Map<string, FlattenedWrongItem>();
+
+    for (const attempt of normalAttempts) {
       const wrongs = Array.isArray(attempt.wrong_list)
         ? (attempt.wrong_list as WordWrongItem[])
         : [];
@@ -200,18 +208,72 @@ export default function WrongWordPage() {
       for (const item of wrongs) {
         if (item.app !== "word") continue;
 
-        rows.push({
+        const key = `${item.app}|${item.qtype}|${item.item_key}`;
+        const prev = wrongCandidateMap.get(key);
+
+        const nextItem: FlattenedWrongItem = {
           ...item,
           attempt_id: attempt.id,
           created_at: attempt.created_at,
           pos_mode: attempt.pos_mode,
           score: attempt.score,
           quiz_len: attempt.quiz_len,
-        });
+        };
+
+        if (!prev) {
+          wrongCandidateMap.set(key, nextItem);
+          continue;
+        }
+
+        const prevTime = prev.created_at ? new Date(prev.created_at).getTime() : 0;
+        const nextTime = attempt.created_at ? new Date(attempt.created_at).getTime() : 0;
+
+        if (nextTime >= prevTime) {
+          wrongCandidateMap.set(key, nextItem);
+        }
       }
     }
 
-    return rows;
+    const reviewCorrectCountMap = new Map<string, number>();
+
+    for (const attempt of reviewAttempts) {
+      const questionKeys = Array.isArray(attempt.question_keys)
+        ? attempt.question_keys.map((v) => String(v || "").trim()).filter(Boolean)
+        : [];
+
+      const wrongs = Array.isArray(attempt.wrong_list)
+        ? (attempt.wrong_list as WordWrongItem[])
+        : [];
+
+      const wrongKeySet = new Set(
+        wrongs
+          .filter((item) => item.app === "word")
+          .map((item) => `${item.app}|${item.qtype}|${item.item_key}`)
+      );
+
+      for (const questionKey of questionKeys) {
+        for (const qtype of ["reading", "meaning", "kr2jp"] as const) {
+          const fullKey = `word|${qtype}|${questionKey}`;
+
+          if (!wrongCandidateMap.has(fullKey)) continue;
+          if (wrongKeySet.has(fullKey)) continue;
+
+          reviewCorrectCountMap.set(
+            fullKey,
+            (reviewCorrectCountMap.get(fullKey) || 0) + 1
+          );
+        }
+      }
+    }
+
+    return Array.from(wrongCandidateMap.entries())
+      .filter(([key]) => (reviewCorrectCountMap.get(key) || 0) < 2)
+      .map(([, item]) => item)
+      .sort((a, b) => {
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return bTime - aTime;
+      });
   }, [attempts]);
 
   const qtypeOptions = useMemo(() => {
@@ -332,7 +394,9 @@ export default function WrongWordPage() {
       selectedKeys.includes(makeSelectionKey(item))
     );
 
-    const itemKeys = selectedItems.map((item) => item.item_key);
+    const itemKeys = Array.from(
+      new Set(selectedItems.map((item) => item.item_key).filter(Boolean))
+    );
 
     if (itemKeys.length === 0) {
       alert("복습할 문제를 찾지 못했습니다.");
@@ -340,29 +404,32 @@ export default function WrongWordPage() {
     }
 
     const qids = encodeURIComponent(itemKeys.join(","));
-    const qtype = encodeURIComponent(
-      selectedQType === "전체" ? "" : selectedQType
+
+    let qtype = "";
+    const qtypeSet = new Set(selectedItems.map((item) => item.qtype).filter(Boolean));
+    if (qtypeSet.size === 1) {
+      qtype = Array.from(qtypeSet)[0] || "";
+    }
+
+    let pos = "";
+    const posSet = new Set(selectedItems.map((item) => item.pos).filter(Boolean));
+    if (posSet.size === 1) {
+      pos = Array.from(posSet)[0] || "";
+    }
+
+    let level = "";
+    const levelSet = new Set(
+      selectedItems
+        .map((item) => normalizeLevelValue(item.level))
+        .filter((lv) => ["N5", "N4", "N3", "N2", "N1"].includes(lv))
     );
-    const pos = encodeURIComponent(selectedPos === "전체" ? "" : selectedPos);
+    if (levelSet.size === 1) {
+      level = Array.from(levelSet)[0] || "";
+    }
 
-    const uniqueLevels = Array.from(
-      new Set(
-        selectedItems
-          .map((item) => normalizeLevelValue(item.level))
-          .filter((lv) => ["N5", "N4", "N3", "N2", "N1"].includes(lv))
-      )
-    );
-
-    const resolvedLevel =
-      selectedLevel !== "전체"
-        ? selectedLevel
-        : uniqueLevels.length === 1
-          ? uniqueLevels[0]
-          : "";
-
-    const level = encodeURIComponent(resolvedLevel);
-
-    window.location.href = `/word?review=1&qids=${qids}&qtype=${qtype}&pos=${pos}&level=${level}`;
+    window.location.href = `/word?review=1&qids=${qids}&qtype=${encodeURIComponent(
+      qtype
+    )}&pos=${encodeURIComponent(pos)}&level=${encodeURIComponent(level)}`;
   };
 
   if (loading) {
@@ -603,7 +670,7 @@ export default function WrongWordPage() {
 
               return (
                 <div
-                  key={`${item.attempt_id}-${item.item_key}-${idx}`}
+                  key={`${item.item_key}-${item.qtype}-${idx}`}
                   className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">

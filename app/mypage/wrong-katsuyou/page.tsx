@@ -161,8 +161,6 @@ function makeSelectionKey(item: FlattenedWrongItem): string {
     item.item_key || "",
     item.qtype || "",
     item.form_key || "",
-    item.correct || "",
-    item.prompt || "",
   ].join("|");
 }
 
@@ -192,7 +190,7 @@ export default function WrongKatsuyouPage() {
           return;
         }
 
-        const rows = await fetchAttemptsByPrefix(user.id, "활용", 50);
+        const rows = await fetchAttemptsByPrefix(user.id, "활용", 300);
         setAttempts(rows);
       } catch (error) {
         console.error(error);
@@ -206,9 +204,17 @@ export default function WrongKatsuyouPage() {
   }, []);
 
   const flattened = useMemo<FlattenedWrongItem[]>(() => {
-    const rows: FlattenedWrongItem[] = [];
+    const normalAttempts = attempts.filter((attempt) =>
+      String(attempt.pos_mode || "").startsWith("활용 ·")
+    );
 
-    for (const attempt of attempts) {
+    const reviewAttempts = attempts.filter((attempt) =>
+      String(attempt.pos_mode || "").startsWith("활용오답복습 ·")
+    );
+
+    const wrongCandidateMap = new Map<string, FlattenedWrongItem>();
+
+    for (const attempt of normalAttempts) {
       const wrongs = Array.isArray(attempt.wrong_list)
         ? (attempt.wrong_list as KatsuyouWrongItem[])
         : [];
@@ -216,18 +222,87 @@ export default function WrongKatsuyouPage() {
       for (const item of wrongs) {
         if (item.app !== "katsuyou") continue;
 
-        rows.push({
+        const key = [
+          "katsuyou",
+          item.item_key || "",
+          item.qtype || "",
+          item.form_key || "",
+        ].join("|");
+
+        const prev = wrongCandidateMap.get(key);
+
+        const nextItem: FlattenedWrongItem = {
           ...item,
           attempt_id: attempt.id,
           created_at: attempt.created_at,
           pos_mode: attempt.pos_mode,
           score: attempt.score,
           quiz_len: attempt.quiz_len,
-        });
+        };
+
+        if (!prev) {
+          wrongCandidateMap.set(key, nextItem);
+          continue;
+        }
+
+        const prevTime = prev.created_at ? new Date(prev.created_at).getTime() : 0;
+        const nextTime = attempt.created_at ? new Date(attempt.created_at).getTime() : 0;
+
+        if (nextTime >= prevTime) {
+          wrongCandidateMap.set(key, nextItem);
+        }
       }
     }
 
-    return rows;
+    const reviewCorrectCountMap = new Map<string, number>();
+
+    for (const attempt of reviewAttempts) {
+      const questionKeys = Array.isArray(attempt.question_keys)
+        ? attempt.question_keys.map((v) => String(v || "").trim()).filter(Boolean)
+        : [];
+
+      const wrongs = Array.isArray(attempt.wrong_list)
+        ? (attempt.wrong_list as KatsuyouWrongItem[])
+        : [];
+
+      const wrongKeySet = new Set(
+        wrongs
+          .filter((item) => item.app === "katsuyou")
+          .map((item) =>
+            [
+              "katsuyou",
+              String(item.item_key || "").trim(),
+              String(item.qtype || "").trim(),
+              String(item.form_key || "").trim(),
+            ].join("|")
+          )
+      );
+
+      for (const questionKey of questionKeys) {
+        const [itemKey, formKey, qtype] = questionKey.split("|||").map((v) => String(v || "").trim());
+
+        if (!itemKey || !formKey || !qtype) continue;
+
+        const fullKey = ["katsuyou", itemKey, qtype, formKey].join("|");
+
+        if (!wrongCandidateMap.has(fullKey)) continue;
+        if (wrongKeySet.has(fullKey)) continue;
+
+        reviewCorrectCountMap.set(
+          fullKey,
+          (reviewCorrectCountMap.get(fullKey) || 0) + 1
+        );
+      }
+    }
+
+    return Array.from(wrongCandidateMap.entries())
+      .filter(([key]) => (reviewCorrectCountMap.get(key) || 0) < 2)
+      .map(([, item]) => item)
+      .sort((a, b) => {
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return bTime - aTime;
+      });
   }, [attempts]);
 
   const posOptions = useMemo(() => {
@@ -334,14 +409,9 @@ export default function WrongKatsuyouPage() {
     }
 
     const targetPos =
-      selectedPos === "전체"
-        ? ""
-        : String(selectedPos || "").trim();
-
+      selectedPos === "전체" ? "" : String(selectedPos || "").trim();
     const targetQType =
-      selectedQType === "전체"
-        ? ""
-        : String(selectedQType || "").trim();
+      selectedQType === "전체" ? "" : String(selectedQType || "").trim();
 
     const targets = encodeURIComponent(selectedReviewTargets.join(","));
     const pos = encodeURIComponent(targetPos);
@@ -559,7 +629,7 @@ export default function WrongKatsuyouPage() {
 
               return (
                 <div
-                  key={`${item.attempt_id}-${selectionKey}-${idx}`}
+                  key={`${item.item_key}-${item.qtype}-${item.form_key}-${idx}`}
                   className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">

@@ -43,6 +43,7 @@ export function buildKanjiAttemptPayload(params: {
   questions: KanjiQuestion[];
 }): KanjiAttemptPayload {
   const wrong_list = buildKanjiWrongList(params.wrongList, params.questions);
+  const question_keys = params.questions.map((q) => q.jp_word);
 
   return {
     user_id: params.user_id,
@@ -53,5 +54,6 @@ export function buildKanjiAttemptPayload(params: {
     score: Number(params.score || 0),
     wrong_count: wrong_list.length,
     wrong_list,
+    question_keys,
   };
 }

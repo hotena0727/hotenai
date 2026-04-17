@@ -853,7 +853,9 @@ export default function KanjiPage() {
         user_id: user.id,
         user_email: user.email ?? "",
         level: selectedLevel,
-        pos_mode: `한자 · ${selectedLevel} · ${selectedQType}`,
+        pos_mode: isReviewMode
+          ? `한자오답복습 · ${selectedLevel} · ${selectedQType}`
+          : `한자 · ${selectedLevel} · ${selectedQType}`,
         quiz_len: currentQuestions.length,
         score: nextScore,
         wrongList,

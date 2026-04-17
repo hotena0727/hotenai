@@ -92,6 +92,15 @@ function WrongPageTabs({
   );
 }
 
+function makeTalkReviewKey(item: {
+  item_key?: string;
+  qid?: string;
+}) {
+  const itemKey = String(item.item_key || "").trim();
+  const qid = String(item.qid || "").trim();
+  return `${itemKey}|||${qid}`;
+}
+
 export default function WrongTalkPage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
@@ -118,7 +127,7 @@ export default function WrongTalkPage() {
           return;
         }
 
-        const rows = await fetchAttemptsByPrefix(user.id, "회화", 100);
+        const rows = await fetchAttemptsByPrefix(user.id, "회화", 200);
         setAttempts(rows);
       } catch (error) {
         console.error(error);
@@ -131,16 +140,45 @@ export default function WrongTalkPage() {
     void loadWrongNotes();
   }, []);
 
+  const reviewClearCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+
+    for (const attempt of attempts) {
+      const mode = String(attempt.pos_mode || "").trim();
+      if (!mode.startsWith("회화오답복습")) continue;
+
+      const keys = Array.isArray(attempt.question_keys)
+        ? attempt.question_keys
+        : [];
+
+      for (const rawKey of keys) {
+        const key = String(rawKey || "").trim();
+        if (!key) continue;
+        map.set(key, (map.get(key) || 0) + 1);
+      }
+    }
+
+    return map;
+  }, [attempts]);
+
   const flattened = useMemo<FlattenedWrongItem[]>(() => {
     const rows: FlattenedWrongItem[] = [];
 
     for (const attempt of attempts) {
+      const mode = String(attempt.pos_mode || "").trim();
+      if (mode.startsWith("회화오답복습")) continue;
+
       const wrongs = Array.isArray(attempt.wrong_list)
         ? (attempt.wrong_list as TalkWrongItem[])
         : [];
 
       for (const item of wrongs) {
         if (item.app !== "talk") continue;
+
+        const reviewKey = makeTalkReviewKey(item);
+        const clearedCount = reviewClearCountMap.get(reviewKey) || 0;
+
+        if (clearedCount >= 2) continue;
 
         rows.push({
           ...item,
@@ -154,11 +192,15 @@ export default function WrongTalkPage() {
     }
 
     return rows;
-  }, [attempts]);
+  }, [attempts, reviewClearCountMap]);
 
   const tagOptions = useMemo(() => {
     const values = Array.from(
-      new Set(flattened.map((item) => String(item.tag_kr || item.tag || "").trim()).filter(Boolean))
+      new Set(
+        flattened
+          .map((item) => String(item.tag_kr || item.tag || "").trim())
+          .filter(Boolean)
+      )
     );
     return ["전체", ...values];
   }, [flattened]);
@@ -170,7 +212,11 @@ export default function WrongTalkPage() {
     });
 
     const values = Array.from(
-      new Set(base.map((item) => String(item.sub_kr || item.sub || "").trim()).filter(Boolean))
+      new Set(
+        base
+          .map((item) => String(item.sub_kr || item.sub || "").trim())
+          .filter(Boolean)
+      )
     );
 
     return ["전체", ...values];
@@ -220,7 +266,9 @@ export default function WrongTalkPage() {
 
   const selectAllVisible = () => {
     const keys = Array.from(
-      new Set(filteredItems.map((item) => makeSelectionKey(item)).filter(Boolean))
+      new Set(
+        filteredItems.map((item) => makeSelectionKey(item)).filter(Boolean)
+      )
     );
     setSelectedKeys(keys);
   };
@@ -241,9 +289,7 @@ export default function WrongTalkPage() {
 
     const qids = Array.from(
       new Set(
-        selectedItems
-          .map((item) => String(item.qid || "").trim())
-          .filter(Boolean)
+        selectedItems.map((item) => String(item.qid || "").trim()).filter(Boolean)
       )
     );
 
@@ -431,7 +477,9 @@ export default function WrongTalkPage() {
           </div>
 
           <div className="mt-5 border-t border-gray-100 pt-5">
-            <label className="block text-sm font-semibold text-gray-700">검색</label>
+            <label className="block text-sm font-semibold text-gray-700">
+              검색
+            </label>
             <input
               type="text"
               value={searchText}
@@ -492,7 +540,9 @@ export default function WrongTalkPage() {
                     <a
                       href={`/talk?review=1&qids=${encodeURIComponent(
                         String(item.qid || "")
-                      )}&itemKeys=${encodeURIComponent(String(item.item_key || ""))}`}
+                      )}&itemKeys=${encodeURIComponent(
+                        String(item.item_key || "")
+                      )}`}
                       className="inline-flex rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800"
                     >
                       이 문제만 복습
@@ -531,7 +581,9 @@ export default function WrongTalkPage() {
                   </div>
 
                   <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-                    <p className="text-sm font-medium text-red-700">내가 고른 답</p>
+                    <p className="text-sm font-medium text-red-700">
+                      내가 고른 답
+                    </p>
                     <p className="mt-1 text-sm text-gray-800">
                       <span lang="ja" style={JA_FONT_STYLE}>
                         {item.selected || "-"}

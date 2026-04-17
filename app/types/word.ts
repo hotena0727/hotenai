@@ -51,4 +51,5 @@ export type WordAttemptPayload = {
   score: number;
   wrong_count: number;
   wrong_list: WordWrongItem[];
+  question_keys: string[];
 };

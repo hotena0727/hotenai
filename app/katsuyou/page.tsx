@@ -992,9 +992,9 @@ export default function KatsuyouPage() {
         user_id: user.id,
         user_email: user.email ?? "",
         pos: selectedPos,
-        pos_mode: `활용 · ${posLabel(selectedPos)} · ${qtypeLabel(
-          selectedQType
-        )}`,
+        pos_mode: reviewMode
+          ? `활용오답복습 · ${posLabel(selectedPos)} · ${qtypeLabel(selectedQType)}`
+          : `활용 · ${posLabel(selectedPos)} · ${qtypeLabel(selectedQType)}`,
         quiz_len: currentQuestions.length,
         score: nextScore,
         wrongList,

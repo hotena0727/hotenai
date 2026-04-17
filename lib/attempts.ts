@@ -11,6 +11,7 @@ export type QuizAttemptRow = {
   score?: number;
   wrong_count?: number;
   wrong_list?: unknown[];
+  question_keys?: string[];
 };
 
 export type SaveQuizAttemptInput = {
@@ -22,6 +23,7 @@ export type SaveQuizAttemptInput = {
   score?: number;
   wrong_count?: number;
   wrong_list?: unknown[];
+  question_keys?: string[];
 };
 
 function getKstDayRange(): { startIso: string; endIso: string } {
@@ -38,8 +40,10 @@ function getKstDayRange(): { startIso: string; endIso: string } {
   const month = Number(parts.find((p) => p.type === "month")?.value);
   const day = Number(parts.find((p) => p.type === "day")?.value);
 
-  const startUtcMs = Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 9 * 60 * 60 * 1000;
-  const endUtcMs = Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 9 * 60 * 60 * 1000;
+  const startUtcMs =
+    Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 9 * 60 * 60 * 1000;
+  const endUtcMs =
+    Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 9 * 60 * 60 * 1000;
 
   return {
     startIso: new Date(startUtcMs).toISOString(),
@@ -60,6 +64,9 @@ export async function saveQuizAttempt(
       score: Number(payload.score ?? 0),
       wrong_count: Number(payload.wrong_count ?? 0),
       wrong_list: Array.isArray(payload.wrong_list) ? payload.wrong_list : [],
+      question_keys: Array.isArray(payload.question_keys)
+        ? payload.question_keys
+        : [],
     };
 
     const { error } = await supabase.from("quiz_attempts").insert(row);
@@ -86,7 +93,7 @@ export async function fetchRecentAttempts(
     const { data, error } = await supabase
       .from("quiz_attempts")
       .select(
-        "id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list"
+        "id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list, question_keys"
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
@@ -114,7 +121,7 @@ export async function fetchAllAttempts(
     const { data, error } = await supabase
       .from("quiz_attempts")
       .select(
-        "id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list"
+        "id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list, question_keys"
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
@@ -143,7 +150,7 @@ export async function fetchAttemptsByPrefix(
     const { data, error } = await supabase
       .from("quiz_attempts")
       .select(
-        "id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list"
+        "id, created_at, user_id, user_email, level, pos_mode, quiz_len, score, wrong_count, wrong_list, question_keys"
       )
       .eq("user_id", userId)
       .like("pos_mode", `${posModePrefix}%`)

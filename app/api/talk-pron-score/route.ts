@@ -66,6 +66,44 @@ function normJpForReading(text: string) {
   );
 }
 
+function normalizeJapaneseMoneyToReading(text: string) {
+  return String(text || "")
+    .normalize("NFKC")
+
+    // 쉼표 포함 금액
+    .replace(/3,000円/g, "さんぜんえん")
+    .replace(/2,000円/g, "にせんえん")
+    .replace(/1,000円/g, "せんえん")
+    .replace(/8,000円/g, "はっせんえん")
+    .replace(/6,000円/g, "ろくせんえん")
+    .replace(/5,000円/g, "ごせんえん")
+    .replace(/4,000円/g, "よんせんえん")
+    .replace(/7,000円/g, "ななせんえん")
+    .replace(/9,000円/g, "きゅうせんえん")
+
+    // 쉼표 없는 금액
+    .replace(/3000円/g, "さんぜんえん")
+    .replace(/2000円/g, "にせんえん")
+    .replace(/1000円/g, "せんえん")
+    .replace(/8000円/g, "はっせんえん")
+    .replace(/6000円/g, "ろくせんえん")
+    .replace(/5000円/g, "ごせんえん")
+    .replace(/4000円/g, "よんせんえん")
+    .replace(/7000円/g, "ななせんえん")
+    .replace(/9000円/g, "きゅうせんえん")
+
+    // 자주 나오는 백 단위
+    .replace(/800円/g, "はっぴゃくえん")
+    .replace(/600円/g, "ろっぴゃくえん")
+    .replace(/300円/g, "さんびゃくえん")
+    .replace(/100円/g, "ひゃくえん")
+    .replace(/200円/g, "にひゃくえん")
+    .replace(/400円/g, "よんひゃくえん")
+    .replace(/500円/g, "ごひゃくえん")
+    .replace(/700円/g, "ななひゃくえん")
+    .replace(/900円/g, "きゅうひゃくえん");
+}
+
 function normalizeJapaneseCountersToReading(text: string) {
   return String(text || "")
     .normalize("NFKC")
@@ -317,10 +355,17 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/良い/g, "よい")
     .replace(/少し/g, "すこし")
     .replace(/見てから/g, "みてから")
+    .replace(/試してみます/g, "ためしてみます")
+    .replace(/試してみたい/g, "ためしてみたい")
+    .replace(/試して/g, "ためして")
+    .replace(/試す/g, "ためす")
     .replace(/見て/g, "みて")
     .replace(/飲みやすくて/g, "のみやすくて")
     .replace(/飲みやすい/g, "のみやすい")
     .replace(/飲む/g, "のむ")
+    .replace(/高くても/g, "たかくても")
+    .replace(/高い/g, "たかい")
+    .replace(/高く/g, "たかく")
 
     // 고유명사/표기 흔들림
     .replace(/日本/g, "にっぽん")
@@ -357,7 +402,12 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/その時/g, "そのとき")
     .replace(/お願いします/g, "おねがいします")
     .replace(/次/g, "つぎ")
+    .replace(/来てみたい/g, "きてみたい")
+    .replace(/着てみたい/g, "きてみたい")
+    .replace(/来て/g, "きて")
+    .replace(/着て/g, "きて")
     .replace(/来たい/g, "きたい")
+    .replace(/着たい/g, "きたい")
     .replace(/期待/g, "きたい")
     .replace(/他/g, "ほか")
     .replace(/今度/g, "こんど")
@@ -370,6 +420,9 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/気になります/g, "きになります")
     .replace(/聞く/g, "きく")
     .replace(/聞きます/g, "ききます")
+    .replace(/見た感じだと/g, "みたかんじだと")
+    .replace(/見た感じ/g, "みたかんじ")
+    .replace(/方が/g, "ほうが")
     ;
 }
 
@@ -380,6 +433,7 @@ function replaceCommonVariants(text: string) {
     .replace(/にほん/g, "にっぽん")
     .replace(/こんにちわ/g, "こんにちは")
     .replace(/わたしわ/g, "わたしは")
+    .replace(/ぐらい/g, "くらい")
     .replace(/youtube/g, "ゆーちゅーぶ")
     .replace(/ゆうちゅうぶ/g, "ゆーちゅーぶ")
     .replace(/ゆーつーぶ/g, "ゆーちゅーぶ")
@@ -401,8 +455,10 @@ function normalizeRangeExpressionsToReading(text: string) {
 function toReadingLike(text: string) {
   return replaceCommonVariants(
     normalizeJapaneseCountersToReading(
-      normalizeRangeExpressionsToReading(
-        normalizeKnownWordsToReading(text)
+      normalizeJapaneseMoneyToReading(
+        normalizeRangeExpressionsToReading(
+          normalizeKnownWordsToReading(text)
+        )
       )
     )
   );

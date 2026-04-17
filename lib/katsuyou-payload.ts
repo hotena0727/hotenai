@@ -24,6 +24,19 @@ export function buildKatsuyouAttemptPayload({
   wrongList: WrongItem[];
   questions: KatsuyouQuestion[];
 }) {
+  const question_keys = questions
+    .map((q) =>
+      [
+        String(q.item_key || q.jp_word || "").trim(),
+        String(q.formKey || "").trim(),
+        String(q.qtype || "").trim(),
+      ].join("|||")
+    )
+    .filter((v) => {
+      const [itemKey, formKey, qtype] = v.split("|||");
+      return Boolean(itemKey && formKey && qtype);
+    });
+
   return {
     user_id,
     user_email,
@@ -35,10 +48,9 @@ export function buildKatsuyouAttemptPayload({
     score,
     wrong_count: wrongList.length,
 
-    // 오답노트 페이지들이 읽는 핵심 필드
     wrong_list: wrongList.map((item) => ({
       app: "katsuyou",
-      item_key: String(item.question.item_key || ""),
+      item_key: String(item.question.item_key || item.question.jp_word || ""),
       jp_word: item.question.jp_word,
       kr_word: item.question.kr_word,
       pos: item.question.pos,
@@ -50,7 +62,8 @@ export function buildKatsuyouAttemptPayload({
       correct: item.question.correct_text,
     })),
 
-    // 기존 호환용으로 남겨둬도 무방
+    question_keys,
+
     wrong_answers: wrongList.map((item) => ({
       jp_word: item.question.jp_word,
       selected: item.selected,

@@ -44,4 +44,5 @@ export type KanjiAttemptPayload = {
   score: number;
   wrong_count: number;
   wrong_list: KanjiWrongItem[];
+  question_keys: string[];
 };

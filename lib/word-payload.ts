@@ -22,11 +22,7 @@ function inferWordAttemptLevel(
   if (normalizedExplicit) return normalizedExplicit;
 
   const levels = Array.from(
-    new Set(
-      questions
-        .map((q) => normalizeLevel(q.level))
-        .filter(Boolean)
-    )
+    new Set(questions.map((q) => normalizeLevel(q.level)).filter(Boolean))
   );
 
   if (levels.length === 1) return levels[0];
@@ -69,6 +65,7 @@ export function buildWordAttemptPayload(params: {
 }): WordAttemptPayload {
   const wrong_list = buildWordWrongList(params.wrongList, params.questions);
   const resolvedLevel = inferWordAttemptLevel(params.questions, params.level);
+  const question_keys = params.questions.map((q) => q.jp_word);
 
   return {
     user_id: params.user_id,
@@ -79,5 +76,6 @@ export function buildWordAttemptPayload(params: {
     score: Number(params.score || 0),
     wrong_count: wrong_list.length,
     wrong_list,
+    question_keys,
   };
 }

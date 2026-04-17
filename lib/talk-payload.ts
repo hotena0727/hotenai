@@ -3,7 +3,7 @@ import type { TalkCsvRow, TalkWrongItem } from "@/app/types/talk";
 export type TalkAttemptWrongItem = {
   app: "talk";
   qtype: "choice";
-  item_key: string; // qid
+  item_key: string;
   qid: string;
   selected: string;
   correct: string;
@@ -31,6 +31,7 @@ export type TalkAttemptPayload = {
   score: number;
   wrong_count: number;
   wrong_list: TalkAttemptWrongItem[];
+  question_keys: string[];
 };
 
 export function buildTalkWrongList(
@@ -38,15 +39,26 @@ export function buildTalkWrongList(
   questions: TalkCsvRow[]
 ): TalkAttemptWrongItem[] {
   return wrongList.map((item) => {
-    const row = questions.find((q) => q.qid === item.qid);
+    const row = questions.find(
+      (q) =>
+        String(q.qid || "").trim() === String(item.qid || "").trim() ||
+        String((q as any).item_key || "").trim() ===
+          String(item.item_key || "").trim()
+    );
+
+    const resolvedItemKey = String(
+      (row as any)?.item_key || item.item_key || row?.qid || item.qid || ""
+    ).trim();
+
+    const resolvedQid = String(row?.qid || item.qid || "").trim();
 
     return {
       app: "talk",
       qtype: "choice",
-      item_key: row?.qid || item.qid,
-      qid: row?.qid || item.qid,
-      selected: item.selected,
-      correct: item.correct,
+      item_key: resolvedItemKey,
+      qid: resolvedQid,
+      selected: String(item.selected || "").trim(),
+      correct: String(item.correct || "").trim(),
 
       stage: row?.stage || "",
       tag: row?.tag || "",
@@ -76,6 +88,17 @@ export function buildTalkAttemptPayload(params: {
 }): TalkAttemptPayload {
   const wrong_list = buildTalkWrongList(params.wrongList, params.questions);
 
+  const question_keys = params.questions
+    .map((q) => {
+      const itemKey = String((q as any).item_key || q.qid || "").trim();
+      const qid = String(q.qid || "").trim();
+      return [itemKey, qid].join("|||");
+    })
+    .filter((v) => {
+      const [itemKey, qid] = v.split("|||");
+      return Boolean(itemKey || qid);
+    });
+
   return {
     user_id: params.user_id,
     user_email: params.user_email ?? "",
@@ -85,5 +108,6 @@ export function buildTalkAttemptPayload(params: {
     score: Number(params.score || 0),
     wrong_count: wrong_list.length,
     wrong_list,
+    question_keys,
   };
 }
