@@ -911,6 +911,28 @@ export default function MyPage() {
                   (갤럭시, 크롬, 사파리 등 앱으로 접속하면 “푸시 미지원”으로 표시될 수 있어요.)
                 </p>
               </div>
+
+              {/* 3) 업데이트 방법 */}
+              <div className="mt-4 font-semibold text-slate-900">업데이트 방법</div>
+              <div className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+                <p className="font-semibold">
+                  업데이트 내용이 바로 보이지 않으면, 이전 데이터가 남아 있을 수 있습니다.
+                </p>
+                <p className="mt-1">
+                  이 경우 <span className="font-bold">브라우저 설정에서 쿠키, 캐시를 삭제한 뒤</span>{" "}
+                  앱을 다시 실행해 주세요.
+                </p>
+
+                <div className="mt-3 rounded-xl bg-white/70 px-3 py-3 text-sm leading-6 text-amber-900">
+                  • <span className="font-semibold">삼성 인터넷</span>: … → 설정 → 인터넷 사용 기록 → 인터넷 사용 기록 삭제 → 쿠키, 캐시 체크 후 데이터 삭제<br />
+                  • <span className="font-semibold">Chrome</span>: … → 인터넷 사용 기록 삭제 → 옵션 더보기 → 쿠키, 캐시 체크 후 데이터 삭제<br />
+                  • <span className="font-semibold">iPhone / Safari</span>: 설정 → 앱 → Safari → 방문 기록 및 웹 사이트 데이터 지우기 → 방문 기록 지우기
+                </div>
+
+                <p className="mt-3 text-amber-700">
+                  반영되지 않으면 앱을 삭제한 뒤 다시 홈 화면에 추가하면 해결되는 경우가 많습니다.
+                </p>
+              </div>
             </div>
           ) : null}
         </div>
