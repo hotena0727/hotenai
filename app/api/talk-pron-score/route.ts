@@ -423,6 +423,12 @@ function normalizeKnownWordsToReading(text: string) {
     .replace(/見た感じだと/g, "みたかんじだと")
     .replace(/見た感じ/g, "みたかんじ")
     .replace(/方が/g, "ほうが")
+    .replace(/物によって/g, "ものによって")
+    .replace(/ものによって/g, "ものによって")
+    .replace(/違います/g, "ちがいます")
+    .replace(/違う/g, "ちがう")
+    .replace(/多い/g, "おおい")
+    .replace(/多く/g, "おおく")
     ;
 }
 
