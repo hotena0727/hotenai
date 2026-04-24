@@ -476,7 +476,6 @@ function makeConnectiveB(baseKr: string): string {
   const special: Record<string, string> = {
     자: "자서",
     빌리: "빌려서",
-    버리: "버려서",
     닫: "닫아서",
     듣: "들어서",
     죽: "죽어서",
