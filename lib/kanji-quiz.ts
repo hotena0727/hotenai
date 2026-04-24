@@ -97,6 +97,18 @@ function pickDistinctLastCharRows(rows: KanjiRow[], count: number): KanjiRow[] {
   return picked;
 }
 
+function isBlockedReadingDistractor(correctRow: KanjiRow, candidateRow: KanjiRow): boolean {
+  const correctWord = String(correctRow.jp_word || "").trim();
+  const correctReading = cleanKana(correctRow.reading);
+  const candidateReading = cleanKana(candidateRow.reading);
+
+  if (correctWord === "入る" && correctReading === "はいる" && candidateReading === "いる") {
+    return true;
+  }
+
+  return false;
+}
+
 function pickReadingWrongRows(correctRow: KanjiRow, poolPos: KanjiRow[]): KanjiRow[] {
   const pos = String(correctRow.pos || "").toLowerCase();
   const correctReading = cleanKana(correctRow.reading);
@@ -105,7 +117,8 @@ function pickReadingWrongRows(correctRow: KanjiRow, poolPos: KanjiRow[]): KanjiR
     poolPos.filter(
       (row) =>
         row.jp_word !== correctRow.jp_word &&
-        cleanKana(row.reading) !== correctReading
+        cleanKana(row.reading) !== correctReading &&
+        !isBlockedReadingDistractor(correctRow, row)
     )
   );
 

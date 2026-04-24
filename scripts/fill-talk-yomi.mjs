@@ -44,7 +44,19 @@ function fixCommonNumberReadings(text = "") {
 function fixPhraseReadings(text = "") {
   return String(text)
     .replace(/ひとつじょう/g, "ひとつうえ")
-    .replace(/一つ上/g, "ひとつうえ");
+    .replace(/一つ上/g, "ひとつうえ")
+
+    // kuromoji가 문맥상 잘못 읽는 경우 보정
+    .replace(/じのでんしゃ/g, "つぎのでんしゃ")
+    .replace(/次の電車/g, "つぎのでんしゃ")
+    .replace(/次の/g, "つぎの");
+}
+
+function normalizeSpecialYomiCases(text = "") {
+  return String(text)
+    .normalize("NFKC")
+    .replace(/十分くらい/g, "じゅっぷんくらい")
+    .replace(/十分ぐらい/g, "じゅっぷんぐらい");
 }
 
 function digitToJapanese(n) {
@@ -112,7 +124,9 @@ function preprocessJapaneseText(text = "") {
   return fixPhraseReadings(
     fixCommonNumberReadings(
       normalizeYomi(
-        convertNumberYenToReading(String(text))
+        convertNumberYenToReading(
+          normalizeSpecialYomiCases(String(text))
+        )
       )
     )
   );
