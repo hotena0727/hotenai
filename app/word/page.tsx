@@ -168,7 +168,7 @@ export default function WordPage() {
   const [selectedPosGroup, setSelectedPosGroup] = useState("noun");
   const [selectedQType, setSelectedQType] = useState<WordQType>("reading");
   const [selectedLevel, setSelectedLevel] = useState<string>("N5");
-  const [levelPanelOpen, setLevelPanelOpen] = useState(true);
+  const [levelPanelOpen, setLevelPanelOpen] = useState(false);
 
   const [otherPanelOpen, setOtherPanelOpen] = useState(true);
   const [selectedOtherPos, setSelectedOtherPos] = useState<string[]>([
