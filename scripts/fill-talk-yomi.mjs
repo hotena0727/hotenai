@@ -59,6 +59,13 @@ function normalizeSpecialYomiCases(text = "") {
     .replace(/十分ぐらい/g, "じゅっぷんぐらい");
 }
 
+function fixTimeReadings(text = "") {
+  return String(text)
+    .replace(/七時/g, "しちじ")
+    .replace(/[7７]時/g, "しちじ")
+    .replace(/ななじ/g, "しちじ");
+}
+
 function digitToJapanese(n) {
   const map = ["", "いち", "に", "さん", "よん", "ご", "ろく", "なな", "はち", "きゅう"];
   return map[n] || "";
@@ -122,10 +129,12 @@ function convertNumberYenToReading(text = "") {
 
 function preprocessJapaneseText(text = "") {
   return fixPhraseReadings(
-    fixCommonNumberReadings(
-      normalizeYomi(
-        convertNumberYenToReading(
-          normalizeSpecialYomiCases(String(text))
+    fixTimeReadings(
+      fixCommonNumberReadings(
+        normalizeYomi(
+          convertNumberYenToReading(
+            normalizeSpecialYomiCases(String(text))
+          )
         )
       )
     )
@@ -149,8 +158,10 @@ function toReading(tokenizer, text) {
     .join("");
 
   return fixPhraseReadings(
-    normalizeYomi(
-      fixCommonNumberReadings(rawReading)
+    fixTimeReadings(
+      normalizeYomi(
+        fixCommonNumberReadings(rawReading)
+      )
     )
   );
 }
