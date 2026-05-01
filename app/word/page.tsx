@@ -1261,15 +1261,19 @@ export default function WordPage() {
         ) : null}
 
         {visibleLevelOptions.length > 0 ? (
-          <div className="mt-8 rounded-2xl border border-gray-300 bg-white">
+          <div className="mt-8 rounded-2xl border border-sky-200 bg-sky-50/60">
             <button
               type="button"
               onClick={() => setLevelPanelOpen((prev) => !prev)}
               className="flex w-full items-center gap-3 px-4 py-4 text-left"
             >
-              <span className="text-lg">{levelPanelOpen ? "⌄" : "›"}</span>
+              <span className="text-lg font-bold text-sky-600">
+                {levelPanelOpen ? "⌄" : "›"}
+              </span>
               <div className="min-w-0">
-                <span className="block text-lg font-semibold">레벨 선택</span>
+                <span className="block text-lg font-bold text-sky-700">
+                  레벨 선택
+                </span>
               </div>
             </button>
 
