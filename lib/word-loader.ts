@@ -24,8 +24,19 @@ function normalizePos(raw: string): string {
   return s;
 }
 
-export async function loadWordRows(): Promise<WordRow[]> {
-  const res = await fetch("/csv/beginner.csv");
+const WORD_CSV_FILES = [
+  "/csv/beginner.csv",
+  "/csv/basic.csv",
+];
+
+async function loadOneWordCsv(path: string): Promise<WordRow[]> {
+  const res = await fetch(path);
+
+  if (!res.ok) {
+    console.error(`[word-loader] CSV 파일을 읽지 못했습니다: ${path}`);
+    return [];
+  }
+
   const csvText = await res.text();
 
   const parsed = Papa.parse<Record<string, string>>(csvText, {
@@ -34,8 +45,8 @@ export async function loadWordRows(): Promise<WordRow[]> {
   });
 
   if (parsed.errors.length > 0) {
-    console.error(parsed.errors);
-    throw new Error("beginner.csv를 읽는 중 오류가 발생했습니다.");
+    console.error(`[word-loader] ${path} 파싱 오류`, parsed.errors);
+    throw new Error(`${path}를 읽는 중 오류가 발생했습니다.`);
   }
 
   return parsed.data
@@ -50,9 +61,18 @@ export async function loadWordRows(): Promise<WordRow[]> {
     }))
     .filter(
       (row) =>
+        row.level &&
         row.jp_word &&
         row.reading &&
         row.meaning &&
         row.pos
     );
+}
+
+export async function loadWordRows(): Promise<WordRow[]> {
+  const allRows = await Promise.all(
+    WORD_CSV_FILES.map((path) => loadOneWordCsv(path))
+  );
+
+  return allRows.flat();
 }
