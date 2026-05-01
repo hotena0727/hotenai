@@ -26,7 +26,6 @@ function normalizePos(raw: string): string {
 
 const WORD_CSV_FILES = [
   "/csv/beginner.csv",
-  "/csv/basic.csv",
 ];
 
 async function loadOneWordCsv(path: string): Promise<WordRow[]> {
